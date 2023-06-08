@@ -37,14 +37,17 @@ class InfoIterable extends IterableBase<String> {
 class RouteConfig {
   RouteConfig._(
     this._path,
+    this._name,
     this._routeDataClass,
     this._parent,
+    this._key,
+    this._isShellRoute,
   );
 
   /// Creates a new [RouteConfig] represented the annotation data in [reader].
   factory RouteConfig.fromAnnotation(
     ConstantReader reader,
-    ClassElement element,
+    InterfaceElement element,
   ) {
     final RouteConfig definition =
         RouteConfig._fromAnnotation(reader, element, null);
@@ -62,23 +65,34 @@ class RouteConfig {
 
   factory RouteConfig._fromAnnotation(
     ConstantReader reader,
-    ClassElement element,
+    InterfaceElement element,
     RouteConfig? parent,
   ) {
     assert(!reader.isNull, 'reader should not be null');
-    final ConstantReader pathValue = reader.read('path');
-    if (pathValue.isNull) {
-      throw InvalidGenerationSourceError(
-        'Missing `path` value on annotation.',
-        element: element,
-      );
+    final InterfaceType type = reader.objectValue.type! as InterfaceType;
+    // TODO(stuartmorgan): Remove this ignore once 'analyze' can be set to
+    // 5.2+ (when Flutter 3.4+ is on stable).
+    // ignore: deprecated_member_use
+    final bool isShellRoute = type.element.name == 'TypedShellRoute';
+
+    String? path;
+    String? name;
+
+    if (!isShellRoute) {
+      final ConstantReader pathValue = reader.read('path');
+      if (pathValue.isNull) {
+        throw InvalidGenerationSourceError(
+          'Missing `path` value on annotation.',
+          element: element,
+        );
+      }
+      path = pathValue.stringValue;
+
+      final ConstantReader nameValue = reader.read('name');
+      name = nameValue.isNull ? null : nameValue.stringValue;
     }
 
-    final String path = pathValue.stringValue;
-
-    final InterfaceType type = reader.objectValue.type! as InterfaceType;
     final DartType typeParamType = type.typeArguments.single;
-
     if (typeParamType is! InterfaceType) {
       throw InvalidGenerationSourceError(
         'The type parameter on one of the @TypedGoRoute declarations could not '
@@ -88,9 +102,22 @@ class RouteConfig {
     }
 
     // TODO(kevmoo): validate that this MUST be a subtype of `GoRouteData`
-    final ClassElement classElement = typeParamType.element;
+    // TODO(stuartmorgan): Remove this ignore once 'analyze' can be set to
+    // 5.2+ (when Flutter 3.4+ is on stable).
+    // ignore: deprecated_member_use
+    final InterfaceElement classElement = typeParamType.element;
 
-    final RouteConfig value = RouteConfig._(path, classElement, parent);
+    final RouteConfig value = RouteConfig._(
+      path ?? '',
+      name,
+      classElement,
+      parent,
+      _generateNavigatorKeyGetterCode(
+        classElement,
+        keyName: isShellRoute ? r'$navigatorKey' : r'$parentNavigatorKey',
+      ),
+      isShellRoute,
+    );
 
     value._children.addAll(reader.read('routes').listValue.map((DartObject e) =>
         RouteConfig._fromAnnotation(ConstantReader(e), element, value)));
@@ -100,8 +127,43 @@ class RouteConfig {
 
   final List<RouteConfig> _children = <RouteConfig>[];
   final String _path;
-  final ClassElement _routeDataClass;
+  final String? _name;
+  final InterfaceElement _routeDataClass;
   final RouteConfig? _parent;
+  final String? _key;
+  final bool _isShellRoute;
+
+  static String? _generateNavigatorKeyGetterCode(
+    InterfaceElement classElement, {
+    required String keyName,
+  }) {
+    final String? fieldDisplayName = classElement.fields
+        .where((FieldElement element) {
+          final DartType type = element.type;
+          if (!element.isStatic ||
+              element.name != keyName ||
+              type is! ParameterizedType) {
+            return false;
+          }
+          final List<DartType> typeArguments = type.typeArguments;
+          if (typeArguments.length != 1) {
+            return false;
+          }
+          final DartType typeArgument = typeArguments.single;
+          if (typeArgument.getDisplayString(withNullability: false) ==
+              'NavigatorState') {
+            return true;
+          }
+          return false;
+        })
+        .map<String>((FieldElement e) => e.displayName)
+        .firstOrNull;
+
+    if (fieldDisplayName == null) {
+      return null;
+    }
+    return '${classElement.name}.$fieldDisplayName';
+  }
 
   /// Generates all of the members that correspond to `this`.
   InfoIterable generateMembers() => InfoIterable._(
@@ -133,17 +195,31 @@ class RouteConfig {
   }
 
   /// Returns `extension` code.
-  String _extensionDefinition() => '''
+  String _extensionDefinition() {
+    if (_isShellRoute) {
+      return '''
+extension $_extensionName on $_className {
+  static $_className _fromState(GoRouterState state) $_newFromState
+}
+''';
+    }
+    return '''
 extension $_extensionName on $_className {
   static $_className _fromState(GoRouterState state) $_newFromState
 
   String get location => GoRouteData.\$location($_locationArgs,$_locationQueryParams);
 
-  void go(BuildContext context) => context.go(location, extra: this);
+  void go(BuildContext context) =>
+      context.go(location${_extraParam != null ? ', extra: $extraFieldName' : ''});
 
-  void push(BuildContext context) => context.push(location, extra: this);
-} 
+  Future<T?> push<T>(BuildContext context) =>
+      context.push<T>(location${_extraParam != null ? ', extra: $extraFieldName' : ''});
+
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location${_extraParam != null ? ', extra: $extraFieldName' : ''});
+}
 ''';
+  }
 
   /// Returns this [RouteConfig] and all child [RouteConfig] instances.
   Iterable<RouteConfig> _flatten() sync* {
@@ -158,7 +234,7 @@ extension $_extensionName on $_className {
 
   /// Returns the `GoRoute` code for the annotated class.
   String _rootDefinition() => '''
-GoRoute get $_routeGetterName => ${_routeDefinition()};
+RouteBase get $_routeGetterName => ${_routeDefinition()};
 ''';
 
   /// Returns code representing the constant maps that contain the `enum` to
@@ -171,8 +247,15 @@ GoRoute get $_routeGetterName => ${_routeDefinition()};
         ...routeDef._ctorParams,
         ...routeDef._ctorQueryParams,
       ]) {
-        if (ctorParam.type.isEnum) {
-          enumParamTypes.add(ctorParam.type as InterfaceType);
+        DartType potentialEnumType = ctorParam.type;
+        if (potentialEnumType is ParameterizedType &&
+            (ctorParam.type as ParameterizedType).typeArguments.isNotEmpty) {
+          potentialEnumType =
+              (ctorParam.type as ParameterizedType).typeArguments.first;
+        }
+
+        if (potentialEnumType.isEnum) {
+          enumParamTypes.add(potentialEnumType as InterfaceType);
         }
       }
     }
@@ -182,14 +265,19 @@ GoRoute get $_routeGetterName => ${_routeDefinition()};
     }
   }
 
+  ParameterElement? get _extraParam => _ctor.parameters
+      .singleWhereOrNull((ParameterElement element) => element.isExtraField);
+
   String get _newFromState {
     final StringBuffer buffer = StringBuffer('=>');
-    if (_ctor.isConst && _ctorParams.isEmpty && _ctorQueryParams.isEmpty) {
+    if (_ctor.isConst &&
+        _ctorParams.isEmpty &&
+        _ctorQueryParams.isEmpty &&
+        _extraParam == null) {
       buffer.writeln('const ');
     }
 
-    final ParameterElement? extraParam = _ctor.parameters
-        .singleWhereOrNull((ParameterElement element) => element.isExtraField);
+    final ParameterElement? extraParam = _extraParam;
 
     buffer.writeln('$_className(');
     for (final ParameterElement param in <ParameterElement>[
@@ -209,7 +297,10 @@ GoRoute get $_routeGetterName => ${_routeDefinition()};
   String get _locationArgs {
     final Iterable<String> pathItems = _parsedPath.map((Token e) {
       if (e is ParameterToken) {
-        return '\${Uri.encodeComponent(${_encodeFor(e.name)})}';
+        // Enum types are encoded using a map, so we need a nullability check
+        // here to ensure it matches Uri.encodeComponent nullability
+        final DartType? type = _field(e.name)?.returnType;
+        return '\${Uri.encodeComponent(${_encodeFor(e.name)}${type?.isEnum ?? false ? '!' : ''})}';
       }
       if (e is PathToken) {
         return e.value;
@@ -219,7 +310,7 @@ GoRoute get $_routeGetterName => ${_routeDefinition()};
         'Token ($e) of type ${e.runtimeType} is not supported.',
       );
     });
-    return "'${pathItems.join('')}'";
+    return "'${pathItems.join()}'";
   }
 
   late final Set<String> _pathParams = Set<String>.unmodifiable(_parsedPath
@@ -249,13 +340,28 @@ GoRoute get $_routeGetterName => ${_routeDefinition()};
     final String routesBit = _children.isEmpty
         ? ''
         : '''
-routes: [${_children.map((RouteConfig e) => '${e._routeDefinition()},').join('')}],
+routes: [${_children.map((RouteConfig e) => '${e._routeDefinition()},').join()}],
 ''';
-
+    final String navigatorKeyParameterName =
+        _isShellRoute ? 'navigatorKey' : 'parentNavigatorKey';
+    final String navigatorKey = _key == null || _key!.isEmpty
+        ? ''
+        : '$navigatorKeyParameterName: $_key,';
+    if (_isShellRoute) {
+      return '''
+  ShellRouteData.\$route(
+    factory: $_extensionName._fromState,
+    $navigatorKey
+    $routesBit
+  )
+''';
+    }
     return '''
 GoRouteData.\$route(
       path: ${escapeDartString(_path)},
+      ${_name != null ? 'name: ${escapeDartString(_name!)},' : ''}
       factory: $_extensionName._fromState,
+      $navigatorKey
       $routesBit
 )
 ''';
@@ -263,21 +369,15 @@ GoRouteData.\$route(
 
   String _decodeFor(ParameterElement element) {
     if (element.isRequired) {
-      if (element.type.nullabilitySuffix == NullabilitySuffix.question) {
+      if (element.type.nullabilitySuffix == NullabilitySuffix.question &&
+          _pathParams.contains(element.name)) {
         throw InvalidGenerationSourceError(
-          'Required parameters cannot be nullable.',
-          element: element,
-        );
-      }
-
-      if (!_pathParams.contains(element.name)) {
-        throw InvalidGenerationSourceError(
-          'Missing param `${element.name}` in path.',
+          'Required parameters in the path cannot be nullable.',
           element: element,
         );
       }
     }
-    final String fromStateExpression = decodeParameter(element);
+    final String fromStateExpression = decodeParameter(element, _pathParams);
 
     if (element.isPositional) {
       return '$fromStateExpression,';
@@ -312,12 +412,26 @@ GoRouteData.\$route(
 
     final StringBuffer buffer = StringBuffer('queryParams: {\n');
 
-    for (final String param
-        in _ctorQueryParams.map((ParameterElement e) => e.name)) {
-      buffer.writeln(
-        'if ($param != null) ${escapeDartString(param.kebab)}: '
-        '${_encodeFor(param)},',
-      );
+    for (final ParameterElement param in _ctorQueryParams) {
+      final String parameterName = param.name;
+
+      final List<String> conditions = <String>[];
+      if (param.hasDefaultValue) {
+        if (param.type.isNullableType) {
+          throw NullableDefaultValueError(param);
+        }
+        conditions.add('$parameterName != ${param.defaultValueCode!}');
+      } else if (param.type.isNullableType) {
+        conditions.add('$parameterName != null');
+      }
+      String line = '';
+      if (conditions.isNotEmpty) {
+        line = 'if (${conditions.join(' && ')}) ';
+      }
+      line += '${escapeDartString(parameterName.kebab)}: '
+          '${_encodeFor(parameterName)},';
+
+      buffer.writeln(line);
     }
 
     buffer.writeln('},');
@@ -327,13 +441,7 @@ GoRouteData.\$route(
 
   late final List<ParameterElement> _ctorParams =
       _ctor.parameters.where((ParameterElement element) {
-    if (element.isRequired) {
-      if (element.isExtraField) {
-        throw InvalidGenerationSourceError(
-          'Parameters named `$extraFieldName` cannot be required.',
-          element: element,
-        );
-      }
+    if (element.isRequired && !element.isExtraField) {
       return true;
     }
     return false;
@@ -363,12 +471,18 @@ GoRouteData.\$route(
 String _enumMapConst(InterfaceType type) {
   assert(type.isEnum);
 
+  // TODO(stuartmorgan): Remove this ignore once 'analyze' can be set to
+  // 5.2+ (when Flutter 3.4+ is on stable).
+  // ignore: deprecated_member_use
   final String enumName = type.element.name;
 
   final StringBuffer buffer = StringBuffer('const ${enumMapName(type)} = {');
 
+  // TODO(stuartmorgan): Remove this ignore once 'analyze' can be set to
+  // 5.2+ (when Flutter 3.4+ is on stable).
+  // ignore: deprecated_member_use
   for (final FieldElement enumField in type.element.fields
-      .where((FieldElement element) => !element.isSynthetic)) {
+      .where((FieldElement element) => element.isEnumConstant)) {
     buffer.writeln(
       '$enumName.${enumField.name}: ${escapeDartString(enumField.name.kebab)},',
     );

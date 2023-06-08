@@ -52,7 +52,7 @@ class GoogleBenchmarkParser {
     )..removeWhere((String k, String v) => _kContextIgnoreKeys.contains(k));
 
     final List<MetricPoint> points = <MetricPoint>[];
-    for (final dynamic item in jsonResult['benchmarks']) {
+    for (final dynamic item in jsonResult['benchmarks'] as List<dynamic>) {
       _parseAnItem(item as Map<String, dynamic>, points, context);
     }
     return points;
@@ -74,8 +74,9 @@ void _parseAnItem(
       try {
         rawValue = item[subResult] as num?;
       } catch (e) {
+        // ignore: avoid_print
         print(
-            '$subResult: ${item[subResult]} (${item[subResult].runtimeType}) is not a number');
+            '$subResult: ${item[subResult]} (${(item[subResult] as Object?).runtimeType}) is not a number');
         rethrow;
       }
 

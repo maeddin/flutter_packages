@@ -4,6 +4,8 @@
 
 // ignore_for_file: public_member_api_docs
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -15,7 +17,7 @@ part 'main.g.dart';
 void main() => runApp(App());
 
 class App extends StatelessWidget {
-  App({Key? key}) : super(key: key);
+  App({super.key});
 
   final LoginInfo loginInfo = LoginInfo();
   static const String title = 'GoRouter Example: Named Routes';
@@ -37,16 +39,16 @@ class App extends StatelessWidget {
     routes: $appRoutes,
 
     // redirect to the login page if the user is not logged in
-    redirect: (GoRouterState state) {
+    redirect: (BuildContext context, GoRouterState state) {
       final bool loggedIn = loginInfo.loggedIn;
 
-      // check just the subloc in case there are query parameters
+      // check just the matchedLocation in case there are query parameters
       final String loginLoc = const LoginRoute().location;
-      final bool goingToLogin = state.subloc == loginLoc;
+      final bool goingToLogin = state.matchedLocation == loginLoc;
 
       // the user is not logged in and not headed to /login, they need to login
       if (!loggedIn && !goingToLogin) {
-        return LoginRoute(fromPage: state.subloc).location;
+        return LoginRoute(fromPage: state.matchedLocation).location;
       }
 
       // the user is logged in and headed to /login, no need to login again
@@ -76,14 +78,15 @@ class App extends StatelessWidget {
           ],
         ),
       ],
-    )
+    ),
+    TypedGoRoute<FamilyCountRoute>(path: 'family-count/:count'),
   ],
 )
 class HomeRoute extends GoRouteData {
   const HomeRoute();
 
   @override
-  Widget build(BuildContext context) => const HomeScreen();
+  Widget build(BuildContext context, GoRouterState state) => const HomeScreen();
 }
 
 @TypedGoRoute<LoginRoute>(
@@ -95,7 +98,8 @@ class LoginRoute extends GoRouteData {
   final String? fromPage;
 
   @override
-  Widget build(BuildContext context) => LoginScreen(from: fromPage);
+  Widget build(BuildContext context, GoRouterState state) =>
+      LoginScreen(from: fromPage);
 }
 
 class FamilyRoute extends GoRouteData {
@@ -104,7 +108,8 @@ class FamilyRoute extends GoRouteData {
   final String fid;
 
   @override
-  Widget build(BuildContext context) => FamilyScreen(family: familyById(fid));
+  Widget build(BuildContext context, GoRouterState state) =>
+      FamilyScreen(family: familyById(fid));
 }
 
 class PersonRoute extends GoRouteData {
@@ -114,7 +119,7 @@ class PersonRoute extends GoRouteData {
   final int pid;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, GoRouterState state) {
     final Family family = familyById(fid);
     final Person person = family.person(pid);
     return PersonScreen(family: family, person: person);
@@ -130,12 +135,13 @@ class PersonDetailsRoute extends GoRouteData {
   final int? $extra;
 
   @override
-  Page<void> buildPage(BuildContext context) {
+  Page<void> buildPage(BuildContext context, GoRouterState state) {
     final Family family = familyById(fid);
     final Person person = family.person(pid);
 
     return MaterialPage<Object>(
       fullscreenDialog: true,
+      key: state.pageKey,
       child: PersonDetailsPage(
         family: family,
         person: person,
@@ -146,8 +152,19 @@ class PersonDetailsRoute extends GoRouteData {
   }
 }
 
+class FamilyCountRoute extends GoRouteData {
+  const FamilyCountRoute(this.count);
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) => FamilyCountScreen(
+        count: count,
+      );
+}
+
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -158,14 +175,38 @@ class HomeScreen extends StatelessWidget {
         title: const Text(App.title),
         centerTitle: true,
         actions: <Widget>[
-          ElevatedButton(
-            onPressed: () => const PersonRoute('f1', 1).push(context),
-            child: const Text('Push a route'),
-          ),
-          IconButton(
-            onPressed: info.logout,
-            tooltip: 'Logout: ${info.userName}',
-            icon: const Icon(Icons.logout),
+          PopupMenuButton<String>(
+            itemBuilder: (BuildContext context) {
+              return <PopupMenuItem<String>>[
+                PopupMenuItem<String>(
+                  value: '1',
+                  child: const Text('Push w/o return value'),
+                  onTap: () => const PersonRoute('f1', 1).push(context),
+                ),
+                PopupMenuItem<String>(
+                  value: '2',
+                  child: const Text('Push w/ return value'),
+                  onTap: () async {
+                    unawaited(FamilyCountRoute(familyData.length)
+                        .push<int>(context)
+                        .then((int? value) {
+                      if (value != null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Age was: $value'),
+                          ),
+                        );
+                      }
+                    }));
+                  },
+                ),
+                PopupMenuItem<String>(
+                  value: '3',
+                  child: Text('Logout: ${info.userName}'),
+                  onTap: () => info.logout(),
+                ),
+              ];
+            },
           ),
         ],
       ),
@@ -183,7 +224,7 @@ class HomeScreen extends StatelessWidget {
 }
 
 class FamilyScreen extends StatelessWidget {
-  const FamilyScreen({required this.family, Key? key}) : super(key: key);
+  const FamilyScreen({required this.family, super.key});
   final Family family;
 
   @override
@@ -202,8 +243,7 @@ class FamilyScreen extends StatelessWidget {
 }
 
 class PersonScreen extends StatelessWidget {
-  const PersonScreen({required this.family, required this.person, Key? key})
-      : super(key: key);
+  const PersonScreen({required this.family, required this.person, super.key});
 
   final Family family;
   final Person person;
@@ -219,12 +259,11 @@ class PersonScreen extends StatelessWidget {
               title: Text(
                   '${person.name} ${family.name} is ${person.age} years old'),
             ),
-            for (MapEntry<PersonDetails, String> entry
+            for (final MapEntry<PersonDetails, String> entry
                 in person.details.entries)
               ListTile(
                 title: Text(
-                  // TODO(kevmoo): replace `split` with `name` when min SDK is 2.15
-                  '${entry.key.toString().split('.').last} - ${entry.value}',
+                  '${entry.key.name} - ${entry.value}',
                 ),
                 trailing: OutlinedButton(
                   onPressed: () => PersonDetailsRoute(
@@ -249,8 +288,8 @@ class PersonDetailsPage extends StatelessWidget {
     required this.person,
     required this.detailsKey,
     this.extra,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   final Family family;
   final Person person;
@@ -276,8 +315,37 @@ class PersonDetailsPage extends StatelessWidget {
       );
 }
 
+class FamilyCountScreen extends StatelessWidget {
+  const FamilyCountScreen({super.key, required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Family Count')),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Center(
+                child: Text(
+                  'There are $count families',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () => context.pop(count),
+                child: Text('Pop with return value $count'),
+              ),
+            ],
+          ),
+        ),
+      );
+}
+
 class LoginScreen extends StatelessWidget {
-  const LoginScreen({this.from, Key? key}) : super(key: key);
+  const LoginScreen({this.from, super.key});
   final String? from;
 
   @override

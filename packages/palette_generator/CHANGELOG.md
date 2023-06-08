@@ -1,7 +1,13 @@
 ## NEXT
 
+* Updates minimum supported SDK version to Flutter 3.3/Dart 2.18.
+* Aligns Dart and Flutter SDK constraints.
+
+## 0.3.3+2
+
 * Ignores lint warnings from new changes in Flutter master.
 * Suppresses deprecation warnings for changes to Flutter master.
+* Fixes lint warnings.
 
 ## 0.3.3+1
 

@@ -12,6 +12,10 @@ import '../misc/extensions.dart';
 bool isMaterialApp(Element elem) =>
     elem.findAncestorWidgetOfExactType<MaterialApp>() != null;
 
+/// Creates a Material HeroController.
+HeroController createMaterialHeroController() =>
+    MaterialApp.createMaterialHeroController();
+
 /// Builds a Material page.
 MaterialPage<void> pageBuilderForMaterialApp({
   required LocalKey key,
@@ -31,7 +35,7 @@ MaterialPage<void> pageBuilderForMaterialApp({
 /// Default error page implementation for Material.
 class MaterialErrorScreen extends StatelessWidget {
   /// Provide an exception to this page for it to be displayed.
-  const MaterialErrorScreen(this.error, {Key? key}) : super(key: key);
+  const MaterialErrorScreen(this.error, {super.key});
 
   /// The exception to be displayed.
   final Exception? error;

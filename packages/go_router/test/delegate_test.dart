@@ -8,6 +8,8 @@ import 'package:go_router/go_router.dart';
 import 'package:go_router/src/match.dart';
 import 'package:go_router/src/misc/error_screen.dart';
 
+import 'test_helpers.dart';
+
 Future<GoRouter> createGoRouter(
   WidgetTester tester, {
   Listenable? refreshListenable,
@@ -16,6 +18,7 @@ Future<GoRouter> createGoRouter(
     initialLocation: '/',
     routes: <GoRoute>[
       GoRoute(path: '/', builder: (_, __) => const DummyStatefulWidget()),
+      GoRoute(path: '/a', builder: (_, __) => const DummyStatefulWidget()),
       GoRoute(
         path: '/error',
         builder: (_, __) => const ErrorScreen(null),
@@ -24,9 +27,48 @@ Future<GoRouter> createGoRouter(
     refreshListenable: refreshListenable,
   );
   await tester.pumpWidget(MaterialApp.router(
-      routeInformationProvider: router.routeInformationProvider,
-      routeInformationParser: router.routeInformationParser,
-      routerDelegate: router.routerDelegate));
+    routerConfig: router,
+  ));
+  return router;
+}
+
+Future<GoRouter> createGoRouterWithStatefulShellRoute(
+    WidgetTester tester) async {
+  final GoRouter router = GoRouter(
+    initialLocation: '/',
+    routes: <RouteBase>[
+      GoRoute(path: '/', builder: (_, __) => const DummyStatefulWidget()),
+      GoRoute(path: '/a', builder: (_, __) => const DummyStatefulWidget()),
+      StatefulShellRoute.indexedStack(branches: <StatefulShellBranch>[
+        StatefulShellBranch(routes: <RouteBase>[
+          GoRoute(
+              path: '/c',
+              builder: (_, __) => const DummyStatefulWidget(),
+              routes: <RouteBase>[
+                GoRoute(
+                    path: 'c1',
+                    builder: (_, __) => const DummyStatefulWidget()),
+                GoRoute(
+                    path: 'c2',
+                    builder: (_, __) => const DummyStatefulWidget()),
+              ]),
+        ]),
+        StatefulShellBranch(routes: <RouteBase>[
+          GoRoute(
+              path: '/d',
+              builder: (_, __) => const DummyStatefulWidget(),
+              routes: <RouteBase>[
+                GoRoute(
+                    path: 'd1',
+                    builder: (_, __) => const DummyStatefulWidget()),
+              ]),
+        ]),
+      ], builder: mockStackedShellBuilder),
+    ],
+  );
+  await tester.pumpWidget(MaterialApp.router(
+    routerConfig: router,
+  ));
   return router;
 }
 
@@ -35,25 +77,111 @@ void main() {
     testWidgets('removes the last element', (WidgetTester tester) async {
       final GoRouter goRouter = await createGoRouter(tester)
         ..push('/error');
+      await tester.pumpAndSettle();
 
-      goRouter.routerDelegate.addListener(expectAsync0(() {}));
-      final RouteMatch last = goRouter.routerDelegate.matches.matches.last;
-      goRouter.routerDelegate.pop();
-      expect(goRouter.routerDelegate.matches.matches.length, 1);
-      expect(goRouter.routerDelegate.matches.matches.contains(last), false);
+      final RouteMatch last =
+          goRouter.routerDelegate.currentConfiguration.matches.last;
+      await goRouter.routerDelegate.popRoute();
+      expect(goRouter.routerDelegate.currentConfiguration.matches.length, 1);
+      expect(
+          goRouter.routerDelegate.currentConfiguration.matches.contains(last),
+          false);
     });
 
-    testWidgets('throws when it pops more than matches count',
+    testWidgets('pops more than matches count should return false',
         (WidgetTester tester) async {
       final GoRouter goRouter = await createGoRouter(tester)
         ..push('/error');
-      expect(
-        () => goRouter.routerDelegate
-          ..pop()
-          ..pop(),
-        throwsA(isAssertionError),
-      );
+      await tester.pumpAndSettle();
+      await goRouter.routerDelegate.popRoute();
+      expect(await goRouter.routerDelegate.popRoute(), isFalse);
     });
+  });
+
+  group('push', () {
+    testWidgets(
+      'It should return different pageKey when push is called',
+      (WidgetTester tester) async {
+        final GoRouter goRouter = await createGoRouter(tester);
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 1);
+
+        goRouter.push('/a');
+        await tester.pumpAndSettle();
+
+        goRouter.push('/a');
+        await tester.pumpAndSettle();
+
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 3);
+        expect(
+          goRouter.routerDelegate.currentConfiguration.matches[1].pageKey,
+          isNot(equals(
+              goRouter.routerDelegate.currentConfiguration.matches[2].pageKey)),
+        );
+      },
+    );
+
+    testWidgets(
+      'It should successfully push a route from outside the the current '
+      'StatefulShellRoute',
+      (WidgetTester tester) async {
+        final GoRouter goRouter =
+            await createGoRouterWithStatefulShellRoute(tester);
+        goRouter.push('/c/c1');
+        await tester.pumpAndSettle();
+
+        goRouter.push('/a');
+        await tester.pumpAndSettle();
+
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 3);
+        expect(
+          goRouter.routerDelegate.currentConfiguration.matches[1].pageKey,
+          isNot(equals(
+              goRouter.routerDelegate.currentConfiguration.matches[2].pageKey)),
+        );
+      },
+    );
+
+    testWidgets(
+      'It should successfully push a route that is a descendant of the current '
+      'StatefulShellRoute branch',
+      (WidgetTester tester) async {
+        final GoRouter goRouter =
+            await createGoRouterWithStatefulShellRoute(tester);
+        goRouter.push('/c/c1');
+        await tester.pumpAndSettle();
+
+        goRouter.push('/c/c2');
+        await tester.pumpAndSettle();
+
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 3);
+        expect(
+          goRouter.routerDelegate.currentConfiguration.matches[1].pageKey,
+          isNot(equals(
+              goRouter.routerDelegate.currentConfiguration.matches[2].pageKey)),
+        );
+      },
+    );
+
+    testWidgets(
+      'It should successfully push the root of the current StatefulShellRoute '
+      'branch upon itself',
+      (WidgetTester tester) async {
+        final GoRouter goRouter =
+            await createGoRouterWithStatefulShellRoute(tester);
+        goRouter.push('/c');
+        await tester.pumpAndSettle();
+
+        goRouter.push('/c');
+        await tester.pumpAndSettle();
+
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 3);
+        expect(
+          goRouter.routerDelegate.currentConfiguration.matches[1].pageKey,
+          isNot(equals(
+              goRouter.routerDelegate.currentConfiguration.matches[2].pageKey)),
+        );
+      },
+    );
   });
 
   group('canPop', () {
@@ -62,7 +190,8 @@ void main() {
       (WidgetTester tester) async {
         final GoRouter goRouter = await createGoRouter(tester);
 
-        expect(goRouter.routerDelegate.matches.matches.length, 1);
+        await tester.pumpAndSettle();
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 1);
         expect(goRouter.routerDelegate.canPop(), false);
       },
     );
@@ -70,61 +199,91 @@ void main() {
       'It should return true if there is more than 1 match in the stack',
       (WidgetTester tester) async {
         final GoRouter goRouter = await createGoRouter(tester)
-          ..push('/error');
+          ..push('/a');
 
-        expect(goRouter.routerDelegate.matches.matches.length, 2);
+        await tester.pumpAndSettle();
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 2);
         expect(goRouter.routerDelegate.canPop(), true);
       },
     );
   });
 
-  group('replace', () {
+  group('pushReplacement', () {
+    testWidgets('It should replace the last match with the given one',
+        (WidgetTester tester) async {
+      final GoRouter goRouter = GoRouter(
+        initialLocation: '/',
+        routes: <GoRoute>[
+          GoRoute(path: '/', builder: (_, __) => const SizedBox()),
+          GoRoute(path: '/page-0', builder: (_, __) => const SizedBox()),
+          GoRoute(path: '/page-1', builder: (_, __) => const SizedBox()),
+        ],
+      );
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerConfig: goRouter,
+        ),
+      );
+
+      goRouter.push('/page-0');
+
+      goRouter.routerDelegate.addListener(expectAsync0(() {}));
+      final RouteMatch first =
+          goRouter.routerDelegate.currentConfiguration.matches.first;
+      final RouteMatch last = goRouter.routerDelegate.currentConfiguration.last;
+      goRouter.pushReplacement('/page-1');
+      expect(goRouter.routerDelegate.currentConfiguration.matches.length, 2);
+      expect(
+        goRouter.routerDelegate.currentConfiguration.matches.first,
+        first,
+        reason: 'The first match should still be in the list of matches',
+      );
+      expect(
+        goRouter.routerDelegate.currentConfiguration.last,
+        isNot(last),
+        reason: 'The last match should have been removed',
+      );
+      expect(
+        (goRouter.routerDelegate.currentConfiguration.last
+                as ImperativeRouteMatch)
+            .matches
+            .uri
+            .toString(),
+        '/page-1',
+        reason: 'The new location should have been pushed',
+      );
+    });
+
     testWidgets(
-      'It should replace the last match with the given one',
+      'It should return different pageKey when pushReplacement is called',
       (WidgetTester tester) async {
-        final GoRouter goRouter = GoRouter(
-          initialLocation: '/',
-          routes: <GoRoute>[
-            GoRoute(path: '/', builder: (_, __) => const SizedBox()),
-            GoRoute(path: '/page-0', builder: (_, __) => const SizedBox()),
-            GoRoute(path: '/page-1', builder: (_, __) => const SizedBox()),
-          ],
-        );
-        await tester.pumpWidget(
-          MaterialApp.router(
-            routeInformationProvider: goRouter.routeInformationProvider,
-            routeInformationParser: goRouter.routeInformationParser,
-            routerDelegate: goRouter.routerDelegate,
-          ),
+        final GoRouter goRouter = await createGoRouter(tester);
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 1);
+        expect(
+          goRouter.routerDelegate.currentConfiguration.matches[0].pageKey,
+          isNotNull,
         );
 
-        goRouter.push('/page-0');
+        goRouter.push('/a');
+        await tester.pumpAndSettle();
 
-        goRouter.routerDelegate.addListener(expectAsync0(() {}));
-        final RouteMatch first = goRouter.routerDelegate.matches.matches.first;
-        final RouteMatch last = goRouter.routerDelegate.matches.last;
-        goRouter.replace('/page-1');
-        expect(goRouter.routerDelegate.matches.matches.length, 2);
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 2);
+        final ValueKey<String> prev =
+            goRouter.routerDelegate.currentConfiguration.matches.last.pageKey;
+
+        goRouter.pushReplacement('/a');
+        await tester.pumpAndSettle();
+
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 2);
         expect(
-          goRouter.routerDelegate.matches.matches.first,
-          first,
-          reason: 'The first match should still be in the list of matches',
-        );
-        expect(
-          goRouter.routerDelegate.matches.last,
-          isNot(last),
-          reason: 'The last match should have been removed',
-        );
-        expect(
-          goRouter.routerDelegate.matches.last.fullpath,
-          '/page-1',
-          reason: 'The new location should have been pushed',
+          goRouter.routerDelegate.currentConfiguration.matches.last.pageKey,
+          isNot(equals(prev)),
         );
       },
     );
   });
 
-  group('replaceNamed', () {
+  group('pushReplacementNamed', () {
     testWidgets(
       'It should replace the last match with the given one',
       (WidgetTester tester) async {
@@ -144,43 +303,261 @@ void main() {
         );
         await tester.pumpWidget(
           MaterialApp.router(
-            routeInformationProvider: goRouter.routeInformationProvider,
-            routeInformationParser: goRouter.routeInformationParser,
-            routerDelegate: goRouter.routerDelegate,
+            routerConfig: goRouter,
           ),
         );
 
         goRouter.pushNamed('page0');
 
         goRouter.routerDelegate.addListener(expectAsync0(() {}));
-        final RouteMatch first = goRouter.routerDelegate.matches.matches.first;
-        final RouteMatch last = goRouter.routerDelegate.matches.last;
-        goRouter.replaceNamed('page1');
-        expect(goRouter.routerDelegate.matches.matches.length, 2);
+        final RouteMatch first =
+            goRouter.routerDelegate.currentConfiguration.matches.first;
+        final RouteMatch last =
+            goRouter.routerDelegate.currentConfiguration.last;
+        goRouter.pushReplacementNamed('page1');
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 2);
         expect(
-          goRouter.routerDelegate.matches.matches.first,
+          goRouter.routerDelegate.currentConfiguration.matches.first,
           first,
           reason: 'The first match should still be in the list of matches',
         );
         expect(
-          goRouter.routerDelegate.matches.last,
+          goRouter.routerDelegate.currentConfiguration.last,
           isNot(last),
           reason: 'The last match should have been removed',
         );
         expect(
-          goRouter.routerDelegate.matches.last,
-          isA<RouteMatch>()
-              .having(
-                (RouteMatch match) => match.fullpath,
-                'match.fullpath',
-                '/page-1',
-              )
-              .having(
-                (RouteMatch match) => match.route.name,
-                'match.route.name',
-                'page1',
-              ),
+          goRouter.routerDelegate.currentConfiguration.last,
+          isA<RouteMatch>().having(
+            (RouteMatch match) => (match.route as GoRoute).name,
+            'match.route.name',
+            'page1',
+          ),
           reason: 'The new location should have been pushed',
+        );
+      },
+    );
+  });
+
+  group('replace', () {
+    testWidgets('It should replace the last match with the given one',
+        (WidgetTester tester) async {
+      final GoRouter goRouter = GoRouter(
+        initialLocation: '/',
+        routes: <GoRoute>[
+          GoRoute(path: '/', builder: (_, __) => const SizedBox()),
+          GoRoute(path: '/page-0', builder: (_, __) => const SizedBox()),
+          GoRoute(path: '/page-1', builder: (_, __) => const SizedBox()),
+        ],
+      );
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerConfig: goRouter,
+        ),
+      );
+
+      goRouter.push('/page-0');
+
+      goRouter.routerDelegate.addListener(expectAsync0(() {}));
+      final RouteMatch first =
+          goRouter.routerDelegate.currentConfiguration.matches.first;
+      final RouteMatch last = goRouter.routerDelegate.currentConfiguration.last;
+      goRouter.replace('/page-1');
+      expect(goRouter.routerDelegate.currentConfiguration.matches.length, 2);
+      expect(
+        goRouter.routerDelegate.currentConfiguration.matches.first,
+        first,
+        reason: 'The first match should still be in the list of matches',
+      );
+      expect(
+        goRouter.routerDelegate.currentConfiguration.last,
+        isNot(last),
+        reason: 'The last match should have been removed',
+      );
+      expect(
+        (goRouter.routerDelegate.currentConfiguration.last
+                as ImperativeRouteMatch)
+            .matches
+            .uri
+            .toString(),
+        '/page-1',
+        reason: 'The new location should have been pushed',
+      );
+    });
+
+    testWidgets(
+      'It should use the same pageKey when replace is called (with the same path)',
+      (WidgetTester tester) async {
+        final GoRouter goRouter = await createGoRouter(tester);
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 1);
+        expect(
+          goRouter.routerDelegate.currentConfiguration.matches[0].pageKey,
+          isNotNull,
+        );
+
+        goRouter.push('/a');
+        await tester.pumpAndSettle();
+
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 2);
+        final ValueKey<String> prev =
+            goRouter.routerDelegate.currentConfiguration.matches.last.pageKey;
+
+        goRouter.replace('/a');
+        await tester.pumpAndSettle();
+
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 2);
+        expect(
+          goRouter.routerDelegate.currentConfiguration.matches.last.pageKey,
+          prev,
+        );
+      },
+    );
+
+    testWidgets(
+      'It should use the same pageKey when replace is called (with a different path)',
+      (WidgetTester tester) async {
+        final GoRouter goRouter = await createGoRouter(tester);
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 1);
+        expect(
+          goRouter.routerDelegate.currentConfiguration.matches[0].pageKey,
+          isNotNull,
+        );
+
+        goRouter.push('/a');
+        await tester.pumpAndSettle();
+
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 2);
+        final ValueKey<String> prev =
+            goRouter.routerDelegate.currentConfiguration.matches.last.pageKey;
+
+        goRouter.replace('/');
+        await tester.pumpAndSettle();
+
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 2);
+        expect(
+          goRouter.routerDelegate.currentConfiguration.matches.last.pageKey,
+          prev,
+        );
+      },
+    );
+  });
+
+  group('replaceNamed', () {
+    Future<GoRouter> createGoRouter(
+      WidgetTester tester, {
+      Listenable? refreshListenable,
+    }) async {
+      final GoRouter router = GoRouter(
+        initialLocation: '/',
+        routes: <GoRoute>[
+          GoRoute(
+            path: '/',
+            name: 'home',
+            builder: (_, __) => const SizedBox(),
+          ),
+          GoRoute(
+            path: '/page-0',
+            name: 'page0',
+            builder: (_, __) => const SizedBox(),
+          ),
+          GoRoute(
+            path: '/page-1',
+            name: 'page1',
+            builder: (_, __) => const SizedBox(),
+          ),
+        ],
+      );
+      await tester.pumpWidget(MaterialApp.router(
+        routerConfig: router,
+      ));
+      return router;
+    }
+
+    testWidgets('It should replace the last match with the given one',
+        (WidgetTester tester) async {
+      final GoRouter goRouter = await createGoRouter(tester);
+
+      goRouter.pushNamed('page0');
+
+      goRouter.routerDelegate.addListener(expectAsync0(() {}));
+      final RouteMatch first =
+          goRouter.routerDelegate.currentConfiguration.matches.first;
+      final RouteMatch last = goRouter.routerDelegate.currentConfiguration.last;
+      goRouter.replaceNamed('page1');
+      expect(goRouter.routerDelegate.currentConfiguration.matches.length, 2);
+      expect(
+        goRouter.routerDelegate.currentConfiguration.matches.first,
+        first,
+        reason: 'The first match should still be in the list of matches',
+      );
+      expect(
+        goRouter.routerDelegate.currentConfiguration.last,
+        isNot(last),
+        reason: 'The last match should have been removed',
+      );
+      expect(
+        (goRouter.routerDelegate.currentConfiguration.last
+                as ImperativeRouteMatch)
+            .matches
+            .uri
+            .toString(),
+        '/page-1',
+        reason: 'The new location should have been pushed',
+      );
+    });
+
+    testWidgets(
+      'It should use the same pageKey when replace is called with the same path',
+      (WidgetTester tester) async {
+        final GoRouter goRouter = await createGoRouter(tester);
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 1);
+        expect(
+          goRouter.routerDelegate.currentConfiguration.matches.first.pageKey,
+          isNotNull,
+        );
+
+        goRouter.pushNamed('page0');
+        await tester.pumpAndSettle();
+
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 2);
+        final ValueKey<String> prev =
+            goRouter.routerDelegate.currentConfiguration.matches.last.pageKey;
+
+        goRouter.replaceNamed('page0');
+        await tester.pumpAndSettle();
+
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 2);
+        expect(
+          goRouter.routerDelegate.currentConfiguration.matches.last.pageKey,
+          prev,
+        );
+      },
+    );
+
+    testWidgets(
+      'It should use a new pageKey when replace is called with a different path',
+      (WidgetTester tester) async {
+        final GoRouter goRouter = await createGoRouter(tester);
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 1);
+        expect(
+          goRouter.routerDelegate.currentConfiguration.matches.first.pageKey,
+          isNotNull,
+        );
+
+        goRouter.pushNamed('page0');
+        await tester.pumpAndSettle();
+
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 2);
+        final ValueKey<String> prev =
+            goRouter.routerDelegate.currentConfiguration.matches.last.pageKey;
+
+        goRouter.replaceNamed('home');
+        await tester.pumpAndSettle();
+
+        expect(goRouter.routerDelegate.currentConfiguration.matches.length, 2);
+        expect(
+          goRouter.routerDelegate.currentConfiguration.matches.last.pageKey,
+          prev,
         );
       },
     );
@@ -208,7 +585,7 @@ class FakeRefreshListenable extends ChangeNotifier {
 }
 
 class DummyStatefulWidget extends StatefulWidget {
-  const DummyStatefulWidget({Key? key}) : super(key: key);
+  const DummyStatefulWidget({super.key});
 
   @override
   State<DummyStatefulWidget> createState() => _DummyStatefulWidgetState();

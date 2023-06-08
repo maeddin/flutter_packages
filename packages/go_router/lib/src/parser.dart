@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
+import '../go_router.dart';
 import 'configuration.dart';
 import 'information_provider.dart';
 import 'logging.dart';
 import 'match.dart';
-import 'matching.dart';
-import 'redirection.dart';
 
 /// Converts between incoming URLs and a [RouteMatchList] using [RouteMatcher].
 /// Also performs redirection using [RouteRedirector].
@@ -18,110 +20,142 @@ class GoRouteInformationParser extends RouteInformationParser<RouteMatchList> {
   /// Creates a [GoRouteInformationParser].
   GoRouteInformationParser({
     required this.configuration,
-    this.debugRequireGoRouteInformationProvider = false,
-  })  : matcher = RouteMatcher(configuration),
-        redirector = redirect;
+  }) : _routeMatchListCodec = RouteMatchListCodec(configuration);
 
-  /// The route configuration for the app.
+  /// The route configuration used for parsing [RouteInformation]s.
   final RouteConfiguration configuration;
 
-  /// The route matcher.
-  final RouteMatcher matcher;
+  final RouteMatchListCodec _routeMatchListCodec;
 
-  /// The route redirector.
-  final RouteRedirector redirector;
+  final Random _random = Random();
 
-  /// A debug property to assert [GoRouteInformationProvider] is in use along
-  /// with this parser.
+  /// The future of current route parsing.
   ///
-  /// An assertion error will be thrown if this property set to true and the
-  /// [GoRouteInformationProvider] is not in use.
-  ///
-  /// Defaults to false.
-  final bool debugRequireGoRouteInformationProvider;
+  /// This is used for testing asynchronous redirection.
+  @visibleForTesting
+  Future<RouteMatchList>? debugParserFuture;
 
   /// Called by the [Router]. The
   @override
-  Future<RouteMatchList> parseRouteInformation(
+  Future<RouteMatchList> parseRouteInformationWithDependencies(
     RouteInformation routeInformation,
+    BuildContext context,
   ) {
-    assert(() {
-      if (debugRequireGoRouteInformationProvider) {
-        assert(
-          routeInformation is DebugGoRouteInformation,
-          'This GoRouteInformationParser needs to be used with '
-          'GoRouteInformationProvider, did you forget to pass in '
-          'GoRouter.routeInformationProvider to the Router constructor?',
-        );
-      }
-      return true;
-    }());
-    try {
-      late final RouteMatchList initialMatches;
-      try {
-        initialMatches = matcher.findMatch(routeInformation.location!,
-            extra: routeInformation.state);
-      } on MatcherError {
-        log.info('No initial matches: ${routeInformation.location}');
+    assert(routeInformation.state != null);
+    final Object state = routeInformation.state!;
 
-        // If there is a matching error for the initial location, we should
-        // still try to process the top-level redirects.
-        initialMatches = RouteMatchList.empty();
-      }
-      final RouteMatchList matches = redirector(
-          initialMatches, configuration, matcher,
-          extra: routeInformation.state);
-      if (matches.isEmpty) {
-        return SynchronousFuture<RouteMatchList>(_errorScreen(
-            Uri.parse(routeInformation.location!),
-            MatcherError('no routes for location', routeInformation.location!)
-                .toString()));
-      }
-
-      // Use [SynchronousFuture] so that the initial url is processed
-      // synchronously and remove unwanted initial animations on deep-linking
-      return SynchronousFuture<RouteMatchList>(matches);
-    } on RedirectionError catch (e) {
-      log.info('Redirection error: ${e.message}');
-      final Uri uri = e.location;
-      return SynchronousFuture<RouteMatchList>(_errorScreen(uri, e.message));
-    } on MatcherError catch (e) {
-      // The RouteRedirector uses the matcher to find the match, so a match
-      // exception can happen during redirection. For example, the redirector
-      // redirects from `/a` to `/b`, it needs to get the matches for `/b`.
-      log.info('Match error: ${e.message}');
-      final Uri uri = Uri.parse(e.location);
-      return SynchronousFuture<RouteMatchList>(_errorScreen(uri, e.message));
+    if (state is! RouteInformationState) {
+      // This is a result of browser backward/forward button or state
+      // restoration. In this case, the route match list is already stored in
+      // the state.
+      final RouteMatchList matchList =
+          _routeMatchListCodec.decode(state as Map<Object?, Object?>);
+      return debugParserFuture = _redirect(context, matchList);
     }
+
+    late final RouteMatchList initialMatches;
+    initialMatches =
+        // TODO(chunhtai): remove this ignore and migrate the code
+        // https://github.com/flutter/flutter/issues/124045.
+        // ignore: deprecated_member_use, unnecessary_non_null_assertion
+        configuration.findMatch(routeInformation.location!, extra: state.extra);
+    if (initialMatches.isError) {
+      // TODO(chunhtai): remove this ignore and migrate the code
+      // https://github.com/flutter/flutter/issues/124045.
+      // ignore: deprecated_member_use
+      log.info('No initial matches: ${routeInformation.location}');
+    }
+
+    return debugParserFuture = _redirect(
+      context,
+      initialMatches,
+    ).then<RouteMatchList>((RouteMatchList matchList) {
+      return _updateRouteMatchList(
+        matchList,
+        baseRouteMatchList: state.baseRouteMatchList,
+        completer: state.completer,
+        type: state.type,
+      );
+    });
+  }
+
+  @override
+  Future<RouteMatchList> parseRouteInformation(
+      RouteInformation routeInformation) {
+    throw UnimplementedError(
+        'use parseRouteInformationWithDependencies instead');
   }
 
   /// for use by the Router architecture as part of the RouteInformationParser
   @override
-  RouteInformation restoreRouteInformation(RouteMatchList configuration) {
+  RouteInformation? restoreRouteInformation(RouteMatchList configuration) {
+    if (configuration.isEmpty) {
+      return null;
+    }
+    if (GoRouter.optionURLReflectsImperativeAPIs &&
+        configuration.matches.last is ImperativeRouteMatch) {
+      configuration =
+          (configuration.matches.last as ImperativeRouteMatch).matches;
+    }
     return RouteInformation(
-      location: configuration.location.toString(),
-      state: configuration.extra,
+      // TODO(chunhtai): remove this ignore and migrate the code
+      // https://github.com/flutter/flutter/issues/124045.
+      // ignore: deprecated_member_use
+      location: configuration.uri.toString(),
+      state: _routeMatchListCodec.encode(configuration),
     );
   }
 
-  /// Creates a match that routes to the error page.
-  RouteMatchList _errorScreen(Uri uri, String errorMessage) {
-    final Exception error = Exception(errorMessage);
-    return RouteMatchList(<RouteMatch>[
-      RouteMatch(
-        subloc: uri.path,
-        fullpath: uri.path,
-        encodedParams: <String, String>{},
-        queryParams: uri.queryParameters,
-        extra: null,
-        error: error,
-        route: GoRoute(
-          path: uri.toString(),
-          pageBuilder: (BuildContext context, GoRouterState state) {
-            throw UnimplementedError();
-          },
-        ),
-      ),
-    ]);
+  Future<RouteMatchList> _redirect(
+      BuildContext context, RouteMatchList routeMatch) {
+    final FutureOr<RouteMatchList> redirectedFuture = configuration
+        .redirect(context, routeMatch, redirectHistory: <RouteMatchList>[]);
+    if (redirectedFuture is RouteMatchList) {
+      return SynchronousFuture<RouteMatchList>(redirectedFuture);
+    }
+    return redirectedFuture;
+  }
+
+  RouteMatchList _updateRouteMatchList(
+    RouteMatchList newMatchList, {
+    required RouteMatchList? baseRouteMatchList,
+    required Completer<Object?>? completer,
+    required NavigatingType type,
+  }) {
+    switch (type) {
+      case NavigatingType.push:
+        return baseRouteMatchList!.push(
+          ImperativeRouteMatch(
+            pageKey: _getUniqueValueKey(),
+            completer: completer!,
+            matches: newMatchList,
+          ),
+        );
+      case NavigatingType.pushReplacement:
+        final RouteMatch routeMatch = baseRouteMatchList!.last;
+        return baseRouteMatchList.remove(routeMatch).push(
+              ImperativeRouteMatch(
+                pageKey: _getUniqueValueKey(),
+                completer: completer!,
+                matches: newMatchList,
+              ),
+            );
+      case NavigatingType.replace:
+        final RouteMatch routeMatch = baseRouteMatchList!.last;
+        return baseRouteMatchList.remove(routeMatch).push(
+              ImperativeRouteMatch(
+                pageKey: routeMatch.pageKey,
+                completer: completer!,
+                matches: newMatchList,
+              ),
+            );
+      case NavigatingType.go:
+        return newMatchList;
+    }
+  }
+
+  ValueKey<String> _getUniqueValueKey() {
+    return ValueKey<String>(String.fromCharCodes(
+        List<int>.generate(32, (_) => _random.nextInt(33) + 89)));
   }
 }

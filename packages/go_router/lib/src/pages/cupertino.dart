@@ -11,6 +11,10 @@ import '../misc/extensions.dart';
 bool isCupertinoApp(Element elem) =>
     elem.findAncestorWidgetOfExactType<CupertinoApp>() != null;
 
+/// Creates a Cupertino HeroController.
+HeroController createCupertinoHeroController() =>
+    CupertinoApp.createCupertinoHeroController();
+
 /// Builds a Cupertino page.
 CupertinoPage<void> pageBuilderForCupertinoApp({
   required LocalKey key,
@@ -30,7 +34,7 @@ CupertinoPage<void> pageBuilderForCupertinoApp({
 /// Default error page implementation for Cupertino.
 class CupertinoErrorScreen extends StatelessWidget {
   /// Provide an exception to this page for it to be displayed.
-  const CupertinoErrorScreen(this.error, {Key? key}) : super(key: key);
+  const CupertinoErrorScreen(this.error, {super.key});
 
   /// The exception to be displayed.
   final Exception? error;

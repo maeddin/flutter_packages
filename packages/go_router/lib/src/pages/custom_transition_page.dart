@@ -17,22 +17,18 @@ class CustomTransitionPage<T> extends Page<T> {
     required this.child,
     required this.transitionsBuilder,
     this.transitionDuration = const Duration(milliseconds: 300),
+    this.reverseTransitionDuration = const Duration(milliseconds: 300),
     this.maintainState = true,
     this.fullscreenDialog = false,
     this.opaque = true,
     this.barrierDismissible = false,
     this.barrierColor,
     this.barrierLabel,
-    LocalKey? key,
-    String? name,
-    Object? arguments,
-    String? restorationId,
-  }) : super(
-          key: key,
-          name: name,
-          arguments: arguments,
-          restorationId: restorationId,
-        );
+    super.key,
+    super.name,
+    super.arguments,
+    super.restorationId,
+  });
 
   /// The content to be shown in the Route created by this page.
   final Widget child;
@@ -42,6 +38,12 @@ class CustomTransitionPage<T> extends Page<T> {
   ///
   /// Defaults to 300ms.
   final Duration transitionDuration;
+
+  /// A duration argument to customize the duration of the custom page
+  /// transition on pop.
+  ///
+  /// Defaults to 300ms.
+  final Duration reverseTransitionDuration;
 
   /// Whether the route should remain in memory when it is inactive.
   ///
@@ -112,6 +114,9 @@ class _CustomTransitionPageRoute<T> extends PageRoute<T> {
   CustomTransitionPage<T> get _page => settings as CustomTransitionPage<T>;
 
   @override
+  bool get barrierDismissible => _page.barrierDismissible;
+
+  @override
   Color? get barrierColor => _page.barrierColor;
 
   @override
@@ -119,6 +124,9 @@ class _CustomTransitionPageRoute<T> extends PageRoute<T> {
 
   @override
   Duration get transitionDuration => _page.transitionDuration;
+
+  @override
+  Duration get reverseTransitionDuration => _page.reverseTransitionDuration;
 
   @override
   bool get maintainState => _page.maintainState;
@@ -160,19 +168,15 @@ class _CustomTransitionPageRoute<T> extends PageRoute<T> {
 class NoTransitionPage<T> extends CustomTransitionPage<T> {
   /// Constructor for a page with no transition functionality.
   const NoTransitionPage({
-    required Widget child,
-    String? name,
-    Object? arguments,
-    String? restorationId,
-    LocalKey? key,
+    required super.child,
+    super.name,
+    super.arguments,
+    super.restorationId,
+    super.key,
   }) : super(
           transitionsBuilder: _transitionsBuilder,
-          transitionDuration: const Duration(microseconds: 1), // hack for #205
-          key: key,
-          name: name,
-          arguments: arguments,
-          restorationId: restorationId,
-          child: child,
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
         );
 
   static Widget _transitionsBuilder(

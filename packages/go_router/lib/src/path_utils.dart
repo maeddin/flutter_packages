@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import '../go_router.dart';
+
 final RegExp _parameterRegExp = RegExp(r':(\w+)(\((?:\\.|[^\\()])+\))?');
 
 /// Converts a [pattern] such as `/user/:id` into [RegExp].
@@ -47,10 +49,13 @@ RegExp patternToRegExp(String pattern, List<String> parameters) {
   return RegExp(buffer.toString(), caseSensitive: false);
 }
 
-String _escapeGroup(String group, String name) {
+String _escapeGroup(String group, [String? name]) {
   final String escapedGroup = group.replaceFirstMapped(
       RegExp(r'[:=!]'), (Match match) => '\\${match[0]}');
-  return '(?<$name>$escapedGroup)';
+  if (name != null) {
+    return '(?<$name>$escapedGroup)';
+  }
+  return escapedGroup;
 }
 
 /// Reconstructs the full path from a [pattern] and path parameters.
@@ -66,7 +71,7 @@ String _escapeGroup(String group, String name) {
 /// 2. Call [patternToPath] with the `pathParameters` from the first step and
 ///    the original `pattern` used for generating the [RegExp].
 String patternToPath(String pattern, Map<String, String> pathParameters) {
-  final StringBuffer buffer = StringBuffer('');
+  final StringBuffer buffer = StringBuffer();
   int start = 0;
   for (final RegExpMatch match in _parameterRegExp.allMatches(pattern)) {
     if (match.start > start) {
@@ -131,4 +136,25 @@ String canonicalUri(String loc) {
   canon = canon.replaceFirst('/?', '?', 1);
 
   return canon;
+}
+
+/// Builds an absolute path for the provided route.
+String? fullPathForRoute(
+    RouteBase targetRoute, String parentFullpath, List<RouteBase> routes) {
+  for (final RouteBase route in routes) {
+    final String fullPath = (route is GoRoute)
+        ? concatenatePaths(parentFullpath, route.path)
+        : parentFullpath;
+
+    if (route == targetRoute) {
+      return fullPath;
+    } else {
+      final String? subRoutePath =
+          fullPathForRoute(targetRoute, fullPath, route.routes);
+      if (subRoutePath != null) {
+        return subRoutePath;
+      }
+    }
+  }
+  return null;
 }

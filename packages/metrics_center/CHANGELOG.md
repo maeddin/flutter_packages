@@ -1,3 +1,21 @@
+## 1.0.9
+
+* Adds compatibility with `http` 1.0.
+
+## 1.0.8
+
+* Removes obsolete null checks on non-nullable values.
+* Updates minimum Flutter version to 3.3.
+
+## 1.0.7
+
+* Updates code to fix strict-cast violations.
+* Updates minimum SDK version to Flutter 3.0.
+
+## 1.0.6
+
+- Fixes lint warnings.
+
 ## 1.0.5
 
 - Fix JSON parsing issue when running in sound null-safety mode.

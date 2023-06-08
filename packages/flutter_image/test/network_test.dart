@@ -85,7 +85,7 @@ void main() {
       });
 
       test('retries 6 times then gives up', () async {
-        final dynamic maxAttemptCountReached = expectAsync0(() {});
+        final VoidCallback maxAttemptCountReached = expectAsync0(() {});
 
         int attemptCount = 0;
         Future<void> onAttempt() async {
@@ -104,7 +104,7 @@ void main() {
             Timer.run(onAttempt);
             return fakeAsync.run((FakeAsync fakeAsync) {
               return NetworkImageWithRetry.defaultFetchStrategy(uri, failure);
-            });
+            }) as Future<FetchInstructions>;
           },
         );
 
@@ -126,7 +126,7 @@ void main() {
             Timer.run(onAttempt);
             return fakeAsync.run((FakeAsync fakeAsync) {
               return NetworkImageWithRetry.defaultFetchStrategy(uri, failure);
-            });
+            }) as Future<FetchInstructions>;
           },
         );
 

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// ignore_for_file: avoid_print
+
 import 'package:googleapis/storage/v1.dart';
 import 'package:googleapis_auth/googleapis_auth.dart';
 
@@ -10,9 +12,7 @@ class GcsLock {
   /// Create a lock with an authenticated client and a GCS bucket name.
   ///
   /// The client is used to communicate with Google Cloud Storage APIs.
-  GcsLock(this._client, this._bucketName)
-      : assert(_client != null),
-        assert(_bucketName != null) {
+  GcsLock(this._client, this._bucketName) {
     _api = StorageApi(_client);
   }
 
