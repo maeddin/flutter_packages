@@ -311,16 +311,20 @@ class _OpenContainerState<T> extends State<OpenContainer<T?>> {
       key: _hideableKey,
       child: GestureDetector(
         onTap: widget.tappable ? openContainer : null,
-        child: Material(
-          clipBehavior: widget.clipBehavior,
-          color: widget.closedColor,
-          elevation: widget.closedElevation,
-          shape: widget.closedShape,
-          child: Builder(
-            key: _closedBuilderKey,
-            builder: (BuildContext context) {
-              return widget.closedBuilder(context, openContainer);
-            },
+        child: Padding(
+          // Padding fixes ui bug in List
+          padding: const EdgeInsets.all(0.002),
+          child: Material(
+            clipBehavior: widget.clipBehavior,
+            color: widget.closedColor,
+            elevation: widget.closedElevation,
+            shape: widget.closedShape,
+            child: Builder(
+              key: _closedBuilderKey,
+              builder: (BuildContext context) {
+                return widget.closedBuilder(context, openContainer);
+              },
+            ),
           ),
         ),
       ),
@@ -603,11 +607,21 @@ class _OpenContainerRoute<T> extends ModalRoute<T> {
           _toggleHideable(hide: false);
           break;
         case AnimationStatus.completed:
-          _toggleHideable(hide: true);
+          //_toggleHideable(hide: true);
           break;
         case AnimationStatus.forward:
-        case AnimationStatus.reverse:
+          //_toggleHideable(hide: true);
           break;
+        case AnimationStatus.reverse:
+          _toggleHideable(hide: false);
+          break;
+      }
+    });
+
+    animation!.addListener(() {
+      if (animation!.value == 0.0 &&
+          animation!.status != AnimationStatus.forward) {
+        _toggleHideable(hide: false);
       }
     });
 
@@ -616,10 +630,12 @@ class _OpenContainerRoute<T> extends ModalRoute<T> {
 
   @override
   bool didPop(T? result) {
-    _takeMeasurements(
-      navigatorContext: subtreeContext!,
-      delayForSourceRoute: true,
-    );
+    if(animation?.value != 0.0) {
+      _takeMeasurements(
+        navigatorContext: subtreeContext!,
+        delayForSourceRoute: true,
+      );
+    }
     return super.didPop(result);
   }
 
