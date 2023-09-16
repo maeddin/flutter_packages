@@ -359,6 +359,7 @@ class _HideableState extends State<_Hideable> {
   /// When non-null the child is replaced by a [SizedBox] of the set size.
   Size? get placeholderSize => _placeholderSize;
   Size? _placeholderSize;
+
   set placeholderSize(Size? value) {
     if (_placeholderSize == value) {
       return;
@@ -374,6 +375,7 @@ class _HideableState extends State<_Hideable> {
   /// (i.e. [isInTree] returns false).
   bool get isVisible => _visible;
   bool _visible = true;
+
   set isVisible(bool value) {
     if (_visible == value) {
       return;
@@ -610,21 +612,16 @@ class _OpenContainerRoute<T> extends ModalRoute<T> {
           _toggleHideable(hide: false);
           break;
         case AnimationStatus.completed:
-          //_toggleHideable(hide: true);
+          _toggleHideable(hide: true);
           break;
         case AnimationStatus.forward:
-          //_toggleHideable(hide: true);
-          break;
         case AnimationStatus.reverse:
-          _toggleHideable(hide: false);
+          if (animation!.value > 0.0 &&
+              animation!.value < 1.0 &&
+              subtreeContext != null) {
+            _takeMeasurements(navigatorContext: subtreeContext!);
+          }
           break;
-      }
-    });
-
-    animation!.addListener(() {
-      if (animation!.value == 0.0 &&
-          animation!.status != AnimationStatus.forward) {
-        _toggleHideable(hide: false);
       }
     });
 
@@ -633,7 +630,7 @@ class _OpenContainerRoute<T> extends ModalRoute<T> {
 
   @override
   bool didPop(T? result) {
-    if(animation?.value != 0.0) {
+    if (animation?.value != 0.0) {
       _takeMeasurements(
         navigatorContext: subtreeContext!,
         delayForSourceRoute: true,
