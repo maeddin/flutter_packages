@@ -1,9 +1,8 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'package:google_identity_services_web/id.dart' as id;
-import 'package:js/js_util.dart' as js_util;
 
 /// Converts user-facing `GisButtonConfiguration` into the JS-Interop `id.GsiButtonConfiguration`.
 id.GsiButtonConfiguration? convertButtonConfiguration(
@@ -12,17 +11,16 @@ id.GsiButtonConfiguration? convertButtonConfiguration(
   if (config == null) {
     return null;
   }
-  return js_util.jsify(<String, Object?>{
-    if (config.type != null) 'type': _idType[config.type],
-    if (config.theme != null) 'theme': _idTheme[config.theme],
-    if (config.size != null) 'size': _idSize[config.size],
-    if (config.text != null) 'text': _idText[config.text],
-    if (config.shape != null) 'shape': _idShape[config.shape],
-    if (config.logoAlignment != null)
-      'logo_alignment': _idLogoAlignment[config.logoAlignment],
-    if (config.minimumWidth != null) 'width': config.minimumWidth,
-    if (config.locale != null) 'locale': config.locale,
-  }) as id.GsiButtonConfiguration;
+  return id.GsiButtonConfiguration(
+    type: _idType[config.type],
+    theme: _idTheme[config.theme],
+    size: _idSize[config.size],
+    text: _idText[config.text],
+    shape: _idShape[config.shape],
+    logo_alignment: _idLogoAlignment[config.logoAlignment],
+    width: config.minimumWidth,
+    locale: config.locale,
+  );
 }
 
 /// A class to configure the Google Sign-In Button for web.
@@ -92,14 +90,14 @@ enum GSIButtonType {
   standard,
 
   /// An icon button without text.
-  icon;
+  icon,
 }
 
 const Map<GSIButtonType, id.ButtonType> _idType =
     <GSIButtonType, id.ButtonType>{
-  GSIButtonType.icon: id.ButtonType.icon,
-  GSIButtonType.standard: id.ButtonType.standard,
-};
+      GSIButtonType.icon: id.ButtonType.icon,
+      GSIButtonType.standard: id.ButtonType.standard,
+    };
 
 /// The theme of the button to be rendered.
 ///
@@ -113,15 +111,15 @@ enum GSIButtonTheme {
   filledBlue,
 
   /// A black-filled button theme.
-  filledBlack;
+  filledBlack,
 }
 
 const Map<GSIButtonTheme, id.ButtonTheme> _idTheme =
     <GSIButtonTheme, id.ButtonTheme>{
-  GSIButtonTheme.outline: id.ButtonTheme.outline,
-  GSIButtonTheme.filledBlue: id.ButtonTheme.filled_blue,
-  GSIButtonTheme.filledBlack: id.ButtonTheme.filled_black,
-};
+      GSIButtonTheme.outline: id.ButtonTheme.outline,
+      GSIButtonTheme.filledBlue: id.ButtonTheme.filled_blue,
+      GSIButtonTheme.filledBlack: id.ButtonTheme.filled_black,
+    };
 
 /// The size of the button to be rendered.
 ///
@@ -135,15 +133,15 @@ enum GSIButtonSize {
   medium,
 
   /// A small button (about 20px tall).
-  small;
+  small,
 }
 
 const Map<GSIButtonSize, id.ButtonSize> _idSize =
     <GSIButtonSize, id.ButtonSize>{
-  GSIButtonSize.large: id.ButtonSize.large,
-  GSIButtonSize.medium: id.ButtonSize.medium,
-  GSIButtonSize.small: id.ButtonSize.small,
-};
+      GSIButtonSize.large: id.ButtonSize.large,
+      GSIButtonSize.medium: id.ButtonSize.medium,
+      GSIButtonSize.small: id.ButtonSize.small,
+    };
 
 /// The button text.
 ///
@@ -160,16 +158,16 @@ enum GSIButtonText {
   continueWith,
 
   /// The button text is "Sign in".
-  signin;
+  signin,
 }
 
 const Map<GSIButtonText, id.ButtonText> _idText =
     <GSIButtonText, id.ButtonText>{
-  GSIButtonText.signinWith: id.ButtonText.signin_with,
-  GSIButtonText.signupWith: id.ButtonText.signup_with,
-  GSIButtonText.continueWith: id.ButtonText.continue_with,
-  GSIButtonText.signin: id.ButtonText.signin,
-};
+      GSIButtonText.signinWith: id.ButtonText.signin_with,
+      GSIButtonText.signupWith: id.ButtonText.signup_with,
+      GSIButtonText.continueWith: id.ButtonText.continue_with,
+      GSIButtonText.signin: id.ButtonText.signin,
+    };
 
 /// The button shape.
 ///
@@ -180,15 +178,15 @@ enum GSIButtonShape {
   rectangular,
 
   /// The circle-shaped button.
-  pill;
+  pill,
   // Does this need circle and square?
 }
 
 const Map<GSIButtonShape, id.ButtonShape> _idShape =
     <GSIButtonShape, id.ButtonShape>{
-  GSIButtonShape.rectangular: id.ButtonShape.rectangular,
-  GSIButtonShape.pill: id.ButtonShape.pill,
-};
+      GSIButtonShape.rectangular: id.ButtonShape.rectangular,
+      GSIButtonShape.pill: id.ButtonShape.pill,
+    };
 
 /// The alignment of the Google logo. The default value is left. This attribute only applies to the standard button type.
 ///
@@ -199,11 +197,11 @@ enum GSIButtonLogoAlignment {
   left,
 
   /// Center-aligns the Google logo.
-  center;
+  center,
 }
 
 const Map<GSIButtonLogoAlignment, id.ButtonLogoAlignment> _idLogoAlignment =
     <GSIButtonLogoAlignment, id.ButtonLogoAlignment>{
-  GSIButtonLogoAlignment.left: id.ButtonLogoAlignment.left,
-  GSIButtonLogoAlignment.center: id.ButtonLogoAlignment.center,
-};
+      GSIButtonLogoAlignment.left: id.ButtonLogoAlignment.left,
+      GSIButtonLogoAlignment.center: id.ButtonLogoAlignment.center,
+    };

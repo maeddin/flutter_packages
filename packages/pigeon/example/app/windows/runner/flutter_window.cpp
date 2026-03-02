@@ -1,8 +1,10 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "flutter_window.h"
+
+#include <flutter/binary_messenger.h>
 
 #include <memory>
 #include <optional>
@@ -11,16 +13,56 @@
 #include "messages.g.h"
 
 namespace {
+using pigeon_example::Code;
 using pigeon_example::ErrorOr;
 using pigeon_example::ExampleHostApi;
+using pigeon_example::FlutterError;
+using pigeon_example::MessageData;
+using pigeon_example::MessageFlutterApi;
 
+// #docregion cpp-class
 class PigeonApiImplementation : public ExampleHostApi {
  public:
   PigeonApiImplementation() {}
   virtual ~PigeonApiImplementation() {}
 
   ErrorOr<std::string> GetHostLanguage() override { return "C++"; }
+  ErrorOr<int64_t> Add(int64_t a, int64_t b) {
+    if (a < 0 || b < 0) {
+      return FlutterError("code", "message", "details");
+    }
+    return a + b;
+  }
+  void SendMessage(const MessageData& message,
+                   std::function<void(ErrorOr<bool> reply)> result) {
+    if (message.code() == Code::kOne) {
+      result(FlutterError("code", "message", "details"));
+      return;
+    }
+    result(true);
+  }
 };
+// #enddocregion cpp-class
+
+// #docregion cpp-method-flutter
+class PigeonFlutterApi {
+ public:
+  PigeonFlutterApi(flutter::BinaryMessenger* messenger)
+      : flutterApi_(std::make_unique<MessageFlutterApi>(messenger)) {}
+
+  void CallFlutterMethod(
+      const std::string& a_string,
+      std::function<void(ErrorOr<std::string> reply)> result) {
+    flutterApi_->FlutterMethod(
+        &a_string, [result](const std::string& echo) { result(echo); },
+        [result](const FlutterError& error) { result(error); });
+  }
+
+ private:
+  std::unique_ptr<MessageFlutterApi> flutterApi_;
+};
+// #enddocregion cpp-method-flutter
+
 }  // namespace
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)

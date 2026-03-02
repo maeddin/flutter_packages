@@ -1,5 +1,30 @@
 ## NEXT
 
+* Updates minimum supported SDK version to Flutter 3.35/Dart 3.9.
+
+## 2.0.1
+
+* Updates to Pigeon 26.
+* Updates minimum supported SDK version to Flutter 3.32/Dart 3.8.
+
+## 2.0.0
+
+* Switches to `LocalAuthException` for error reporting.
+* Updates minimum supported SDK version to Flutter 3.29/Dart 3.7.
+
+## 1.0.11
+
+* Updates to pigeon 21.
+* Updates minimum supported SDK version to Flutter 3.16/Dart 3.2.
+
+## 1.0.10
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 1.0.9
+
+* Updates to Pigeon 10.0.
 * Fixes stale ignore: prefer_const_constructors.
 * Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
 

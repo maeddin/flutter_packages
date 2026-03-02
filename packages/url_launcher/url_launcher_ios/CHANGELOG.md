@@ -1,3 +1,76 @@
+## 6.4.1
+
+* Updates example app to current APIs.
+
+## 6.4.0
+
+* Improves compatibility with `UIScene`.
+* Updates minimum supported SDK version to Flutter 3.38/Dart 3.10.
+
+## 6.3.6
+
+* Updates to Pigeon 26.
+
+## 6.3.5
+
+* Updates minimum supported version to iOS 13.
+* Updates minimum supported SDK version to Flutter 3.35/Dart 3.9.
+* Fixes integration test button text matcher to work on iOS 26.
+
+## 6.3.4
+
+* Updates to Pigeon 25.5.0.
+* Updates minimum supported SDK version to Flutter 3.27/Dart 3.6.
+
+## 6.3.3
+
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+* Ensures the completion callback is invoked if the user dismisses the Safari view before the initial URL load completes.
+
+## 6.3.2
+
+* Updates to Pigeon v22.
+* Updates minimum supported SDK version to Flutter 3.19/Dart 3.3.
+
+## 6.3.1
+
+* Fixes a compile error when comforming UIApplication to Launcher in iOS 18 Beta 3.
+
+## 6.3.0
+
+* Adds Swift Package Manager compatibility.
+
+## 6.2.5
+
+* Adds explicit imports for UIKit.
+* Updates minimum iOS version to 12.0 and minimum Flutter version to 3.16.6.
+
+## 6.2.4
+
+* Adds privacy manifest.
+
+## 6.2.3
+
+* Updates minimum required plugin_platform_interface version to 2.1.7.
+
+## 6.2.2
+
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+* Fixes lint warnings.
+
+## 6.2.1
+
+* Migrates plugin from Objective-C to Swift.
+
+## 6.2.0
+
+* Implements `supportsMode` and `supportsCloseForMode`.
+
+## 6.1.5
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
 ## 6.1.4
 
 * Updates pigeon to fix warnings with clang 15.

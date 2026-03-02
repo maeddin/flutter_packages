@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -16,6 +16,10 @@ void main() {
   runApp(const Example());
 }
 
+// The "#docregion" comment helps us keep this code in sync with the
+// excerpt in the rfw package's README.md file.
+//
+// #docregion Example
 class Example extends StatefulWidget {
   const Example({super.key});
 
@@ -35,6 +39,9 @@ class _ExampleState extends State<Example> {
 
   @override
   void reassemble() {
+    // This function causes the Runtime to be updated any time the app is
+    // hot reloaded, so that changes to _createLocalWidgets can be seen
+    // during development. This function has no effect in production.
     super.reassemble();
     _update();
   }
@@ -42,7 +49,7 @@ class _ExampleState extends State<Example> {
   static WidgetLibrary _createLocalWidgets() {
     return LocalWidgetLibrary(<String, LocalWidgetBuilder>{
       'GreenBox': (BuildContext context, DataSource source) {
-        return Container(
+        return ColoredBox(
           color: const Color(0xFF002211),
           child: source.child(<Object>['child']),
         );
@@ -67,12 +74,15 @@ class _ExampleState extends State<Example> {
     // server, and decode it with [decodeLibraryBlob] rather than parsing the
     // text version using [parseLibraryFile]. However, to make it easier to
     // play with this sample, this uses the slower text format.
-    _runtime.update(remoteName, parseLibraryFile('''
+    _runtime.update(
+      remoteName,
+      parseLibraryFile('''
       import local;
       widget root = GreenBox(
         child: Hello(name: "World"),
       );
-    '''));
+    '''),
+    );
   }
 
   @override
@@ -87,3 +97,5 @@ class _ExampleState extends State<Example> {
     );
   }
 }
+
+// #enddocregion Example

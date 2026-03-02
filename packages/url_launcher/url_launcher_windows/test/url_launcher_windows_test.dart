@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -47,35 +47,105 @@ void main() {
       api.canLaunch = true;
 
       expect(
-          plugin.launch(
-            'http://example.com/',
-            useSafariVC: true,
-            useWebView: false,
-            enableJavaScript: false,
-            enableDomStorage: false,
-            universalLinksOnly: false,
-            headers: const <String, String>{},
-          ),
-          completes);
+        await plugin.launch(
+          'http://example.com/',
+          useSafariVC: true,
+          useWebView: false,
+          enableJavaScript: false,
+          enableDomStorage: false,
+          universalLinksOnly: false,
+          headers: const <String, String>{},
+        ),
+        true,
+      );
       expect(api.argument, 'http://example.com/');
     });
 
     test('handles failure', () async {
       api.canLaunch = false;
 
-      await expectLater(
-          plugin.launch(
-            'http://example.com/',
-            useSafariVC: true,
-            useWebView: false,
-            enableJavaScript: false,
-            enableDomStorage: false,
-            universalLinksOnly: false,
-            headers: const <String, String>{},
-          ),
-          throwsA(isA<PlatformException>()));
+      expect(
+        await plugin.launch(
+          'http://example.com/',
+          useSafariVC: true,
+          useWebView: false,
+          enableJavaScript: false,
+          enableDomStorage: false,
+          universalLinksOnly: false,
+          headers: const <String, String>{},
+        ),
+        false,
+      );
       expect(api.argument, 'http://example.com/');
     });
+
+    test('handles errors', () async {
+      api.throwError = true;
+
+      await expectLater(
+        plugin.launch(
+          'http://example.com/',
+          useSafariVC: true,
+          useWebView: false,
+          enableJavaScript: false,
+          enableDomStorage: false,
+          universalLinksOnly: false,
+          headers: const <String, String>{},
+        ),
+        throwsA(isA<PlatformException>()),
+      );
+      expect(api.argument, 'http://example.com/');
+    });
+  });
+
+  group('supportsMode', () {
+    test('returns true for platformDefault', () async {
+      final launcher = UrlLauncherWindows(api: api);
+      expect(
+        await launcher.supportsMode(PreferredLaunchMode.platformDefault),
+        true,
+      );
+    });
+
+    test('returns true for external application', () async {
+      final launcher = UrlLauncherWindows(api: api);
+      expect(
+        await launcher.supportsMode(PreferredLaunchMode.externalApplication),
+        true,
+      );
+    });
+
+    test('returns false for other modes', () async {
+      final launcher = UrlLauncherWindows(api: api);
+      expect(
+        await launcher.supportsMode(
+          PreferredLaunchMode.externalNonBrowserApplication,
+        ),
+        false,
+      );
+      expect(
+        await launcher.supportsMode(PreferredLaunchMode.inAppBrowserView),
+        false,
+      );
+      expect(
+        await launcher.supportsMode(PreferredLaunchMode.inAppWebView),
+        false,
+      );
+    });
+  });
+
+  test('supportsCloseForMode returns false', () async {
+    final launcher = UrlLauncherWindows(api: api);
+    expect(
+      await launcher.supportsCloseForMode(PreferredLaunchMode.platformDefault),
+      false,
+    );
+    expect(
+      await launcher.supportsCloseForMode(
+        PreferredLaunchMode.externalApplication,
+      ),
+      false,
+    );
   });
 }
 
@@ -83,11 +153,14 @@ class _FakeUrlLauncherApi implements UrlLauncherApi {
   /// The argument that was passed to an API call.
   String? argument;
 
-  /// Controls the behavior of the fake implementations.
+  /// Controls the behavior of the fake canLaunch implementations.
   ///
   /// - [canLaunchUrl] returns this value.
-  /// - [launchUrl] throws if this is false.
+  /// - [launchUrl] returns this value if [throwError] is false.
   bool canLaunch = false;
+
+  /// Whether to throw a platform exception.
+  bool throwError = false;
 
   @override
   Future<bool> canLaunchUrl(String url) async {
@@ -96,10 +169,19 @@ class _FakeUrlLauncherApi implements UrlLauncherApi {
   }
 
   @override
-  Future<void> launchUrl(String url) async {
+  Future<bool> launchUrl(String url) async {
     argument = url;
-    if (!canLaunch) {
+    if (throwError) {
       throw PlatformException(code: 'Failed');
     }
+    return canLaunch;
   }
+
+  @override
+  // ignore: non_constant_identifier_names
+  BinaryMessenger? get pigeonVar_binaryMessenger => null;
+
+  @override
+  // ignore: non_constant_identifier_names
+  String get pigeonVar_messageChannelSuffix => '';
 }

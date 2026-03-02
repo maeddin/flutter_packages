@@ -1,8 +1,9 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import XCTest
+import Testing
+
 @testable import test_plugin
 
 class MockEnumApi2Host: EnumApi2Host {
@@ -11,47 +12,49 @@ class MockEnumApi2Host: EnumApi2Host {
   }
 }
 
-extension DataWithEnum: Equatable {
-  public static func == (lhs: DataWithEnum, rhs: DataWithEnum) -> Bool {
-    lhs.state == rhs.state
-  }
-}
+@MainActor
+struct EnumTests {
 
-class EnumTests: XCTestCase {
-
-  func testEchoHost() throws {
-    let binaryMessenger = MockBinaryMessenger<DataWithEnum>(codec: EnumApi2HostCodec.shared)
+  @Test
+  func echoHost() async throws {
+    let binaryMessenger = MockBinaryMessenger<DataWithEnum>(codec: EnumPigeonCodec.shared)
     EnumApi2HostSetup.setUp(binaryMessenger: binaryMessenger, api: MockEnumApi2Host())
-    let channelName = "dev.flutter.pigeon.EnumApi2Host.echo"
-    XCTAssertNotNil(binaryMessenger.handlers[channelName])
+    let channelName = "dev.flutter.pigeon.pigeon_integration_tests.EnumApi2Host.echo"
+    #expect(binaryMessenger.handlers[channelName] != nil)
 
     let input = DataWithEnum(state: .success)
     let inputEncoded = binaryMessenger.codec.encode([input])
 
-    let expectation = XCTestExpectation(description: "echo")
-    binaryMessenger.handlers[channelName]?(inputEncoded) { data in
-      let outputMap = binaryMessenger.codec.decode(data) as? [Any]
-      XCTAssertNotNil(outputMap)
-      
-      let output = outputMap?.first as? DataWithEnum
-      XCTAssertEqual(output, input)
-      XCTAssertTrue(outputMap?.count == 1)
-      expectation.fulfill()
+    await confirmation { confirmed in
+      binaryMessenger.handlers[channelName]?(inputEncoded) { data in
+        let outputMap = binaryMessenger.codec.decode(data) as? [Any]
+        #expect(outputMap != nil)
+
+        let output = outputMap?.first as? DataWithEnum
+        #expect(output == input)
+        #expect(outputMap?.count == 1)
+        confirmed()
+      }
     }
-    wait(for: [expectation], timeout: 1.0)
   }
 
-  func testEchoFlutter() throws {
+  @Test
+  func echoFlutter() async throws {
     let data = DataWithEnum(state: .error)
-    let binaryMessenger = EchoBinaryMessenger(codec: EnumApi2HostCodec.shared)
+    let binaryMessenger = EchoBinaryMessenger(codec: EnumPigeonCodec.shared)
     let api = EnumApi2Flutter(binaryMessenger: binaryMessenger)
 
-    let expectation = XCTestExpectation(description: "callback")
-    api.echo(data: data) { result in
-      XCTAssertEqual(data.state, result.state)
-      expectation.fulfill()
+    await confirmation { confirmed in
+      api.echo(data: data) { result in
+        switch result {
+        case .success(let res):
+          #expect(res.state == data.state)
+          confirmed()
+        case .failure(let error):
+          Issue.record("Error: \(error) from data \(data)")
+        }
+      }
     }
-    wait(for: [expectation], timeout: 1.0)
   }
 
 }

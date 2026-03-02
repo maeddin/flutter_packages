@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -21,16 +21,21 @@ export 'package:multicast_dns/src/resource_record.dart';
 ///
 /// See also:
 ///   * [MDnsQuerier.allInterfacesFactory]
-typedef NetworkInterfacesFactory = Future<Iterable<NetworkInterface>> Function(
-    InternetAddressType type);
+typedef NetworkInterfacesFactory =
+    Future<Iterable<NetworkInterface>> Function(InternetAddressType type);
 
 /// A factory for construction of datagram sockets.
 ///
 /// This can be injected into the [MDnsClient] to provide alternative
 /// implementations of [RawDatagramSocket.bind].
-typedef RawDatagramSocketFactory = Future<RawDatagramSocket> Function(
-    dynamic host, int port,
-    {bool reuseAddress, bool reusePort, int ttl});
+typedef RawDatagramSocketFactory =
+    Future<RawDatagramSocket> Function(
+      dynamic host,
+      int port, {
+      bool reuseAddress,
+      bool reusePort,
+      int ttl,
+    });
 
 /// Client for DNS lookup and publishing using the mDNS protocol.
 ///
@@ -48,8 +53,8 @@ class MDnsClient {
 
   bool _starting = false;
   bool _started = false;
-  final List<RawDatagramSocket> _sockets = <RawDatagramSocket>[];
-  final List<RawDatagramSocket> _toBeClosed = <RawDatagramSocket>[];
+  RawDatagramSocket? _incomingIPv4;
+  final List<RawDatagramSocket> _ipv6InterfaceSockets = <RawDatagramSocket>[];
   final LookupResolver _resolver = LookupResolver();
   final ResourceRecordCache _cache = ResourceRecordCache();
   final RawDatagramSocketFactory _rawDatagramSocketFactory;
@@ -59,7 +64,8 @@ class MDnsClient {
 
   /// Find all network interfaces with an the [InternetAddressType] specified.
   Future<Iterable<NetworkInterface>> allInterfacesFactory(
-      InternetAddressType type) {
+    InternetAddressType type,
+  ) {
     return NetworkInterface.list(
       includeLinkLocal: true,
       type: type,
@@ -84,6 +90,10 @@ class MDnsClient {
   /// for the mDNS query. If not provided, defaults to either `224.0.0.251` or
   /// or `FF02::FB`.
   ///
+  /// If provided, [onError] will be called in case of a stream error. If
+  /// omitted any errors on the stream are considered unhandled, and will be
+  /// passed to the current [Zone]'s error handler.
+  ///
   /// Subsequent calls to this method are ignored while the mDNS client is in
   /// started state.
   Future<void> start({
@@ -91,12 +101,15 @@ class MDnsClient {
     NetworkInterfacesFactory? interfacesFactory,
     int mDnsPort = mDnsPort,
     InternetAddress? mDnsAddress,
+    Function? onError,
   }) async {
     listenAddress ??= InternetAddress.anyIPv4;
     interfacesFactory ??= allInterfacesFactory;
 
-    assert(listenAddress.address == InternetAddress.anyIPv4.address ||
-        listenAddress.address == InternetAddress.anyIPv6.address);
+    assert(
+      listenAddress.address == InternetAddress.anyIPv4.address ||
+          listenAddress.address == InternetAddress.anyIPv6.address,
+    );
 
     if (_started || _starting) {
       return;
@@ -117,47 +130,48 @@ class MDnsClient {
 
     // Can't send to IPv6 any address.
     if (incoming.address != InternetAddress.anyIPv6) {
-      _sockets.add(incoming);
+      _incomingIPv4 = incoming;
     } else {
-      _toBeClosed.add(incoming);
+      _ipv6InterfaceSockets.add(incoming);
     }
 
     _mDnsAddress ??= incoming.address.type == InternetAddressType.IPv4
         ? mDnsAddressIPv4
         : mDnsAddressIPv6;
 
-    final List<NetworkInterface> interfaces =
-        (await interfacesFactory(listenAddress.type)).toList();
+    final List<NetworkInterface> interfaces = (await interfacesFactory(
+      listenAddress.type,
+    )).toList();
 
-    for (final NetworkInterface interface in interfaces) {
-      // Create a socket for sending on each adapter.
+    for (final interface in interfaces) {
       final InternetAddress targetAddress = interface.addresses[0];
-      final RawDatagramSocket socket = await _rawDatagramSocketFactory(
-        targetAddress,
-        selectedMDnsPort,
-        reuseAddress: true,
-        reusePort: true,
-        ttl: 255,
-      );
-      _sockets.add(socket);
+
       // Ensure that we're using this address/interface for multicast.
-      if (targetAddress.type == InternetAddressType.IPv4) {
-        socket.setRawOption(RawSocketOption(
-          RawSocketOption.levelIPv4,
-          RawSocketOption.IPv4MulticastInterface,
-          targetAddress.rawAddress,
-        ));
-      } else {
-        socket.setRawOption(RawSocketOption.fromInt(
-          RawSocketOption.levelIPv6,
-          RawSocketOption.IPv6MulticastInterface,
-          interface.index,
-        ));
+      if (targetAddress.type == InternetAddressType.IPv6) {
+        final RawDatagramSocket socket = await _rawDatagramSocketFactory(
+          targetAddress,
+          selectedMDnsPort,
+          reuseAddress: true,
+          reusePort: true,
+          ttl: 255,
+        );
+        _ipv6InterfaceSockets.add(socket);
+        socket.setRawOption(
+          RawSocketOption.fromInt(
+            RawSocketOption.levelIPv6,
+            RawSocketOption.IPv6MulticastInterface,
+            interface.index,
+          ),
+        );
       }
+
       // Join multicast on this interface.
       incoming.joinMulticast(_mDnsAddress!, interface);
     }
-    incoming.listen((RawSocketEvent event) => _handleIncoming(event, incoming));
+    incoming.listen(
+      (RawSocketEvent event) => _handleIncoming(event, incoming),
+      onError: onError,
+    );
     _started = true;
     _starting = false;
   }
@@ -171,15 +185,13 @@ class MDnsClient {
       throw StateError('Cannot stop mDNS client while it is starting.');
     }
 
-    for (final RawDatagramSocket socket in _sockets) {
-      socket.close();
-    }
-    _sockets.clear();
+    _incomingIPv4?.close();
+    _incomingIPv4 = null;
 
-    for (final RawDatagramSocket socket in _toBeClosed) {
+    for (final RawDatagramSocket socket in _ipv6InterfaceSockets) {
       socket.close();
     }
-    _toBeClosed.clear();
+    _ipv6InterfaceSockets.clear();
 
     _resolver.clearPendingRequests();
 
@@ -205,11 +217,14 @@ class MDnsClient {
       throw StateError('mDNS client must be started before calling lookup.');
     }
     // Look for entries in the cache.
-    final List<T> cached = <T>[];
+    final cached = <T>[];
     _cache.lookup<T>(
-        query.fullyQualifiedName, query.resourceRecordType, cached);
+      query.fullyQualifiedName,
+      query.resourceRecordType,
+      cached,
+    );
     if (cached.isNotEmpty) {
-      final StreamController<T> controller = StreamController<T>();
+      final controller = StreamController<T>();
       cached.forEach(controller.add);
       controller.close();
       return controller.stream;
@@ -217,13 +232,22 @@ class MDnsClient {
 
     // Add the pending request before sending the query.
     final Stream<T> results = _resolver.addPendingRequest<T>(
-        query.resourceRecordType, query.fullyQualifiedName, timeout);
+      query.resourceRecordType,
+      query.fullyQualifiedName,
+      timeout,
+    );
 
-    // Send the request on all interfaces.
     final List<int> packet = query.encode();
-    for (final RawDatagramSocket socket in _sockets) {
-      socket.send(packet, _mDnsAddress!, selectedMDnsPort);
+
+    if (_mDnsAddress?.type == InternetAddressType.IPv4) {
+      // Send and listen on same "ANY" interface
+      _incomingIPv4?.send(packet, _mDnsAddress!, selectedMDnsPort);
+    } else {
+      for (final RawDatagramSocket socket in _ipv6InterfaceSockets) {
+        socket.send(packet, _mDnsAddress!, selectedMDnsPort);
+      }
     }
+
     return results;
   }
 

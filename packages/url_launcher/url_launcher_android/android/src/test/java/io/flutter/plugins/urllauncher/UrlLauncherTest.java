@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,9 +6,11 @@ package io.flutter.plugins.urllauncher;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -21,12 +23,14 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Browser;
+import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.test.core.app.ApplicationProvider;
 import java.util.HashMap;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
 
 @RunWith(RobolectricTestRunner.class)
 public class UrlLauncherTest {
@@ -85,7 +89,7 @@ public class UrlLauncherTest {
     Messages.FlutterError exception =
         assertThrows(
             Messages.FlutterError.class,
-            () -> api.launchUrl("https://flutter.dev", new HashMap<>()));
+            () -> api.launchUrl("https://flutter.dev", new HashMap<>(), false));
     assertEquals("NO_ACTIVITY", exception.code);
   }
 
@@ -97,11 +101,30 @@ public class UrlLauncherTest {
     api.setActivity(activity);
     doThrow(new ActivityNotFoundException()).when(activity).startActivity(any());
 
-    api.launchUrl("https://flutter.dev", new HashMap<>());
+    api.launchUrl("https://flutter.dev", new HashMap<>(), false);
 
     final ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
     verify(activity).startActivity(intentCaptor.capture());
     assertEquals(url, intentCaptor.getValue().getData().toString());
+    assertEquals(0, intentCaptor.getValue().getFlags() & Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER);
+  }
+
+  @Config(minSdk = 30)
+  @Test
+  public void launch_setsRequireNonBrowserWhenRequested() {
+    Activity activity = mock(Activity.class);
+    String url = "https://flutter.dev";
+    UrlLauncher api = new UrlLauncher(ApplicationProvider.getApplicationContext());
+    api.setActivity(activity);
+    doThrow(new ActivityNotFoundException()).when(activity).startActivity(any());
+
+    api.launchUrl("https://flutter.dev", new HashMap<>(), true);
+
+    final ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
+    verify(activity).startActivity(intentCaptor.capture());
+    assertEquals(
+        Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER,
+        intentCaptor.getValue().getFlags() & Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER);
   }
 
   @Test
@@ -111,7 +134,7 @@ public class UrlLauncherTest {
     api.setActivity(activity);
     doThrow(new ActivityNotFoundException()).when(activity).startActivity(any());
 
-    boolean result = api.launchUrl("https://flutter.dev", new HashMap<>());
+    boolean result = api.launchUrl("https://flutter.dev", new HashMap<>(), false);
 
     assertFalse(result);
   }
@@ -122,28 +145,33 @@ public class UrlLauncherTest {
     UrlLauncher api = new UrlLauncher(ApplicationProvider.getApplicationContext());
     api.setActivity(activity);
 
-    boolean result = api.launchUrl("https://flutter.dev", new HashMap<>());
+    boolean result = api.launchUrl("https://flutter.dev", new HashMap<>(), false);
 
     assertTrue(result);
   }
 
   @Test
-  public void openWebView_opensUrl() {
+  public void openUrlInApp_opensUrlInWebViewIfNecessary() {
     Activity activity = mock(Activity.class);
     UrlLauncher api = new UrlLauncher(ApplicationProvider.getApplicationContext());
     api.setActivity(activity);
     String url = "https://flutter.dev";
     boolean enableJavaScript = false;
     boolean enableDomStorage = false;
+    HashMap<String, String> headers = new HashMap<>();
+    headers.put("key", "value");
+    boolean showTitle = false;
 
     boolean result =
-        api.openUrlInWebView(
+        api.openUrlInApp(
             url,
+            true,
             new Messages.WebViewOptions.Builder()
                 .setEnableJavaScript(enableJavaScript)
                 .setEnableDomStorage(enableDomStorage)
-                .setHeaders(new HashMap<>())
-                .build());
+                .setHeaders(headers)
+                .build(),
+            new Messages.BrowserOptions.Builder().setShowTitle(showTitle).build());
 
     final ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
     verify(activity).startActivity(intentCaptor.capture());
@@ -158,19 +186,192 @@ public class UrlLauncherTest {
   }
 
   @Test
+  public void openWebView_opensUrlInWebViewIfRequested() {
+    Activity activity = mock(Activity.class);
+    UrlLauncher api = new UrlLauncher(ApplicationProvider.getApplicationContext());
+    api.setActivity(activity);
+    String url = "https://flutter.dev";
+
+    boolean result =
+        api.openUrlInApp(
+            url,
+            false,
+            new Messages.WebViewOptions.Builder()
+                .setEnableJavaScript(false)
+                .setEnableDomStorage(false)
+                .setHeaders(new HashMap<>())
+                .build(),
+            new Messages.BrowserOptions.Builder().setShowTitle(true).build());
+
+    final ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
+    verify(activity).startActivity(intentCaptor.capture());
+    assertTrue(result);
+    assertEquals(url, intentCaptor.getValue().getExtras().getString(WebViewActivity.URL_EXTRA));
+  }
+
+  @Test
+  public void openWebView_opensUrlInCustomTabs() {
+    Activity activity = mock(Activity.class);
+    UrlLauncher api = new UrlLauncher(ApplicationProvider.getApplicationContext());
+    api.setActivity(activity);
+    String url = "https://flutter.dev";
+
+    boolean result =
+        api.openUrlInApp(
+            url,
+            true,
+            new Messages.WebViewOptions.Builder()
+                .setEnableJavaScript(false)
+                .setEnableDomStorage(false)
+                .setHeaders(new HashMap<>())
+                .build(),
+            new Messages.BrowserOptions.Builder().setShowTitle(false).build());
+
+    final ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
+    verify(activity).startActivity(intentCaptor.capture(), isNull());
+    assertTrue(result);
+    assertEquals(Intent.ACTION_VIEW, intentCaptor.getValue().getAction());
+    assertNull(intentCaptor.getValue().getComponent());
+  }
+
+  @Test
+  public void openWebView_opensUrlInCustomTabsWithCORSAllowedHeader() {
+    Activity activity = mock(Activity.class);
+    UrlLauncher api = new UrlLauncher(ApplicationProvider.getApplicationContext());
+    api.setActivity(activity);
+    String url = "https://flutter.dev";
+    HashMap<String, String> headers = new HashMap<>();
+    String headerKey = "Content-Type";
+    headers.put(headerKey, "text/plain");
+
+    boolean result =
+        api.openUrlInApp(
+            url,
+            true,
+            new Messages.WebViewOptions.Builder()
+                .setEnableJavaScript(false)
+                .setEnableDomStorage(false)
+                .setHeaders(headers)
+                .build(),
+            new Messages.BrowserOptions.Builder().setShowTitle(false).build());
+
+    final ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
+    verify(activity).startActivity(intentCaptor.capture(), isNull());
+    assertTrue(result);
+    assertEquals(Intent.ACTION_VIEW, intentCaptor.getValue().getAction());
+    assertNull(intentCaptor.getValue().getComponent());
+    final Bundle passedHeaders =
+        intentCaptor.getValue().getExtras().getBundle(Browser.EXTRA_HEADERS);
+    assertEquals(headers.get(headerKey), passedHeaders.getString(headerKey));
+  }
+
+  @Test
+  public void openWebView_opensUrlInCustomTabsWithShowTitle() {
+    Activity activity = mock(Activity.class);
+    UrlLauncher api = new UrlLauncher(ApplicationProvider.getApplicationContext());
+    api.setActivity(activity);
+    String url = "https://flutter.dev";
+    HashMap<String, String> headers = new HashMap<>();
+
+    boolean result =
+        api.openUrlInApp(
+            url,
+            true,
+            new Messages.WebViewOptions.Builder()
+                .setEnableJavaScript(false)
+                .setEnableDomStorage(false)
+                .setHeaders(headers)
+                .build(),
+            new Messages.BrowserOptions.Builder().setShowTitle(true).build());
+
+    final ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
+    verify(activity).startActivity(intentCaptor.capture(), isNull());
+    assertTrue(result);
+    assertEquals(Intent.ACTION_VIEW, intentCaptor.getValue().getAction());
+    assertNull(intentCaptor.getValue().getComponent());
+    assertEquals(
+        intentCaptor.getValue().getExtras().getInt(CustomTabsIntent.EXTRA_TITLE_VISIBILITY_STATE),
+        CustomTabsIntent.SHOW_PAGE_TITLE);
+  }
+
+  @Test
+  public void openWebView_opensUrlInCustomTabsWithoutShowTitle() {
+    Activity activity = mock(Activity.class);
+    UrlLauncher api = new UrlLauncher(ApplicationProvider.getApplicationContext());
+    api.setActivity(activity);
+    String url = "https://flutter.dev";
+    HashMap<String, String> headers = new HashMap<>();
+
+    boolean result =
+        api.openUrlInApp(
+            url,
+            true,
+            new Messages.WebViewOptions.Builder()
+                .setEnableJavaScript(false)
+                .setEnableDomStorage(false)
+                .setHeaders(headers)
+                .build(),
+            new Messages.BrowserOptions.Builder().setShowTitle(false).build());
+
+    final ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
+    verify(activity).startActivity(intentCaptor.capture(), isNull());
+    assertTrue(result);
+    assertEquals(Intent.ACTION_VIEW, intentCaptor.getValue().getAction());
+    assertNull(intentCaptor.getValue().getComponent());
+    assertEquals(
+        intentCaptor.getValue().getExtras().getInt(CustomTabsIntent.EXTRA_TITLE_VISIBILITY_STATE),
+        CustomTabsIntent.NO_TITLE);
+  }
+
+  @Test
+  public void openWebView_fallsBackToWebViewIfCustomTabFails() {
+    Activity activity = mock(Activity.class);
+    UrlLauncher api = new UrlLauncher(ApplicationProvider.getApplicationContext());
+    api.setActivity(activity);
+    String url = "https://flutter.dev";
+    doThrow(new ActivityNotFoundException())
+        .when(activity)
+        .startActivity(any(), isNull()); // for custom tabs intent
+
+    boolean result =
+        api.openUrlInApp(
+            url,
+            true,
+            new Messages.WebViewOptions.Builder()
+                .setEnableJavaScript(false)
+                .setEnableDomStorage(false)
+                .setHeaders(new HashMap<>())
+                .build(),
+            new Messages.BrowserOptions.Builder().setShowTitle(false).build());
+
+    final ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
+    verify(activity).startActivity(intentCaptor.capture());
+    assertTrue(result);
+    assertEquals(url, intentCaptor.getValue().getExtras().getString(WebViewActivity.URL_EXTRA));
+    assertEquals(
+        false, intentCaptor.getValue().getExtras().getBoolean(WebViewActivity.ENABLE_JS_EXTRA));
+    assertEquals(
+        false, intentCaptor.getValue().getExtras().getBoolean(WebViewActivity.ENABLE_DOM_EXTRA));
+  }
+
+  @Test
   public void openWebView_handlesEnableJavaScript() {
     Activity activity = mock(Activity.class);
     UrlLauncher api = new UrlLauncher(ApplicationProvider.getApplicationContext());
     api.setActivity(activity);
     boolean enableJavaScript = true;
+    HashMap<String, String> headers = new HashMap<>();
+    headers.put("key", "value");
 
-    api.openUrlInWebView(
+    api.openUrlInApp(
         "https://flutter.dev",
+        true,
         new Messages.WebViewOptions.Builder()
             .setEnableJavaScript(enableJavaScript)
             .setEnableDomStorage(false)
-            .setHeaders(new HashMap<>())
-            .build());
+            .setHeaders(headers)
+            .build(),
+        new Messages.BrowserOptions.Builder().setShowTitle(false).build());
 
     final ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
     verify(activity).startActivity(intentCaptor.capture());
@@ -190,13 +391,15 @@ public class UrlLauncherTest {
     headers.put(key1, "value");
     headers.put(key2, "value2");
 
-    api.openUrlInWebView(
+    api.openUrlInApp(
         "https://flutter.dev",
+        true,
         new Messages.WebViewOptions.Builder()
             .setEnableJavaScript(false)
             .setEnableDomStorage(false)
             .setHeaders(headers)
-            .build());
+            .build(),
+        new Messages.BrowserOptions.Builder().setShowTitle(false).build());
 
     final ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
     verify(activity).startActivity(intentCaptor.capture());
@@ -213,20 +416,51 @@ public class UrlLauncherTest {
     UrlLauncher api = new UrlLauncher(ApplicationProvider.getApplicationContext());
     api.setActivity(activity);
     boolean enableDomStorage = true;
+    HashMap<String, String> headers = new HashMap<>();
+    headers.put("key", "value");
 
-    api.openUrlInWebView(
+    api.openUrlInApp(
         "https://flutter.dev",
+        true,
         new Messages.WebViewOptions.Builder()
             .setEnableJavaScript(false)
             .setEnableDomStorage(enableDomStorage)
-            .setHeaders(new HashMap<>())
-            .build());
+            .setHeaders(headers)
+            .build(),
+        new Messages.BrowserOptions.Builder().setShowTitle(false).build());
 
     final ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
     verify(activity).startActivity(intentCaptor.capture());
     assertEquals(
         enableDomStorage,
         intentCaptor.getValue().getExtras().getBoolean(WebViewActivity.ENABLE_DOM_EXTRA));
+  }
+
+  @Test
+  public void openWebView_handlesEnableShowTitle() {
+    Activity activity = mock(Activity.class);
+    UrlLauncher api = new UrlLauncher(ApplicationProvider.getApplicationContext());
+    api.setActivity(activity);
+    boolean enableDomStorage = true;
+    HashMap<String, String> headers = new HashMap<>();
+    boolean showTitle = true;
+
+    api.openUrlInApp(
+        "https://flutter.dev",
+        true,
+        new Messages.WebViewOptions.Builder()
+            .setEnableJavaScript(false)
+            .setEnableDomStorage(enableDomStorage)
+            .setHeaders(headers)
+            .build(),
+        new Messages.BrowserOptions.Builder().setShowTitle(showTitle).build());
+
+    final ArgumentCaptor<Intent> intentCaptor = ArgumentCaptor.forClass(Intent.class);
+    verify(activity).startActivity(intentCaptor.capture(), isNull());
+
+    assertEquals(
+        intentCaptor.getValue().getExtras().getInt(CustomTabsIntent.EXTRA_TITLE_VISIBILITY_STATE),
+        CustomTabsIntent.SHOW_PAGE_TITLE);
   }
 
   @Test
@@ -238,13 +472,15 @@ public class UrlLauncherTest {
         assertThrows(
             Messages.FlutterError.class,
             () ->
-                api.openUrlInWebView(
+                api.openUrlInApp(
                     "https://flutter.dev",
+                    true,
                     new Messages.WebViewOptions.Builder()
                         .setEnableJavaScript(false)
                         .setEnableDomStorage(false)
                         .setHeaders(new HashMap<>())
-                        .build()));
+                        .build(),
+                    new Messages.BrowserOptions.Builder().setShowTitle(false).build()));
     assertEquals("NO_ACTIVITY", exception.code);
   }
 
@@ -253,16 +489,23 @@ public class UrlLauncherTest {
     Activity activity = mock(Activity.class);
     UrlLauncher api = new UrlLauncher(ApplicationProvider.getApplicationContext());
     api.setActivity(activity);
-    doThrow(new ActivityNotFoundException()).when(activity).startActivity(any());
+    doThrow(new ActivityNotFoundException())
+        .when(activity)
+        .startActivity(any(), isNull()); // for custom tabs intent
+    doThrow(new ActivityNotFoundException())
+        .when(activity)
+        .startActivity(any()); // for webview intent
 
     boolean result =
-        api.openUrlInWebView(
+        api.openUrlInApp(
             "https://flutter.dev",
+            true,
             new Messages.WebViewOptions.Builder()
                 .setEnableJavaScript(false)
                 .setEnableDomStorage(false)
                 .setHeaders(new HashMap<>())
-                .build());
+                .build(),
+            new Messages.BrowserOptions.Builder().setShowTitle(false).build());
 
     assertFalse(result);
   }

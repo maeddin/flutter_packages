@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,7 +8,6 @@ import 'package:google_identity_services_web/id.dart';
 // #docregion use-loader
 import 'package:google_identity_services_web/loader.dart' as gis;
 // #enddocregion use-loader
-import 'package:js/js.dart' show allowInterop;
 
 import 'src/jwt.dart' as jwt;
 
@@ -16,17 +15,18 @@ import 'src/jwt.dart' as jwt;
 void main() async {
   await gis.loadWebSdk(); // Load the GIS SDK
   // The rest of your code...
-// #enddocregion use-loader
+  // #enddocregion use-loader
   id.setLogLevel('debug');
 
-  final IdConfiguration config = IdConfiguration(
-    client_id: 'your-client_id.apps.googleusercontent.com',
-    callback: allowInterop(onCredentialResponse),
+  final config = IdConfiguration(
+    client_id: 'your-google-client-id-goes-here.apps.googleusercontent.com',
+    callback: onCredentialResponse,
+    use_fedcm_for_prompt: true,
   );
 
   id.initialize(config);
-  id.prompt(allowInterop(onPromptMoment));
-// #docregion use-loader
+  id.prompt(onPromptMoment);
+  // #docregion use-loader
 }
 // #enddocregion use-loader
 

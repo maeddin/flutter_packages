@@ -1,13 +1,19 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library webview_flutter;
-
 export 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart'
     show
+        HttpAuthRequest,
+        HttpResponseError,
+        HttpResponseErrorCallback,
+        JavaScriptAlertDialogRequest,
+        JavaScriptConfirmDialogRequest,
+        JavaScriptConsoleMessage,
+        JavaScriptLogLevel,
         JavaScriptMessage,
         JavaScriptMode,
+        JavaScriptTextInputDialogRequest,
         LoadRequestMethod,
         NavigationDecision,
         NavigationRequest,
@@ -19,13 +25,19 @@ export 'package:webview_flutter_platform_interface/webview_flutter_platform_inte
         PlatformWebViewPermissionRequest,
         PlatformWebViewWidgetCreationParams,
         ProgressCallback,
+        ScrollPositionChange,
         UrlChange,
         WebResourceError,
         WebResourceErrorCallback,
         WebResourceErrorType,
+        WebResourceRequest,
+        WebResourceResponse,
         WebViewCookie,
+        WebViewCredential,
+        WebViewOverScrollMode,
         WebViewPermissionResourceType,
-        WebViewPlatform;
+        WebViewPlatform,
+        X509Certificate;
 
 export 'src/navigation_delegate.dart';
 export 'src/webview_controller.dart';

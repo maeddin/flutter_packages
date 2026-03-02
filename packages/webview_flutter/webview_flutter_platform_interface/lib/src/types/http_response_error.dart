@@ -1,8 +1,11 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'package:flutter/foundation.dart';
+
+import 'web_resource_request.dart';
+import 'web_resource_response.dart';
 
 /// Error returned in `PlatformNavigationDelegate.setOnHttpError` when an HTTP
 /// response error has been received.
@@ -36,10 +39,11 @@ import 'package:flutter/foundation.dart';
 @immutable
 class HttpResponseError {
   /// Used by the platform implementation to create a new [HttpResponseError].
-  const HttpResponseError({
-    required this.statusCode,
-  });
+  const HttpResponseError({this.request, this.response});
 
-  /// The HTTP status code.
-  final int statusCode;
+  /// The associated request.
+  final WebResourceRequest? request;
+
+  /// The associated response.
+  final WebResourceResponse? response;
 }

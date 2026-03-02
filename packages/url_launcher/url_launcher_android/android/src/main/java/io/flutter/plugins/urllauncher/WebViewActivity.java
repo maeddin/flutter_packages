@@ -1,16 +1,14 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 package io.flutter.plugins.urllauncher;
 
-import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Message;
 import android.provider.Browser;
@@ -21,8 +19,8 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
+import androidx.core.content.ContextCompat;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -49,27 +47,9 @@ public class WebViewActivity extends Activity {
 
   private final WebViewClient webViewClient =
       new WebViewClient() {
-
-        /*
-         * This method is deprecated in API 24. Still overridden to support
-         * earlier Android versions.
-         */
-        @SuppressWarnings("deprecation")
-        @Override
-        public boolean shouldOverrideUrlLoading(WebView view, String url) {
-          if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-            view.loadUrl(url);
-            return false;
-          }
-          return super.shouldOverrideUrlLoading(view, url);
-        }
-
-        @RequiresApi(Build.VERSION_CODES.N)
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            view.loadUrl(request.getUrl().toString());
-          }
+          view.loadUrl(request.getUrl().toString());
           return false;
         }
       };
@@ -86,22 +66,10 @@ public class WebViewActivity extends Activity {
         final WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
       final WebViewClient webViewClient =
           new WebViewClient() {
-            @TargetApi(Build.VERSION_CODES.LOLLIPOP)
             @Override
             public boolean shouldOverrideUrlLoading(
                 @NonNull WebView view, @NonNull WebResourceRequest request) {
               webview.loadUrl(request.getUrl().toString());
-              return true;
-            }
-
-            /*
-             * This method is deprecated in API 24. Still overridden to support
-             * earlier Android versions.
-             */
-            @SuppressWarnings("deprecation")
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, String url) {
-              webview.loadUrl(url);
               return true;
             }
           };
@@ -143,7 +111,8 @@ public class WebViewActivity extends Activity {
     webview.setWebChromeClient(new FlutterWebChromeClient());
 
     // Register receiver that may finish this Activity.
-    registerReceiver(broadcastReceiver, closeIntentFilter);
+    ContextCompat.registerReceiver(
+        this, broadcastReceiver, closeIntentFilter, ContextCompat.RECEIVER_EXPORTED);
   }
 
   @VisibleForTesting

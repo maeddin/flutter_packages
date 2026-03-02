@@ -1,3 +1,290 @@
+## 4.10.13
+
+* Bumps androidx.webkit:webkit from 1.14.0 to 1.15.0.
+
+## 4.10.12
+
+* Bumps kotlin_version to 2.3.0.
+
+## 4.10.11
+
+* Removes internal native library Dart proxy.
+
+## 4.10.10
+
+* Bumps kotlin_version to 2.2.21.
+
+## 4.10.9
+
+* Fixes a compatibility issue with Kotlin 1.8.
+
+## 4.10.8
+
+* Bumps com.android.tools.build:gradle from 8.12.1 to 8.13.1.
+
+## 4.10.7
+
+* Replaces use of deprecated Color.value.
+
+## 4.10.6
+
+* Updates to Pigeon 26.
+
+## 4.10.5
+
+* Resolves Gradle 9 deprecations.
+
+## 4.10.4
+
+* Adds a README section about enabling geolocation.
+
+## 4.10.3
+
+* Updates Java compatibility version to 17.
+
+## 4.10.2
+
+* Updates minimum supported SDK version to Flutter 3.35.
+* Removes obsolete code related to supporting SDK <24.
+
+## 4.10.1
+
+* Bumps com.android.tools.build:gradle to 8.12.1 and kotlin_version to 2.2.10.
+* Updates minimum supported SDK version to Flutter 3.29/Dart 3.7.
+
+## 4.10.0
+
+* Adds support for the Payment Request API with `AndroidWebViewController.isWebViewFeatureSupported` and `AndroidWebViewController.setPaymentRequestEnabled`.
+
+## 4.9.1
+
+* Updates kotlin version to 2.2.0 to enable gradle 8.11 support.
+
+## 4.9.0
+
+* Adds support for `PlatformWebViewController.loadFileWithParams`.
+* Introduces `AndroidLoadFileParams`, a platform-specific extension of `LoadFileParams` for Android that adds support for `headers`.
+
+## 4.8.2
+
+* Bumps gradle from 8.9.0 to 8.11.1.
+
+## 4.8.1
+
+* Updates `androidx.webkit` to 1.14.0.
+
+## 4.8.0
+
+* Adds `AndroidWebViewController.setMixedContentMode` to control how
+  mixed-content pages load.
+
+## 4.7.0
+
+* Adds support to respond to recoverable SSL certificate errors. See `AndroidNavigationDelegate.setOnSSlAuthError`.
+
+## 4.6.0
+
+* Adds support to set using wide view port. See `AndroidWebViewController.setUseWideViewPort`.
+* Changes default of `WebSettings.setUseWideViewPort` to `false` to align with native WebViews.
+
+## 4.5.0
+
+* Adds support to set whether to draw the scrollbar. See
+  `AndroidWebViewController.setVerticalScrollBarEnabled`,
+  `AndroidWebViewController.setHorizontalScrollBarEnabled`,
+  `AndroidWebViewController.supportsSetScrollBarsEnabled`.
+
+## 4.4.2
+
+* Updates pigeon generated code to fix `ImplicitSamInstance` and `SyntheticAccessor` Kotlin lint
+  warnings.
+
+## 4.4.1
+
+* Removes obsolete code related to supporting SDK <21.
+
+## 4.4.0
+
+* Adds support to set the over-scroll mode for the WebView. See `AndroidWebViewController.setOverScrollMode`.
+
+## 4.3.5
+
+* Adds internal wrapper methods for native `WebViewClient`.
+
+## 4.3.4
+
+* Bumps gradle from 8.0.0 to 8.9.0.
+
+## 4.3.3
+
+* Updates compileSdk 34 to flutter.compileSdkVersion.
+
+## 4.3.2
+
+* Bumps gradle-plugin to 2.1.10.
+
+## 4.3.1
+
+* Bumps gradle-plugin to 2.1.0.
+
+## 4.3.0
+
+* Adds support for disabling content URL access within WebView and disabling the Geolocation API.
+  See `AndroidWebViewController.setAllowContentAccess` and
+  `AndroidWebViewController.setGeolocationEnabled`.
+
+## 4.2.0
+
+* Adds support for configuring file access permissions. See `AndroidWebViewController.setAllowFileAccess`.
+
+## 4.1.0
+
+* Updates internal API wrapper to use `ProxyApi`s.
+
+## 4.0.3
+
+* Bumps androidx.annotation:annotation from 1.8.2 to 1.9.1.
+
+## 4.0.2
+
+* Updates README to remove contributor-focused documentation.
+
+## 4.0.1
+
+* Adds `missing_code_block_language_in_doc_comment` lint.
+
+## 4.0.0
+
+* Bumps androidx.webkit:webkit from 1.12.0 to 1.12.1.
+* **Breaking Change** Bumps Android `minSdkVersion` from 19 to 21.
+
+## 3.16.9
+
+* Updates Java compatibility version to 11.
+* Updates minimum supported SDK version to Flutter 3.24/Dart 3.5.
+
+## 3.16.8
+
+* Bumps androidx.webkit:webkit from 1.11.0 to 1.12.0.
+
+## 3.16.7
+
+* Bumps androidx.annotation:annotation from 1.8.1 to 1.8.2.
+
+## 3.16.6
+
+* Bumps androidx.annotation:annotation from 1.7.1 to 1.8.1.
+
+## 3.16.5
+
+* Updates lint checks to ignore NewerVersionAvailable.
+
+## 3.16.4
+
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+* Removes support for apps using the v1 Android embedding.
+
+## 3.16.3
+
+* Bumps androidx.webkit:webkit from 1.10.0 to 1.11.0.
+
+## 3.16.2
+
+* Bumps androidx.webkit:webkit from 1.7.0 to 1.10.0.
+* Updates minimum supported SDK version to Flutter 3.16/Dart 3.2.
+
+## 3.16.1
+
+* Fixes iframe navigation being handled in the main frame when `NavigationDelegate.onNavigationRequest` is present.
+
+## 3.16.0
+
+* Adds onReceivedHttpError WebViewClient callback to support
+  `PlatformNavigationDelegate.onHttpError`.
+* Updates minimum supported SDK version to Flutter 3.13/Dart 3.1.
+* Updates compileSdk to 34.
+
+## 3.15.0
+
+* Adds support for `setOnScrollPositionChange` method to the `AndroidWebViewController`.
+
+## 3.14.0
+
+* Adds support to show JavaScript dialog. See `AndroidWebViewController.setOnJavaScriptAlertDialog`, `AndroidWebViewController.setOnJavaScriptConfirmDialog` and `AndroidWebViewController.setOnJavaScriptTextInputDialog`.
+
+## 3.13.2
+
+* Fixes new lint warnings.
+
+## 3.13.1
+
+* Bumps androidx.annotation:annotation from 1.7.0 to 1.7.1.
+
+## 3.13.0
+
+* Adds support for `PlatformNavigationDelegate.setOnHttpAuthRequest`.
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+
+## 3.12.1
+
+* Fixes `use_build_context_synchronously` lint violations in the example app.
+
+## 3.12.0
+
+* Adds support for `PlatformWebViewController.getUserAgent`.
+
+## 3.11.0
+
+* Adds support to register a callback to receive JavaScript console messages. See `AndroidWebViewController.onConsoleMessage`.
+
+## 3.10.1
+
+* Bumps androidx.annotation:annotation from 1.5.0 to 1.7.0.
+
+## 3.10.0
+
+* Adds support for playing video in fullscreen. See
+  `AndroidWebViewController.setCustomWidgetCallbacks`.
+
+## 3.9.5
+
+* Updates pigeon to 11 and removes unneeded enum wrappers.
+
+## 3.9.4
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 3.9.3
+
+* Fixes bug where the `PlatformWebViewWidget` was rebuilt unnecessarily.
+
+## 3.9.2
+
+* Fixes bug where `PlatformWebViewWidget` doesn't rebuild when the controller or PlatformView
+  implementation flag changes.
+
+## 3.9.1
+
+* Adjusts SDK checks for better testability.
+
+## 3.9.0
+
+* Adds support for `WebResouceError.url`.
+
+## 3.8.2
+
+* Fixes unawaited_futures violations.
+
+## 3.8.1
+
+* Bumps androidx.webkit:webkit from 1.6.0 to 1.7.0.
+
+## 3.8.0
+
+* Adds support for handling geolocation permissions. See
+  `AndroidWebViewController.setGeolocationPermissionsPromptCallbacks`.
+
 ## 3.7.1
 
 * Removes obsolete null checks on non-nullable values.

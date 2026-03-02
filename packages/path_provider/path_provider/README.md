@@ -1,5 +1,5 @@
 # path_provider
-<?code-excerpt path-base="excerpts/packages/path_provider_example"?>
+<?code-excerpt path-base="example/lib"?>
 
 [![pub package](https://img.shields.io/pub/v/path_provider.svg)](https://pub.dev/packages/path_provider)
 
@@ -9,11 +9,7 @@ Not all methods are supported on all platforms.
 
 |             | Android | iOS   | Linux | macOS  | Windows     |
 |-------------|---------|-------|-------|--------|-------------|
-| **Support** | SDK 16+ | 11.0+ | Any   | 10.14+ | Windows 10+ |
-
-## Usage
-
-To use this plugin, add `path_provider` as a [dependency in your pubspec.yaml file](https://flutter.dev/docs/development/platform-integration/platform-channels).
+| **Support** | SDK 24+ | 13.0+ | Any   | 10.15+ | Windows 10+ |
 
 ## Example
 <?code-excerpt "readme_excerpts.dart (Example)"?>
@@ -35,10 +31,11 @@ Directories support by platform:
 | Application Support | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
 | Application Library | ❌️ | ✔️ | ❌️ | ✔️ | ❌️ |
 | Application Documents | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
+| Application Cache | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
 | External Storage | ✔️ | ❌ | ❌ | ❌️ | ❌️ |
 | External Cache Directories | ✔️ | ❌ | ❌ | ❌️ | ❌️ |
 | External Storage Directories | ✔️ | ❌ | ❌ | ❌️ | ❌️ |
-| Downloads | ❌ | ✔️ | ✔️ | ✔️ | ✔️ |
+| Downloads | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ |
 
 ## Testing
 

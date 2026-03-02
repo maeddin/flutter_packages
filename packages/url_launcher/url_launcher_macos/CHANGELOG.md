@@ -1,5 +1,43 @@
-## NEXT
+## 3.2.5
 
+* Updates to Pigeon 26.
+
+## 3.2.4
+
+* Updates minimum supported version to macOS 10.15.
+* Updates minimum supported SDK version to Flutter 3.35/Dart 3.9.
+
+## 3.2.3
+
+* Updates to Pigeon 25.5.0.
+* Updates minimum supported SDK version to Flutter 3.27/Dart 3.6.
+
+## 3.2.2
+
+* Updates to Pigeon v22.
+
+## 3.2.1
+
+* Adds privacy manifest.
+* Updates minimum supported SDK version to Flutter 3.19/Dart 3.3.
+
+## 3.2.0
+
+* Adds Swift Package Manager compatibility.
+* Updates minimum supported SDK version to Flutter 3.13/Dart 3.1.
+
+## 3.1.0
+
+* Implements `supportsMode` and `supportsCloseForMode`.
+
+## 3.0.7
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 3.0.6
+
+* Updates to the latest version of `pigeon`.
 * Updates minimum supported macOS version to 10.14.
 * Updates minimum supported SDK version to Flutter 3.3/Dart 2.18.
 

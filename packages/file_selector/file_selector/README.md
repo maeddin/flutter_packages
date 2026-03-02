@@ -1,18 +1,16 @@
 # file_selector
 
-<?code-excerpt path-base="excerpts/packages/file_selector_example"?>
+<?code-excerpt path-base="example/lib"?>
 
 [![pub package](https://img.shields.io/pub/v/file_selector.svg)](https://pub.dartlang.org/packages/file_selector)
 
 A Flutter plugin that manages files and interactions with file dialogs.
 
-|             | iOS     | Linux | macOS  | Web | Windows     |
-|-------------|---------|-------|--------|-----|-------------|
-| **Support** | iOS 11+ | Any   | 10.14+ | Any | Windows 10+ |
+|             | Android | iOS     | Linux | macOS  | Web | Windows     |
+|-------------|---------|---------|-------|--------|-----|-------------|
+| **Support** | SDK 24+ | iOS 13+ | Any   | 10.15+ | Any | Windows 10+ |
 
-## Usage
-
-To use this plugin, add `file_selector` as a [dependency in your pubspec.yaml file](https://flutter.dev/platform-plugins/).
+## Setup
 
 ### macOS
 
@@ -36,49 +34,57 @@ Please also take a look at our [example][example] app.
 #### Open a single file
 
 <?code-excerpt "open_image_page.dart (SingleOpen)"?>
-``` dart
-const XTypeGroup typeGroup = XTypeGroup(
+```dart
+const typeGroup = XTypeGroup(
   label: 'images',
   extensions: <String>['jpg', 'png'],
+  uniformTypeIdentifiers: <String>['public.jpeg', 'public.png'],
 );
-final XFile? file =
-    await openFile(acceptedTypeGroups: <XTypeGroup>[typeGroup]);
+final XFile? file = await openFile(
+  acceptedTypeGroups: <XTypeGroup>[typeGroup],
+);
 ```
 
 #### Open multiple files at once
 
 <?code-excerpt "open_multiple_images_page.dart (MultiOpen)"?>
-``` dart
-const XTypeGroup jpgsTypeGroup = XTypeGroup(
+```dart
+const jpgsTypeGroup = XTypeGroup(
   label: 'JPEGs',
   extensions: <String>['jpg', 'jpeg'],
+  uniformTypeIdentifiers: <String>['public.jpeg'],
 );
-const XTypeGroup pngTypeGroup = XTypeGroup(
+const pngTypeGroup = XTypeGroup(
   label: 'PNGs',
   extensions: <String>['png'],
+  uniformTypeIdentifiers: <String>['public.png'],
 );
-final List<XFile> files = await openFiles(acceptedTypeGroups: <XTypeGroup>[
-  jpgsTypeGroup,
-  pngTypeGroup,
-]);
+final List<XFile> files = await openFiles(
+  acceptedTypeGroups: <XTypeGroup>[jpgsTypeGroup, pngTypeGroup],
+);
 ```
 
 #### Save a file
 
 <?code-excerpt "readme_standalone_excerpts.dart (Save)"?>
 ```dart
-const String fileName = 'suggested_name.txt';
-final String? path = await getSavePath(suggestedName: fileName);
-if (path == null) {
+const fileName = 'suggested_name.txt';
+final FileSaveLocation? result = await getSaveLocation(
+  suggestedName: fileName,
+);
+if (result == null) {
   // Operation was canceled by the user.
   return;
 }
 
-final Uint8List fileData = Uint8List.fromList('Hello World!'.codeUnits);
-const String mimeType = 'text/plain';
-final XFile textFile =
-    XFile.fromData(fileData, mimeType: mimeType, name: fileName);
-await textFile.saveTo(path);
+final fileData = Uint8List.fromList('Hello World!'.codeUnits);
+const mimeType = 'text/plain';
+final textFile = XFile.fromData(
+  fileData,
+  mimeType: mimeType,
+  name: fileName,
+);
+await textFile.saveTo(result.path);
 ```
 
 #### Get a directory path
@@ -99,23 +105,23 @@ Different platforms support different type group filter options. To avoid
 filters that cover all platforms you are targeting, or that you conditionally
 pass different `XTypeGroup`s based on `Platform`.
 
-|                          | iOS | Linux | macOS  | Web | Windows     |
-|--------------------------|-----|-------|--------|-----|-------------|
-| `extensions`             |     | ✔️     | ✔️      | ✔️   | ✔️           |
-| `mimeTypes`              |     | ✔️     | ✔️†     | ✔️   |             |
-| `uniformTypeIdentifiers` | ✔️   |       | ✔️      |     |             |
-| `webWildCards`           |     |       |        | ✔️   |             |
+|                          | Andoid | iOS | Linux | macOS  | Web | Windows     |
+|--------------------------|--------|-----|-------|--------|-----|-------------|
+| `extensions`             | ✔️      |     | ✔️     | ✔️      | ✔️   | ✔️           |
+| `mimeTypes`              | ✔️      |     | ✔️     | ✔️†     | ✔️   |             |
+| `uniformTypeIdentifiers` |        | ✔️   |       | ✔️      |     |             |
+| `webWildCards`           |        |     |       |        | ✔️   |             |
 
 † `mimeTypes` are not supported on version of macOS earlier than 11 (Big Sur).
 
 ### Features supported by platform
 
-| Feature                | Description                        | iOS      | Linux      | macOS    | Windows      | Web         |
-| ---------------------- |----------------------------------- |--------- | ---------- | -------- | ------------ | ----------- |
-| Choose a single file   | Pick a file/image                  | ✔️       | ✔️        | ✔️       | ✔️          | ✔️          |
-| Choose multiple files  | Pick multiple files/images         | ✔️       | ✔️        | ✔️       | ✔️          | ✔️          |
-| Choose a save location | Pick a directory to save a file in | ❌       | ✔️        | ✔️       | ✔️          | ❌          |
-| Choose a directory     | Pick a folder and get its path     | ❌       | ✔️        | ✔️       | ✔️          | ❌          |
+| Feature                | Description                        | Android | iOS      | Linux      | macOS    | Windows      | Web         |
+| ---------------------- |----------------------------------- |---------|--------- | ---------- | -------- | ------------ | ----------- |
+| Choose a single file   | Pick a file/image                  | ✔️       | ✔️       | ✔️        | ✔️       | ✔️          | ✔️          |
+| Choose multiple files  | Pick multiple files/images         | ✔️       | ✔️       | ✔️        | ✔️       | ✔️          | ✔️          |
+| Choose a save location | Pick a directory to save a file in | ❌       | ❌       | ✔️        | ✔️       | ✔️          | ❌          |
+| Choose a directory     | Pick a directory and get its path  | ✔️       | ❌       | ✔️        | ✔️       | ✔️          | ❌          |
 
 [example]:./example
 [entitlement]: https://docs.flutter.dev/desktop#entitlements-and-the-app-sandbox

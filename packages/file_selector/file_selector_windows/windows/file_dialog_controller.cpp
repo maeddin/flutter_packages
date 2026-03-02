@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -49,6 +49,10 @@ HRESULT FileDialogController::Show(HWND parent) {
 
 HRESULT FileDialogController::GetResult(IShellItem** out_item) const {
   return dialog_->GetResult(out_item);
+}
+
+HRESULT FileDialogController::GetFileTypeIndex(UINT* out_index) const {
+  return dialog_->GetFileTypeIndex(out_index);
 }
 
 HRESULT FileDialogController::GetResults(IShellItemArray** out_items) const {

@@ -1,27 +1,30 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
+import 'package:shared_preferences_platform_interface/types.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group(SharedPreferencesStorePlatform, () {
     test('disallows implementing interface', () {
-      expect(() {
-        SharedPreferencesStorePlatform.instance = IllegalImplementation();
-      },
-          // In versions of `package:plugin_platform_interface` prior to fixing
-          // https://github.com/flutter/flutter/issues/109339, an attempt to
-          // implement a platform interface using `implements` would sometimes
-          // throw a `NoSuchMethodError` and other times throw an
-          // `AssertionError`. After the issue is fixed, an `AssertionError` will
-          // always be thrown. For the purpose of this test, we don't really care
-          // what exception is thrown, so just allow any exception.
-          throwsA(anything));
+      expect(
+        () {
+          SharedPreferencesStorePlatform.instance = IllegalImplementation();
+        },
+        // In versions of `package:plugin_platform_interface` prior to fixing
+        // https://github.com/flutter/flutter/issues/109339, an attempt to
+        // implement a platform interface using `implements` would sometimes
+        // throw a `NoSuchMethodError` and other times throw an
+        // `AssertionError`. After the issue is fixed, an `AssertionError` will
+        // always be thrown. For the purpose of this test, we don't really care
+        // what exception is thrown, so just allow any exception.
+        throwsA(anything),
+      );
     });
 
     test('supports MockPlatformInterfaceMixin', () {
@@ -52,12 +55,24 @@ class IllegalImplementation implements SharedPreferencesStorePlatform {
   }
 
   @override
+  Future<bool> clearWithParameters(ClearParameters parameters) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<Map<String, Object>> getAll() {
     throw UnimplementedError();
   }
 
   @override
   Future<Map<String, Object>> getAllWithPrefix(String prefix) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Map<String, Object>> getAllWithParameters(
+    GetAllParameters parameters,
+  ) {
     throw UnimplementedError();
   }
 
@@ -87,12 +102,24 @@ class LegacyIsMockImplementation implements SharedPreferencesStorePlatform {
   }
 
   @override
+  Future<bool> clearWithParameters(ClearParameters parameters) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<Map<String, Object>> getAll() {
     throw UnimplementedError();
   }
 
   @override
   Future<Map<String, Object>> getAllWithPrefix(String prefix) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Map<String, Object>> getAllWithParameters(
+    GetAllParameters parameters,
+  ) {
     throw UnimplementedError();
   }
 
@@ -124,12 +151,24 @@ class ModernMockImplementation
   }
 
   @override
+  Future<bool> clearWithParameters(ClearParameters parameters) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<Map<String, Object>> getAll() {
     throw UnimplementedError();
   }
 
   @override
   Future<Map<String, Object>> getAllWithPrefix(String prefix) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Map<String, Object>> getAllWithParameters(
+    GetAllParameters parameters,
+  ) {
     throw UnimplementedError();
   }
 

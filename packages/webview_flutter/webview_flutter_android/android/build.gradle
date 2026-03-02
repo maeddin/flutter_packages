@@ -1,14 +1,16 @@
-group 'io.flutter.plugins.webviewflutter'
-version '1.0-SNAPSHOT'
+group = 'io.flutter.plugins.webviewflutter'
+version = '1.0-SNAPSHOT'
 
 buildscript {
+    ext.kotlin_version = '2.3.0'
     repositories {
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.0.0'
+        classpath 'com.android.tools.build:gradle:8.13.1'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
@@ -20,36 +22,40 @@ rootProject.allprojects {
 }
 
 apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
 
 android {
-    // Conditional for compatibility with AGP <4.2.
-    if (project.android.hasProperty("namespace")) {
-        namespace 'io.flutter.plugins.webviewflutter'
+    namespace = "io.flutter.plugins.webviewflutter"
+    compileSdk = flutter.compileSdkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
-    compileSdkVersion 33
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17.toString()
+    }
 
     defaultConfig {
-        minSdkVersion 19
+        minSdkVersion 24
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    lintOptions {
-        checkAllWarnings true
-        warningsAsErrors true
-        disable 'AndroidGradlePluginVersion', 'InvalidPackage', 'GradleDependency'
+    lint {
+        checkAllWarnings = true
+        warningsAsErrors = true
+        disable 'AndroidGradlePluginVersion', 'InvalidPackage', 'GradleDependency', 'NewerVersionAvailable'
+        baseline = file("lint-baseline.xml")
     }
 
     dependencies {
-        implementation 'androidx.annotation:annotation:1.5.0'
-        implementation 'androidx.webkit:webkit:1.6.1'
-        testImplementation 'junit:junit:4.13.2'
-        testImplementation 'org.mockito:mockito-inline:5.1.0'
-        testImplementation 'androidx.test:core:1.3.0'
-    }
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        implementation("androidx.annotation:annotation:1.9.1")
+        implementation("androidx.webkit:webkit:1.15.0")
+        testImplementation("junit:junit:4.13.2")
+        testImplementation("org.mockito:mockito-core:5.22.0")
+        testImplementation("org.mockito:mockito-inline:5.2.0")
+        testImplementation("androidx.test:core:1.7.0")
     }
 
     testOptions {

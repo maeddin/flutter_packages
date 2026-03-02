@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,8 +6,6 @@ package io.flutter.plugins.camera.features.noisereduction;
 
 import android.annotation.SuppressLint;
 import android.hardware.camera2.CaptureRequest;
-import android.os.Build.VERSION;
-import android.os.Build.VERSION_CODES;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import io.flutter.BuildConfig;
@@ -36,12 +34,10 @@ public class NoiseReductionFeature extends CameraFeature<NoiseReductionMode> {
     NOISE_REDUCTION_MODES.put(NoiseReductionMode.fast, CaptureRequest.NOISE_REDUCTION_MODE_FAST);
     NOISE_REDUCTION_MODES.put(
         NoiseReductionMode.highQuality, CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY);
-    if (VERSION.SDK_INT >= VERSION_CODES.M) {
-      NOISE_REDUCTION_MODES.put(
-          NoiseReductionMode.minimal, CaptureRequest.NOISE_REDUCTION_MODE_MINIMAL);
-      NOISE_REDUCTION_MODES.put(
-          NoiseReductionMode.zeroShutterLag, CaptureRequest.NOISE_REDUCTION_MODE_ZERO_SHUTTER_LAG);
-    }
+    NOISE_REDUCTION_MODES.put(
+        NoiseReductionMode.minimal, CaptureRequest.NOISE_REDUCTION_MODE_MINIMAL);
+    NOISE_REDUCTION_MODES.put(
+        NoiseReductionMode.zeroShutterLag, CaptureRequest.NOISE_REDUCTION_MODE_ZERO_SHUTTER_LAG);
   }
 
   @NonNull

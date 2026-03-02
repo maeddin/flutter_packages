@@ -1,3 +1,175 @@
+## 6.3.28
+
+* Bumps com.android.tools.build:gradle from 8.12.1 to 8.13.1.
+
+## 6.3.27
+
+* Bumps androidx.browser:browser from 1.8.0 to 1.9.0.
+
+## 6.3.26
+
+* Bumps androidx.core:core from 1.13.1 to 1.17.0.
+
+## 6.3.25
+
+* Updates to Pigeon 26.
+
+## 6.3.24
+
+* Resolves Gradle 9 deprecations. 
+
+## 6.3.23
+
+* Updates Java compatibility version to 17.
+
+## 6.3.22
+
+* Adds support for `externalNonBrowserApplication` on API 30+.
+
+## 6.3.21
+
+* Updates minimum supported SDK version to Flutter 3.35.
+* Removes obsolete code related to supporting SDK <24.
+
+## 6.3.20
+
+* Restore SDK 21-23 support, as the previous change was intended
+  to require Flutter 3.35, but didn't.
+
+## 6.3.19
+
+* **Retracted** due to not including the Flutter min SDK change.
+* Updates minimum supported SDK version to Flutter 3.35.
+* Removes obsolete code related to supporting SDK <24.
+
+## 6.3.18
+
+* Bumps com.android.tools.build:gradle to 8.12.1.
+* Updates minimum supported SDK version to Flutter 3.29/Dart 3.7.
+
+## 6.3.17
+
+* Updates kotlin version to 2.2.0 to enable gradle 8.11 support.
+
+## 6.3.16
+
+* Removes obsolete code related to supporting SDK <21.
+
+## 6.3.15
+
+* Updates compileSdk 34 to flutter.compileSdkVersion.
+
+## 6.3.14
+
+* Bumps androidx.annotation:annotation from 1.9.0 to 1.9.1.
+
+## 6.3.13
+
+* Bumps androidx.annotation:annotation from 1.8.2 to 1.9.0.
+
+## 6.3.12
+
+* Updates Java compatibility version to 11.
+
+## 6.3.11
+
+* Updates Pigeon for non-nullable collection type support.
+
+## 6.3.10
+
+* Removes dependency on org.jetbrains.kotlin:kotlin-bom.
+* Updates minimum supported SDK version to Flutter 3.24/Dart 3.5.
+
+## 6.3.9
+
+* Bumps androidx.annotation:annotation from 1.8.1 to 1.8.2.
+
+## 6.3.8
+
+* Bumps androidx.browser:browser from 1.5.0 to 1.8.0.
+
+## 6.3.7
+
+* Bumps androidx.annotation:annotation from 1.8.0 to 1.8.1.
+
+## 6.3.6
+
+* Updates lint checks to ignore NewerVersionAvailable.
+
+## 6.3.5
+
+* Bumps androidx.core:core from 1.10.1 to 1.13.1.
+
+## 6.3.4
+
+* Updates Android Gradle Plugin to 8.5.1.
+
+## 6.3.3
+
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+* Removes support for apps using the v1 Android embedding.
+
+## 6.3.2
+
+* Bumps androidx.annotation:annotation from 1.7.1 to 1.8.0.
+
+## 6.3.1
+
+* Updates minSdkVersion to 19.
+* Updates minimum supported SDK version to Flutter 3.16/Dart 3.2.
+
+## 6.3.0
+
+* Adds support for `BrowserConfiguration`.
+* Implements `showTitle` functionality for Android Custom Tabs.
+* Updates compileSdk version to 34.
+
+## 6.2.3
+
+* Bumps androidx.annotation:annotation from 1.7.0 to 1.7.1.
+
+## 6.2.2
+
+* Updates minimum required plugin_platform_interface version to 2.1.7.
+
+## 6.2.1
+
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+* Fixes lint warnings.
+
+## 6.2.0
+
+* Adds support for `inAppBrowserView` as a separate launch mode option from
+  `inAppWebView` mode. `inAppBrowserView` is the preferred in-app mode for most uses,
+  but does not support `closeInAppWebView`.
+* Implements `supportsMode` and `supportsCloseForMode`.
+
+## 6.1.1
+
+* Updates annotations lib to 1.7.0.
+
+## 6.1.0
+
+* Adds support for Android Custom Tabs.
+
+## 6.0.39
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 6.0.38
+
+* Updates android implementation to support api 34 broadcast receiver requirements.
+
+## 6.0.37
+
+* Sets android.defaults.buildfeatures.buildconfig to true for compatibility with AGP 8.0+.
+
+## 6.0.36
+
+* Bumps androidx.annotation:annotation from 1.2.0 to 1.6.0.
+* Adds a dependency on kotlin-bom to align versions of Kotlin transitive dependencies.
+
 ## 6.0.35
 
 * Converts method channels to Pigeon.

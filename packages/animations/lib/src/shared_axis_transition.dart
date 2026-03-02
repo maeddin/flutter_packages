@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -233,56 +233,44 @@ class SharedAxisTransition extends StatelessWidget {
     final Color color = fillColor ?? Theme.of(context).canvasColor;
     return DualTransitionBuilder(
       animation: animation,
-      forwardBuilder: (
-        BuildContext context,
-        Animation<double> animation,
-        Widget? child,
-      ) {
-        return _EnterTransition(
-          animation: animation,
-          transitionType: transitionType,
-          child: child,
-        );
-      },
-      reverseBuilder: (
-        BuildContext context,
-        Animation<double> animation,
-        Widget? child,
-      ) {
-        return _ExitTransition(
-          animation: animation,
-          transitionType: transitionType,
-          reverse: true,
-          fillColor: color,
-          child: child,
-        );
-      },
+      forwardBuilder:
+          (BuildContext context, Animation<double> animation, Widget? child) {
+            return _EnterTransition(
+              animation: animation,
+              transitionType: transitionType,
+              child: child,
+            );
+          },
+      reverseBuilder:
+          (BuildContext context, Animation<double> animation, Widget? child) {
+            return _ExitTransition(
+              animation: animation,
+              transitionType: transitionType,
+              reverse: true,
+              fillColor: color,
+              child: child,
+            );
+          },
       child: DualTransitionBuilder(
         animation: ReverseAnimation(secondaryAnimation),
-        forwardBuilder: (
-          BuildContext context,
-          Animation<double> animation,
-          Widget? child,
-        ) {
-          return _EnterTransition(
-            animation: animation,
-            transitionType: transitionType,
-            reverse: true,
-            child: child,
-          );
-        },
-        reverseBuilder: (
-          BuildContext context,
-          Animation<double> animation,
-          Widget? child,
-        ) {
-          return _ExitTransition(
-            animation: animation,
-            transitionType: transitionType,
-            fillColor: color,
-            child: child,
-          );
-        },
+        forwardBuilder:
+            (BuildContext context, Animation<double> animation, Widget? child) {
+              return _EnterTransition(
+                animation: animation,
+                transitionType: transitionType,
+                reverse: true,
+                child: child,
+              );
+            },
+        reverseBuilder:
+            (BuildContext context, Animation<double> animation, Widget? child) {
+              return _ExitTransition(
+                animation: animation,
+                transitionType: transitionType,
+                fillColor: color,
+                child: child,
+              );
+            },
         child: child,
       ),
     );
@@ -303,18 +291,18 @@ class _EnterTransition extends StatelessWidget {
   final bool reverse;
 
   static final Animatable<double> _fadeInTransition = CurveTween(
-    curve: decelerateEasing,
+    curve: Easing.legacyDecelerate,
   ).chain(CurveTween(curve: const Interval(0.3, 1.0)));
 
   static final Animatable<double> _scaleDownTransition = Tween<double>(
     begin: 1.10,
     end: 1.00,
-  ).chain(CurveTween(curve: standardEasing));
+  ).chain(CurveTween(curve: Easing.legacy));
 
   static final Animatable<double> _scaleUpTransition = Tween<double>(
     begin: 0.80,
     end: 1.00,
-  ).chain(CurveTween(curve: standardEasing));
+  ).chain(CurveTween(curve: Easing.legacy));
 
   @override
   Widget build(BuildContext context) {
@@ -323,7 +311,7 @@ class _EnterTransition extends StatelessWidget {
         final Animatable<Offset> slideInTransition = Tween<Offset>(
           begin: Offset(!reverse ? 30.0 : -30.0, 0.0),
           end: Offset.zero,
-        ).chain(CurveTween(curve: standardEasing));
+        ).chain(CurveTween(curve: Easing.legacy));
 
         return FadeTransition(
           opacity: _fadeInTransition.animate(animation),
@@ -342,7 +330,7 @@ class _EnterTransition extends StatelessWidget {
         final Animatable<Offset> slideInTransition = Tween<Offset>(
           begin: Offset(0.0, !reverse ? 30.0 : -30.0),
           end: Offset.zero,
-        ).chain(CurveTween(curve: standardEasing));
+        ).chain(CurveTween(curve: Easing.legacy));
 
         return FadeTransition(
           opacity: _fadeInTransition.animate(animation),
@@ -386,18 +374,18 @@ class _ExitTransition extends StatelessWidget {
   final Widget? child;
 
   static final Animatable<double> _fadeOutTransition = _FlippedCurveTween(
-    curve: accelerateEasing,
+    curve: Easing.legacyAccelerate,
   ).chain(CurveTween(curve: const Interval(0.0, 0.3)));
 
   static final Animatable<double> _scaleUpTransition = Tween<double>(
     begin: 1.00,
     end: 1.10,
-  ).chain(CurveTween(curve: standardEasing));
+  ).chain(CurveTween(curve: Easing.legacy));
 
   static final Animatable<double> _scaleDownTransition = Tween<double>(
     begin: 1.00,
     end: 0.80,
-  ).chain(CurveTween(curve: standardEasing));
+  ).chain(CurveTween(curve: Easing.legacy));
 
   @override
   Widget build(BuildContext context) {
@@ -406,11 +394,11 @@ class _ExitTransition extends StatelessWidget {
         final Animatable<Offset> slideOutTransition = Tween<Offset>(
           begin: Offset.zero,
           end: Offset(!reverse ? -30.0 : 30.0, 0.0),
-        ).chain(CurveTween(curve: standardEasing));
+        ).chain(CurveTween(curve: Easing.legacy));
 
         return FadeTransition(
           opacity: _fadeOutTransition.animate(animation),
-          child: Container(
+          child: ColoredBox(
             color: fillColor,
             child: AnimatedBuilder(
               animation: animation,
@@ -428,11 +416,11 @@ class _ExitTransition extends StatelessWidget {
         final Animatable<Offset> slideOutTransition = Tween<Offset>(
           begin: Offset.zero,
           end: Offset(0.0, !reverse ? -30.0 : 30.0),
-        ).chain(CurveTween(curve: standardEasing));
+        ).chain(CurveTween(curve: Easing.legacy));
 
         return FadeTransition(
           opacity: _fadeOutTransition.animate(animation),
-          child: Container(
+          child: ColoredBox(
             color: fillColor,
             child: AnimatedBuilder(
               animation: animation,
@@ -449,7 +437,7 @@ class _ExitTransition extends StatelessWidget {
       case SharedAxisTransitionType.scaled:
         return FadeTransition(
           opacity: _fadeOutTransition.animate(animation),
-          child: Container(
+          child: ColoredBox(
             color: fillColor,
             child: ScaleTransition(
               scale: (!reverse ? _scaleUpTransition : _scaleDownTransition)
@@ -471,9 +459,7 @@ class _ExitTransition extends StatelessWidget {
 /// between 0.0 and 1.0.
 class _FlippedCurveTween extends CurveTween {
   /// Creates a vertically flipped [CurveTween].
-  _FlippedCurveTween({
-    required super.curve,
-  });
+  _FlippedCurveTween({required super.curve});
 
   @override
   double transform(double t) => 1.0 - super.transform(t);

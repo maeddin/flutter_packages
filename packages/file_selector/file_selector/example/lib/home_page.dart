@@ -1,7 +1,10 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// Home Page of the application
@@ -12,16 +15,11 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ButtonStyle style = ElevatedButton.styleFrom(
-      // TODO(darrenaustin): Migrate to new API once it lands in stable: https://github.com/flutter/flutter/issues/105724
-      // ignore: deprecated_member_use
-      primary: Colors.blue,
-      // ignore: deprecated_member_use
-      onPrimary: Colors.white,
+      backgroundColor: Colors.blue,
+      foregroundColor: Colors.white,
     );
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('File Selector Demo Home Page'),
-      ),
+      appBar: AppBar(title: const Text('File Selector Demo Home Page')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -43,25 +41,33 @@ class HomePage extends StatelessWidget {
               child: const Text('Open multiple images'),
               onPressed: () => Navigator.pushNamed(context, '/open/images'),
             ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              style: style,
-              child: const Text('Save a file'),
-              onPressed: () => Navigator.pushNamed(context, '/save/text'),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              style: style,
-              child: const Text('Open a get directory dialog'),
-              onPressed: () => Navigator.pushNamed(context, '/directory'),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              style: style,
-              child: const Text('Open a get multi directories dialog'),
-              onPressed: () =>
-                  Navigator.pushNamed(context, '/multi-directories'),
-            ),
+            // TODO(stuartmorgan): Replace these checks with support queries once
+            // https://github.com/flutter/flutter/issues/127328 is implemented.
+            if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) ...<Widget>[
+              const SizedBox(height: 10),
+              ElevatedButton(
+                style: style,
+                child: const Text('Save a file'),
+                onPressed: () => Navigator.pushNamed(context, '/save/text'),
+              ),
+            ],
+            if (!(kIsWeb || Platform.isIOS)) ...<Widget>[
+              const SizedBox(height: 10),
+              ElevatedButton(
+                style: style,
+                child: const Text('Open a get directory dialog'),
+                onPressed: () => Navigator.pushNamed(context, '/directory'),
+              ),
+            ],
+            if (!(kIsWeb || Platform.isAndroid || Platform.isIOS)) ...<Widget>[
+              const SizedBox(height: 10),
+              ElevatedButton(
+                style: style,
+                child: const Text('Open a get multi directories dialog'),
+                onPressed: () =>
+                    Navigator.pushNamed(context, '/multi-directories'),
+              ),
+            ],
           ],
         ),
       ),

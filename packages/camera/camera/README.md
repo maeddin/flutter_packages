@@ -1,6 +1,6 @@
 # Camera Plugin
 
-<?code-excerpt path-base="excerpts/packages/camera_example"?>
+<?code-excerpt path-base="example/lib"?>
 
 [![pub package](https://img.shields.io/pub/v/camera.svg)](https://pub.dev/packages/camera)
 
@@ -8,7 +8,7 @@ A Flutter plugin for iOS, Android and Web allowing access to the device cameras.
 
 |                | Android | iOS       | Web                    |
 |----------------|---------|-----------|------------------------|
-| **Support**    | SDK 21+ | iOS 11.0+ | [See `camera_web `][1] |
+| **Support**    | SDK 24+ | iOS 13.0+ | [See `camera_web `][1] |
 
 ## Features
 
@@ -17,9 +17,7 @@ A Flutter plugin for iOS, Android and Web allowing access to the device cameras.
 * Record video.
 * Add access to the image stream from Dart.
 
-## Installation
-
-First, add `camera` as a [dependency in your pubspec.yaml file](https://flutter.dev/using-packages/).
+## Setup
 
 ### iOS
 
@@ -39,13 +37,13 @@ If editing `Info.plist` as text, add:
 
 ### Android
 
-Change the minimum Android sdk version to 21 (or higher) in your `android/app/build.gradle` file.
+The endorsed [`camera_android_camerax`][2] implementation of the camera plugin built with CameraX has
+better support for more devices than `camera_android`, but has some limitations; please see [this list][3]
+for more details. If you wish to use the [`camera_android`][4] implementation of the camera plugin
+built with Camera2 that lacks these limitations, please follow [these instructions][5].
 
-```groovy
-minSdkVersion 21
-```
-
-It's important to note that the `MediaRecorder` class is not working properly on emulators, as stated in the documentation: https://developer.android.com/reference/android/media/MediaRecorder. Specifically, when recording a video with sound enabled and trying to play it back, the duration won't be correct and you will only see the first frame.
+If you wish to allow image streaming while your app is in the background, there are additional steps required;
+please see [these instructions][6] for more details.
 
 ### Web integration
 
@@ -127,23 +125,26 @@ class _CameraAppState extends State<CameraApp> {
   void initState() {
     super.initState();
     controller = CameraController(_cameras[0], ResolutionPreset.max);
-    controller.initialize().then((_) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {});
-    }).catchError((Object e) {
-      if (e is CameraException) {
-        switch (e.code) {
-          case 'CameraAccessDenied':
-            // Handle access errors here.
-            break;
-          default:
-            // Handle other errors here.
-            break;
-        }
-      }
-    });
+    controller
+        .initialize()
+        .then((_) {
+          if (!mounted) {
+            return;
+          }
+          setState(() {});
+        })
+        .catchError((Object e) {
+          if (e is CameraException) {
+            switch (e.code) {
+              case 'CameraAccessDenied':
+                // Handle access errors here.
+                break;
+              default:
+                // Handle other errors here.
+                break;
+            }
+          }
+        });
   }
 
   @override
@@ -157,13 +158,17 @@ class _CameraAppState extends State<CameraApp> {
     if (!controller.value.isInitialized) {
       return Container();
     }
-    return MaterialApp(
-      home: CameraPreview(controller),
-    );
+    return MaterialApp(home: CameraPreview(controller));
   }
 }
+
 ```
 
 For a more elaborate usage example see [here](https://github.com/flutter/packages/tree/main/packages/camera/camera/example).
 
 [1]: https://pub.dev/packages/camera_web#limitations-on-the-web-platform
+[2]: https://pub.dev/packages/camera_android_camerax
+[3]: https://pub.dev/packages/camera_android_camerax#limitations
+[4]: https://pub.dev/packages/camera_android
+[5]: https://pub.dev/packages/camera_android#usage
+[6]: https://pub.dev/packages/camera_android_camerax#allowing-image-streaming-in-the-background

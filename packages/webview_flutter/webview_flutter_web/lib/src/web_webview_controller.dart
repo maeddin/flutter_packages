@@ -1,16 +1,17 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'dart:convert';
-import 'dart:html' as html;
+import 'dart:js_interop';
+import 'dart:ui_web' as ui_web;
 
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/widgets.dart';
+import 'package:web/web.dart' as web;
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 
 import 'content_type.dart';
 import 'http_request_factory.dart';
-import 'shims/dart_ui.dart' as ui;
 
 /// An implementation of [PlatformWebViewControllerCreationParams] using Flutter
 /// for Web API.
@@ -38,7 +39,7 @@ class WebWebViewControllerCreationParams
 
   /// The underlying element used as the WebView.
   @visibleForTesting
-  final html.IFrameElement iFrame = html.IFrameElement()
+  final web.HTMLIFrameElement iFrame = web.HTMLIFrameElement()
     ..id = 'webView${_nextIFrameId++}'
     ..style.width = '100%'
     ..style.height = '100%'
@@ -49,17 +50,19 @@ class WebWebViewControllerCreationParams
 class WebWebViewController extends PlatformWebViewController {
   /// Constructs a [WebWebViewController].
   WebWebViewController(PlatformWebViewControllerCreationParams params)
-      : super.implementation(params is WebWebViewControllerCreationParams
+    : super.implementation(
+        params is WebWebViewControllerCreationParams
             ? params
-            : WebWebViewControllerCreationParams
-                .fromPlatformWebViewControllerCreationParams(params));
+            : WebWebViewControllerCreationParams.fromPlatformWebViewControllerCreationParams(
+                params,
+              ),
+      );
 
   WebWebViewControllerCreationParams get _webWebViewParams =>
       params as WebWebViewControllerCreationParams;
 
   @override
   Future<void> loadHtmlString(String html, {String? baseUrl}) async {
-    // ignore: unsafe_html
     _webWebViewParams.iFrame.src = Uri.dataFromString(
       html,
       mimeType: 'text/html',
@@ -71,13 +74,13 @@ class WebWebViewController extends PlatformWebViewController {
   Future<void> loadRequest(LoadRequestParams params) async {
     if (!params.uri.hasScheme) {
       throw ArgumentError(
-          'LoadRequestParams#uri is required to have a scheme.');
+        'LoadRequestParams#uri is required to have a scheme.',
+      );
     }
 
     if (params.headers.isEmpty &&
         (params.body == null || params.body!.isEmpty) &&
         params.method == LoadRequestMethod.get) {
-      // ignore: unsafe_html
       _webWebViewParams.iFrame.src = params.uri.toString();
     } else {
       await _updateIFrameFromXhr(params);
@@ -86,22 +89,21 @@ class WebWebViewController extends PlatformWebViewController {
 
   /// Performs an AJAX request defined by [params].
   Future<void> _updateIFrameFromXhr(LoadRequestParams params) async {
-    final html.HttpRequest httpReq =
+    final response =
         await _webWebViewParams.httpRequestFactory.request(
-      params.uri.toString(),
-      method: params.method.serialize(),
-      requestHeaders: params.headers,
-      sendData: params.body,
-    );
+              params.uri.toString(),
+              method: params.method.serialize(),
+              requestHeaders: params.headers,
+              sendData: params.body,
+            )
+            as web.Response;
 
-    final String header =
-        httpReq.getResponseHeader('content-type') ?? 'text/html';
-    final ContentType contentType = ContentType.parse(header);
+    final String header = response.headers.get('content-type') ?? 'text/html';
+    final contentType = ContentType.parse(header);
     final Encoding encoding = Encoding.getByName(contentType.charset) ?? utf8;
 
-    // ignore: unsafe_html
     _webWebViewParams.iFrame.src = Uri.dataFromString(
-      httpReq.responseText ?? '',
+      (await response.text().toDart).toDart,
       mimeType: contentType.mimeType,
       encoding: encoding,
     ).toString();
@@ -112,10 +114,9 @@ class WebWebViewController extends PlatformWebViewController {
 class WebWebViewWidget extends PlatformWebViewWidget {
   /// Constructs a [WebWebViewWidget].
   WebWebViewWidget(PlatformWebViewWidgetCreationParams params)
-      : super.implementation(params) {
-    final WebWebViewController controller =
-        params.controller as WebWebViewController;
-    ui.platformViewRegistry.registerViewFactory(
+    : super.implementation(params) {
+    final controller = params.controller as WebWebViewController;
+    ui_web.platformViewRegistry.registerViewFactory(
       controller._webWebViewParams.iFrame.id,
       (int viewId) => controller._webWebViewParams.iFrame,
     );

@@ -1,14 +1,16 @@
-group 'io.flutter.plugins.sharedpreferences'
-version '1.0-SNAPSHOT'
+group = 'io.flutter.plugins.sharedpreferences'
+version = '1.0-SNAPSHOT'
 
 buildscript {
+    ext.kotlin_version = '2.3.0'
     repositories {
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.2.2'
+        classpath 'com.android.tools.build:gradle:8.13.1'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
@@ -28,31 +30,45 @@ allprojects {
 }
 
 apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
 
 android {
-    // Conditional for compatibility with AGP <4.2.
-    if (project.android.hasProperty("namespace")) {
-        namespace 'io.flutter.plugins.sharedpreferences'
-    }
-    compileSdkVersion 33
+    namespace = "io.flutter.plugins.sharedpreferences"
+    compileSdk = flutter.compileSdkVersion
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17.toString()
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
     }
 
     defaultConfig {
-        minSdkVersion 16
+        minSdkVersion 24
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
-    lintOptions {
-        checkAllWarnings true
-        warningsAsErrors true
-        disable 'AndroidGradlePluginVersion', 'InvalidPackage', 'GradleDependency'
+    lint {
+        checkAllWarnings = true
+        warningsAsErrors = true
+        disable 'AndroidGradlePluginVersion', 'InvalidPackage', 'GradleDependency', 'NewerVersionAvailable'
+        baseline = file("lint-baseline.xml")
     }
     dependencies {
-        testImplementation 'junit:junit:4.13.2'
-        testImplementation 'org.mockito:mockito-inline:5.0.0'
+        implementation("androidx.datastore:datastore:1.1.7")
+        implementation("androidx.datastore:datastore-preferences:1.1.7")
+        implementation("androidx.preference:preference:1.2.1")
+        testImplementation("junit:junit:4.13.2")
+        testImplementation("androidx.test:core-ktx:1.7.0")
+        testImplementation("androidx.test.ext:junit-ktx:1.3.0")
+        testImplementation("org.robolectric:robolectric:4.16")
+        testImplementation("org.mockito:mockito-inline:5.2.0")
+        testImplementation("io.mockk:mockk:1.14.9")
     }
 
 

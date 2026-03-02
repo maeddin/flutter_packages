@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -20,28 +20,25 @@ class Family {
 /// Person data class.
 class Person {
   /// Creates a person.
-  const Person({required this.name, required this.age});
+  const Person({required this.name});
 
   /// The first name of the person.
   final String name;
-
-  /// The age of the person.
-  final int age;
 }
 
 const Map<String, Family> _families = <String, Family>{
   'f1': Family(
     name: 'Doe',
     people: <String, Person>{
-      'p1': Person(name: 'Jane', age: 23),
-      'p2': Person(name: 'John', age: 6),
+      'p1': Person(name: 'Jane'),
+      'p2': Person(name: 'John'),
     },
   ),
   'f2': Family(
     name: 'Wong',
     people: <String, Person>{
-      'p1': Person(name: 'June', age: 51),
-      'p2': Person(name: 'Xin', age: 44),
+      'p1': Person(name: 'June'),
+      'p2': Person(name: 'Xin'),
     },
   ),
 };
@@ -57,10 +54,8 @@ class App extends StatelessWidget {
   static const String title = 'GoRouter Example: Extra Parameter';
 
   @override
-  Widget build(BuildContext context) => MaterialApp.router(
-        routerConfig: _router,
-        title: title,
-      );
+  Widget build(BuildContext context) =>
+      MaterialApp.router(routerConfig: _router, title: title);
 
   late final GoRouter _router = GoRouter(
     routes: <GoRoute>[
@@ -76,7 +71,7 @@ class App extends StatelessWidget {
             builder: (BuildContext context, GoRouterState state) {
               final Map<String, Object> params =
                   state.extra! as Map<String, String>;
-              final String fid = params['fid']! as String;
+              final fid = params['fid']! as String;
               return FamilyScreen(fid: fid);
             },
           ),
@@ -93,18 +88,20 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text(App.title)),
-        body: ListView(
-          children: <Widget>[
-            for (final MapEntry<String, Family> entry in _families.entries)
-              ListTile(
-                title: Text(entry.value.name),
-                onTap: () => context.goNamed('family',
-                    extra: <String, String>{'fid': entry.key}),
-              )
-          ],
-        ),
-      );
+    appBar: AppBar(title: const Text(App.title)),
+    body: ListView(
+      children: <Widget>[
+        for (final MapEntry<String, Family> entry in _families.entries)
+          ListTile(
+            title: Text(entry.value.name),
+            onTap: () => context.goNamed(
+              'family',
+              extra: <String, String>{'fid': entry.key},
+            ),
+          ),
+      ],
+    ),
+  );
 }
 
 /// The screen that shows a list of persons in a family.
@@ -122,10 +119,7 @@ class FamilyScreen extends StatelessWidget {
       appBar: AppBar(title: Text(_families[fid]!.name)),
       body: ListView(
         children: <Widget>[
-          for (final Person p in people.values)
-            ListTile(
-              title: Text(p.name),
-            ),
+          for (final Person p in people.values) ListTile(title: Text(p.name)),
         ],
       ),
     );

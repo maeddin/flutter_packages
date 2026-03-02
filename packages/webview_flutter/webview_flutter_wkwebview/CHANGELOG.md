@@ -1,3 +1,236 @@
+## 3.23.8
+
+* Fixes lossy transition from Dart Color to native UIColor when calling `setBackgroundColor`.
+
+## 3.23.7
+
+* Fixes crash when calling setOnConsoleMessage multiple times.
+
+## 3.23.6
+
+* Fixes a crash if WebViewFlutterWKWebViewExternalAPI is passed the wrong registry.
+
+## 3.23.5
+
+* Removes internal native library Dart proxy.
+
+## 3.23.4
+
+* Replaces use of deprecated Color.value.
+
+## 3.23.3
+
+* Updates to Pigeon 26.
+
+## 3.23.2
+
+* Removes specialization of 'map' to fix a Swift warning.
+
+## 3.23.1
+
+* Removes code for versions of iOS older than 13.0.
+* Updates minimum supported SDK version to Flutter 3.35.
+
+## 3.23.0
+
+* Adds support for `PlatformWebViewController.loadFileWithParams`.
+* Introduces `WebKitLoadFileParams`, a platform-specific extension of `LoadFileParams` for iOS and macOS that adds support for `readAccessPath`.
+
+## 3.22.1
+
+* Changes the handling of a Flutter method failure from throwing an assertion error to logging the
+  error.
+* Updates minimum supported SDK version to Flutter 3.27/Dart 3.6.
+
+## 3.22.0
+
+* Adds support to respond to recoverable SSL certificate errors. See `WebKitNavigationDelegate.setOnSSlAuthError`.
+
+## 3.21.0
+
+* Adds support to set whether to draw the scrollbar. See
+  `WebKitWebViewController.setVerticalScrollBarEnabled`,
+  `WebKitWebViewController.setHorizontalScrollBarEnabled`,
+  `WebKitWebViewController.supportsSetScrollBarsEnabled`.
+
+## 3.20.0
+
+* Adds support to disable a preview of the destination for a link. See
+  `WebKitWebViewController.setAllowsLinkPreview`.
+
+## 3.19.0
+
+* Adds support to set the over-scroll mode for the WebView. See `WebKitWebViewController.setOverScrollMode`.
+
+## 3.18.6
+
+* Fixes `PlatformException` when calling `loadFlutterAsset` on macOS.
+* Updates native wrapper with methods handling `SecTust` and `SecCertificate`. 
+
+## 3.18.5
+
+* Fixes crash when sending undefined message via JavaScript channel.
+
+## 3.18.4
+
+* Fixes crash when native `WKFrameInfo.request` is nil.
+
+## 3.18.3
+
+* Fixes crash where the native `AuthenticationChallengeResponse` could not be found for auth
+  requests.
+
+## 3.18.2
+
+* Updates generated pigeon code to ensure the internal wrapper immediately sends constructor calls.
+
+## 3.18.1
+
+* Fixes bug that would allow the API wrapper to return `null` when a non-null value was required in
+  a callback method.
+* Changes default method to enable JavaScript for web content to
+  `WKWebpagePreferences.allowsContentJavaScript`. 
+
+## 3.18.0
+
+* Updates internal API wrapper to use ProxyApis.
+
+## 3.17.0
+
+* Adds a change listener for the `canGoBack` property. See
+  `WebKitWebViewController.setOnCanGoBackChange`.
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+
+## 3.16.3
+
+* Fixes re-registering existing channels while removing Javascript channels.
+
+## 3.16.2
+
+* Updates README to remove contributor-focused documentation.
+
+## 3.16.1
+
+* Adds `missing_code_block_language_in_doc_comment` lint.
+
+## 3.16.0
+
+* Supports NTLM for authentication.
+
+## 3.15.0
+
+* Adds macOS support.
+
+## 3.14.0
+
+* Adds Swift Package Manager compatibility.
+
+## 3.13.1
+
+* Fixes `JSON.stringify()` cannot serialize cyclic structures.
+
+## 3.13.0
+
+* Adds `decidePolicyForNavigationResponse` to internal WKNavigationDelegate to support the
+  `PlatformNavigationDelegate.onHttpError` callback.
+
+## 3.12.0
+
+* Adds support for `setOnScrollPositionChange` method to the `WebKitWebViewController`.
+
+## 3.11.0
+
+* Adds support to show JavaScript dialog. See `PlatformWebViewController.setOnJavaScriptAlertDialog`, `PlatformWebViewController.setOnJavaScriptConfirmDialog` and `PlatformWebViewController.setOnJavaScriptTextInputDialog`.
+
+## 3.10.3
+
+* Adds a check that throws an `ArgumentError` when `WebKitWebViewController.addJavaScriptChannel`
+  receives a `JavaScriptChannelParams` with a name that is not unique.
+* Updates minimum iOS version to 12.0 and minimum Flutter version to 3.16.6.
+
+## 3.10.2
+
+* Adds privacy manifest.
+
+## 3.10.1
+
+* Fixes new lint warnings.
+
+## 3.10.0
+
+* Adds support for `PlatformNavigationDelegate.setOnHttpAuthRequest`.
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+
+## 3.9.4
+
+* Updates to Pigeon 13.
+
+## 3.9.3
+
+* Fixes `use_build_context_synchronously` lint violations in the example app.
+
+## 3.9.2
+
+* Fixes error caused by calling `WKWebViewConfiguration.limitsNavigationsToAppBoundDomains` on
+  versions below 14.
+
+## 3.9.1
+
+* Fixes bug where `WebkitWebViewController.getUserAgent` was incorrectly returning an empty String.
+
+## 3.9.0
+
+* Adds support for `PlatformWebViewController.getUserAgent`.
+
+## 3.8.0
+
+* Adds support to register a callback to receive JavaScript console messages. See `WebKitWebViewController.setOnConsoleMessage`.
+
+## 3.7.4
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 3.7.3
+
+* Fixes bug where the `PlatformWebViewWidget` was rebuilt unnecessarily.
+
+## 3.7.2
+
+* Fixes bug where `PlatformWebViewWidget` doesn't rebuild when the controller changes.
+
+## 3.7.1
+
+* Updates pigeon version to `10.1.4`.
+
+## 3.7.0
+
+* Adds support for `WebResouceError.url`.
+
+## 3.6.3
+
+* Introduces `NSError.toString` for better diagnostics.
+
+## 3.6.2
+
+* Fixes unawaited_futures violations.
+
+## 3.6.1
+
+* Fixes bug where a native `NSURL` could be removed from an `InstanceManager` if it is equal to an
+  already present `NSURL`.
+* Fixes compile-time error from using `WKWebView.inspectable` on unsupported Xcode versions.
+
+## 3.6.0
+
+* Adds support to enable debugging of web contents on the latest versions of WebKit. See
+  `WebKitWebViewController.setInspectable`.
+
+## 3.5.0
+
+* Adds support to limit navigation to pages within the app’s domain. See
+  `WebKitWebViewControllerCreationParams.limitsNavigationsToAppBoundDomains`.
+
 ## 3.4.4
 
 * Removes obsolete null checks on non-nullable values.

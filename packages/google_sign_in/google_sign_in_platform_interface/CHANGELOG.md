@@ -1,3 +1,45 @@
+## NEXT
+
+* Updates minimum supported SDK version to Flutter 3.35/Dart 3.9.
+
+## 3.1.0
+
+* Adds a `clearAuthorizationToken` method to remove an access token from the
+  cache.
+* Updates minimum supported SDK version to Flutter 3.29/Dart 3.7.
+
+## 3.0.0
+
+* **BREAKING CHANGE**: Overhauls the entire API surface to better abstract the
+  current set of underlying platform SDKs, and to use structured errors. See
+  API doc comments for details on the behaviors that platform implementations
+  must implement.
+* Updates minimum supported SDK version to Flutter 3.27/Dart 3.6.
+
+## 2.5.0
+
+* Adds a sign-in field to allow Android clients to explicitly specify an account name.
+  This capability is only available within Android for the underlying libraries.
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+
+## 2.4.5
+
+* Updates minimum required plugin_platform_interface version to 2.1.7.
+
+## 2.4.4
+
+* Updates `clearAuthCache` override to match base class declaration.
+
+## 2.4.3
+
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+* Drop dependency on `package:quiver`.
+
+## 2.4.2
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
 ## 2.4.1
 
 * Clarifies `canAccessScopes` method documentation.

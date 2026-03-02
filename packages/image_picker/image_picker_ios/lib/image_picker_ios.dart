@@ -1,8 +1,9 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 
 import 'src/messages.g.dart';
@@ -43,7 +44,11 @@ SourceCamera _convertCamera(CameraDevice camera) {
 
 /// An implementation of [ImagePickerPlatform] for iOS.
 class ImagePickerIOS extends ImagePickerPlatform {
-  final ImagePickerApi _hostApi = ImagePickerApi();
+  /// Creates a new plugin implementation instance.
+  ImagePickerIOS({@visibleForTesting ImagePickerApi? api})
+    : _hostApi = api ?? ImagePickerApi();
+
+  final ImagePickerApi _hostApi;
 
   /// Registers this class as the default platform implementation.
   static void registerWith() {
@@ -88,7 +93,7 @@ class ImagePickerIOS extends ImagePickerPlatform {
     double? maxHeight,
     int? imageQuality,
   }) async {
-    final List<dynamic>? paths = await _pickMultiImageAsPath(
+    final List<String> paths = await _pickMultiImageAsPath(
       options: MultiImagePickerOptions(
         imageOptions: ImageOptions(
           maxWidth: maxWidth,
@@ -97,32 +102,33 @@ class ImagePickerIOS extends ImagePickerPlatform {
         ),
       ),
     );
-    if (paths == null) {
+    // Convert an empty list to a null return since that was the legacy behavior
+    // of this method.
+    if (paths.isEmpty) {
       return null;
     }
 
-    return paths.map((dynamic path) => PickedFile(path as String)).toList();
+    return paths.map((String path) => PickedFile(path)).toList();
   }
 
   @override
   Future<List<XFile>> getMultiImageWithOptions({
     MultiImagePickerOptions options = const MultiImagePickerOptions(),
   }) async {
-    final List<String>? paths = await _pickMultiImageAsPath(options: options);
-    if (paths == null) {
-      return <XFile>[];
-    }
-
+    final List<String> paths = await _pickMultiImageAsPath(options: options);
     return paths.map((String path) => XFile(path)).toList();
   }
 
-  Future<List<String>?> _pickMultiImageAsPath({
+  Future<List<String>> _pickMultiImageAsPath({
     MultiImagePickerOptions options = const MultiImagePickerOptions(),
   }) async {
     final int? imageQuality = options.imageOptions.imageQuality;
     if (imageQuality != null && (imageQuality < 0 || imageQuality > 100)) {
       throw ArgumentError.value(
-          imageQuality, 'imageQuality', 'must be between 0 and 100');
+        imageQuality,
+        'imageQuality',
+        'must be between 0 and 100',
+      );
     }
 
     final double? maxWidth = options.imageOptions.maxWidth;
@@ -135,13 +141,17 @@ class ImagePickerIOS extends ImagePickerPlatform {
       throw ArgumentError.value(maxHeight, 'maxHeight', 'cannot be negative');
     }
 
-    // TODO(stuartmorgan): Remove the cast once Pigeon supports non-nullable
-    //  generics, https://github.com/flutter/flutter/issues/97848
-    return (await _hostApi.pickMultiImage(
-            MaxSize(width: maxWidth, height: maxHeight),
-            imageQuality,
-            options.imageOptions.requestFullMetadata))
-        ?.cast<String>();
+    final int? limit = options.limit;
+    if (limit != null && limit < 2) {
+      throw ArgumentError.value(limit, 'limit', 'cannot be lower than 2');
+    }
+
+    return _hostApi.pickMultiImage(
+      MaxSize(width: maxWidth, height: maxHeight),
+      imageQuality,
+      options.imageOptions.requestFullMetadata,
+      limit,
+    );
   }
 
   Future<String?> _pickImageAsPath({
@@ -151,7 +161,10 @@ class ImagePickerIOS extends ImagePickerPlatform {
     final int? imageQuality = options.imageQuality;
     if (imageQuality != null && (imageQuality < 0 || imageQuality > 100)) {
       throw ArgumentError.value(
-          imageQuality, 'imageQuality', 'must be between 0 and 100');
+        imageQuality,
+        'imageQuality',
+        'must be between 0 and 100',
+      );
     }
 
     final double? maxHeight = options.maxHeight;
@@ -176,6 +189,71 @@ class ImagePickerIOS extends ImagePickerPlatform {
   }
 
   @override
+  Future<List<XFile>> getMedia({required MediaOptions options}) async {
+    final MediaSelectionOptions mediaSelectionOptions =
+        _mediaOptionsToMediaSelectionOptions(options);
+
+    return (await _hostApi.pickMedia(
+      mediaSelectionOptions,
+    )).map((String? path) => XFile(path!)).toList();
+  }
+
+  MaxSize _imageOptionsToMaxSizeWithValidation(ImageOptions imageOptions) {
+    final double? maxHeight = imageOptions.maxHeight;
+    final double? maxWidth = imageOptions.maxWidth;
+    final int? imageQuality = imageOptions.imageQuality;
+
+    if (imageQuality != null && (imageQuality < 0 || imageQuality > 100)) {
+      throw ArgumentError.value(
+        imageQuality,
+        'imageQuality',
+        'must be between 0 and 100',
+      );
+    }
+
+    if (maxWidth != null && maxWidth < 0) {
+      throw ArgumentError.value(maxWidth, 'maxWidth', 'cannot be negative');
+    }
+
+    if (maxHeight != null && maxHeight < 0) {
+      throw ArgumentError.value(maxHeight, 'maxHeight', 'cannot be negative');
+    }
+
+    return MaxSize(width: maxWidth, height: maxHeight);
+  }
+
+  MediaSelectionOptions _mediaOptionsToMediaSelectionOptions(
+    MediaOptions mediaOptions,
+  ) {
+    final MaxSize maxSize = _imageOptionsToMaxSizeWithValidation(
+      mediaOptions.imageOptions,
+    );
+
+    final bool allowMultiple = mediaOptions.allowMultiple;
+    final int? limit = mediaOptions.limit;
+
+    if (!allowMultiple && limit != null) {
+      throw ArgumentError.value(
+        allowMultiple,
+        'allowMultiple',
+        'cannot be false, when limit is not null',
+      );
+    }
+
+    if (limit != null && limit < 2) {
+      throw ArgumentError.value(limit, 'limit', 'cannot be lower than 2');
+    }
+
+    return MediaSelectionOptions(
+      maxSize: maxSize,
+      imageQuality: mediaOptions.imageOptions.imageQuality,
+      requestFullMetadata: mediaOptions.imageOptions.requestFullMetadata,
+      allowMultiple: mediaOptions.allowMultiple,
+      limit: mediaOptions.limit,
+    );
+  }
+
+  @override
   Future<PickedFile?> pickVideo({
     required ImageSource source,
     CameraDevice preferredCameraDevice = CameraDevice.rear,
@@ -195,10 +273,12 @@ class ImagePickerIOS extends ImagePickerPlatform {
     Duration? maxDuration,
   }) {
     return _hostApi.pickVideo(
-        SourceSpecification(
-            type: _convertSource(source),
-            camera: _convertCamera(preferredCameraDevice)),
-        maxDuration?.inSeconds);
+      SourceSpecification(
+        type: _convertSource(source),
+        camera: _convertCamera(preferredCameraDevice),
+      ),
+      maxDuration?.inSeconds,
+    );
   }
 
   @override
@@ -227,7 +307,7 @@ class ImagePickerIOS extends ImagePickerPlatform {
     double? maxHeight,
     int? imageQuality,
   }) async {
-    final List<String>? paths = await _pickMultiImageAsPath(
+    final List<String> paths = await _pickMultiImageAsPath(
       options: MultiImagePickerOptions(
         imageOptions: ImageOptions(
           maxWidth: maxWidth,
@@ -236,7 +316,9 @@ class ImagePickerIOS extends ImagePickerPlatform {
         ),
       ),
     );
-    if (paths == null) {
+    // Convert an empty list to a null return since that was the legacy behavior
+    // of this method.
+    if (paths.isEmpty) {
       return null;
     }
 
@@ -255,5 +337,15 @@ class ImagePickerIOS extends ImagePickerPlatform {
       preferredCameraDevice: preferredCameraDevice,
     );
     return path != null ? XFile(path) : null;
+  }
+
+  @override
+  Future<List<XFile>> getMultiVideoWithOptions({
+    MultiVideoPickerOptions options = const MultiVideoPickerOptions(),
+  }) async {
+    return (await _hostApi.pickMultiVideo(
+      options.maxDuration?.inSeconds,
+      options.limit,
+    )).map((String path) => XFile(path)).toList();
   }
 }

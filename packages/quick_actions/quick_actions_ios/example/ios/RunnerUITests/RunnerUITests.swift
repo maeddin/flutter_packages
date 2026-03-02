@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -18,7 +18,7 @@ private let pressDurationRetryAdjustment: TimeInterval = 0.2
 // This is to deflake a situation where the quick action menu is not present after
 // the long press.
 // See: https://github.com/flutter/flutter/issues/125509
-private let quickActionMaxRetries: Int = 4;
+private let quickActionMaxRetries: Int = 4
 
 class RunnerUITests: XCTestCase {
 
@@ -36,11 +36,15 @@ class RunnerUITests: XCTestCase {
     exampleApp = nil
   }
 
-  func testQuickActionWithFreshStart() {
+  func testQuickActionWithFreshStart() throws {
+    // See https://github.com/flutter/flutter/issues/169928
+    throw XCTSkip("Temporarily disabled")
+
     let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
     let quickActionsAppIcon = springboard.icons["quick_actions_example"]
 
-    findAndTapQuickActionButton(buttonName: "Action two", quickActionsAppIcon: quickActionsAppIcon, springboard: springboard);
+    findAndTapQuickActionButton(
+      buttonName: "Action two", quickActionsAppIcon: quickActionsAppIcon, springboard: springboard)
 
     let actionTwoConfirmation = exampleApp.otherElements["action_two"]
     if !actionTwoConfirmation.waitForExistence(timeout: elementWaitingTime) {
@@ -52,7 +56,10 @@ class RunnerUITests: XCTestCase {
     XCTAssert(actionTwoConfirmation.exists)
   }
 
-  func testQuickActionWhenAppIsInBackground() {
+  func testQuickActionWhenAppIsInBackground() throws {
+    // See https://github.com/flutter/flutter/issues/169928
+    throw XCTSkip("Temporarily disabled")
+
     exampleApp.launch()
 
     let actionsReady = exampleApp.otherElements["actions ready"]
@@ -73,7 +80,9 @@ class RunnerUITests: XCTestCase {
       )
     }
 
-    findAndTapQuickActionButton(buttonName: "Action one", quickActionsAppIcon: quickActionsAppIcon, springboard: springboard);
+    findAndTapQuickActionButton(
+      buttonName: "Action one, Action one subtitle", quickActionsAppIcon: quickActionsAppIcon,
+      springboard: springboard)
 
     let actionOneConfirmation = exampleApp.otherElements["action_one"]
     if !actionOneConfirmation.waitForExistence(timeout: elementWaitingTime) {
@@ -85,7 +94,9 @@ class RunnerUITests: XCTestCase {
     XCTAssert(actionOneConfirmation.exists)
   }
 
-  private func findAndTapQuickActionButton(buttonName: String, quickActionsAppIcon: XCUIElement, springboard: XCUIElement) {
+  private func findAndTapQuickActionButton(
+    buttonName: String, quickActionsAppIcon: XCUIElement, springboard: XCUIElement
+  ) {
     var actionButton: XCUIElement?
     var pressDuration = quickActionPressDuration
     for _ in 1...quickActionMaxRetries {
@@ -111,12 +122,12 @@ class RunnerUITests: XCTestCase {
       // Reset to previous state.
       XCUIDevice.shared.press(XCUIDevice.Button.home)
     }
-    if (!actionButton!.exists) {
+    if !actionButton!.exists {
       XCTFail(
         "Failed due to not able to find the \(buttonName) button from springboard with \(elementWaitingTime) seconds. Springboard debug description: \(springboard.debugDescription)"
       )
     }
 
-    actionButton!.tap();
+    actionButton!.tap()
   }
 }

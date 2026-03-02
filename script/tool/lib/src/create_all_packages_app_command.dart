@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -11,8 +11,10 @@ import 'package:pubspec_parse/pubspec_parse.dart';
 
 import 'common/core.dart';
 import 'common/file_utils.dart';
+import 'common/output_utils.dart';
 import 'common/package_command.dart';
 import 'common/process_runner.dart';
+import 'common/pub_utils.dart';
 import 'common/repository_package.dart';
 
 /// The name of the build-all-packages project, as passed to `flutter create`.
@@ -32,18 +34,24 @@ class CreateAllPackagesAppCommand extends PackageCommand {
     ProcessRunner processRunner = const ProcessRunner(),
     Platform platform = const LocalPlatform(),
   }) : super(packagesDir, processRunner: processRunner, platform: platform) {
-    argParser.addOption(_outputDirectoryFlag,
-        defaultsTo: packagesDir.parent.path,
-        help: 'The path the directory to create the "$allPackagesProjectName" '
-            'project in.\n'
-            'Defaults to the repository root.');
-    argParser.addOption(_legacySourceFlag,
-        help: 'A partial project directory to use as a source for replacing '
-            'portions of the created app. All top-level directories in the '
-            'source will replace the corresponding directories in the output '
-            'directory post-create.\n\n'
-            'The replacement will be done before any tool-driven '
-            'modifications.');
+    argParser.addOption(
+      _outputDirectoryFlag,
+      defaultsTo: packagesDir.parent.path,
+      help:
+          'The path the directory to create the "$allPackagesProjectName" '
+          'project in.\n'
+          'Defaults to the repository root.',
+    );
+    argParser.addOption(
+      _legacySourceFlag,
+      help:
+          'A partial project directory to use as a source for replacing '
+          'portions of the created app. All top-level directories in the '
+          'source will replace the corresponding directories in the output '
+          'directory post-create.\n\n'
+          'The replacement will be done before any tool-driven '
+          'modifications.',
+    );
   }
 
   static const String _legacySourceFlag = 'legacy-source';
@@ -74,15 +82,16 @@ class CreateAllPackagesAppCommand extends PackageCommand {
 
     final String? legacySource = getNullableStringArg(_legacySourceFlag);
     if (legacySource != null) {
-      final Directory legacyDir =
-          packagesDir.fileSystem.directory(legacySource);
+      final Directory legacyDir = packagesDir.fileSystem.directory(
+        legacySource,
+      );
       await _replaceWithLegacy(target: _appDirectory, source: legacyDir);
     }
 
     final Set<String> excluded = getExcludedPackageNames();
     if (excluded.isNotEmpty) {
       print('Exluding the following plugins from the combined build:');
-      for (final String plugin in excluded) {
+      for (final plugin in excluded) {
         print('  $plugin');
       }
       print('');
@@ -96,16 +105,18 @@ class CreateAllPackagesAppCommand extends PackageCommand {
     // further and/or implement https://github.com/flutter/flutter/issues/93407,
     // and remove the need for this conditional.
     if (!platform.isWindows) {
-      if (!await _genNativeBuildFiles()) {
+      if (!await runPubGet(app, processRunner, platform)) {
         printError(
-            "Failed to generate native build files via 'flutter pub get'");
+          "Failed to generate native build files via 'flutter pub get'",
+        );
         throw ToolExit(_exitGenNativeBuildFilesFailed);
       }
     }
 
     await Future.wait(<Future<void>>[
       _updateAppGradle(),
-      _updateMacosPbxproj(),
+      _updateIOSPbxproj(),
+      _updateMacOSPbxproj(),
       // This step requires the native file generation triggered by
       // flutter pub get above, so can't currently be run on Windows.
       if (!platform.isWindows) _updateMacosPodfile(),
@@ -113,19 +124,18 @@ class CreateAllPackagesAppCommand extends PackageCommand {
   }
 
   Future<int> _createApp() async {
-    return processRunner.runAndStream(
-      flutterCommand,
-      <String>[
-        'create',
-        '--template=app',
-        '--project-name=$allPackagesProjectName',
-        _appDirectory.path,
-      ],
-    );
+    return processRunner.runAndStream(flutterCommand, <String>[
+      'create',
+      '--template=app',
+      '--project-name=$allPackagesProjectName',
+      _appDirectory.path,
+    ]);
   }
 
-  Future<void> _replaceWithLegacy(
-      {required Directory target, required Directory source}) async {
+  Future<void> _replaceWithLegacy({
+    required Directory target,
+    required Directory source,
+  }) async {
     if (!source.existsSync()) {
       printError('No such legacy source directory: ${source.path}');
       throw ToolExit(_exitMissingLegacySource);
@@ -145,14 +155,19 @@ class CreateAllPackagesAppCommand extends PackageCommand {
   void _copyDirectory({required Directory target, required Directory source}) {
     target.createSync(recursive: true);
     for (final FileSystemEntity entity in source.listSync(recursive: true)) {
-      final List<String> subcomponents =
-          p.split(p.relative(entity.path, from: source.path));
+      final List<String> subcomponents = p.split(
+        p.relative(entity.path, from: source.path),
+      );
       if (entity is Directory) {
-        childDirectoryWithSubcomponents(target, subcomponents)
-            .createSync(recursive: true);
+        childDirectoryWithSubcomponents(
+          target,
+          subcomponents,
+        ).createSync(recursive: true);
       } else if (entity is File) {
-        final File targetFile =
-            childFileWithSubcomponents(target, subcomponents);
+        final File targetFile = childFileWithSubcomponents(
+          target,
+          subcomponents,
+        );
         targetFile.parent.createSync(recursive: true);
         entity.copySync(targetFile.path);
       } else {
@@ -179,7 +194,7 @@ class CreateAllPackagesAppCommand extends PackageCommand {
       throw ToolExit(_exitMissingFile);
     }
 
-    final StringBuffer output = StringBuffer();
+    final output = StringBuffer();
     for (final String line in file.readAsLinesSync()) {
       List<String>? replacementLines;
       for (final MapEntry<String, List<String>> replacement
@@ -214,7 +229,11 @@ class CreateAllPackagesAppCommand extends PackageCommand {
     final File gradleFile = app
         .platformDirectory(FlutterPlatform.android)
         .childDirectory('app')
-        .childFile('build.gradle');
+        .listSync()
+        .whereType<File>()
+        .firstWhere((File file) => file.basename.startsWith('build.gradle'));
+
+    final bool gradleFileIsKotlin = gradleFile.basename.endsWith('kts');
 
     // Ensure that there is a dependencies section, so the dependencies addition
     // below will work.
@@ -226,21 +245,33 @@ dependencies {}
 ''');
     }
 
-    const String lifecycleDependency =
-        "    implementation 'androidx.lifecycle:lifecycle-runtime:2.2.0-rc01'";
+    final lifecycleDependency = gradleFileIsKotlin
+        ? '    implementation("androidx.lifecycle:lifecycle-runtime:2.2.0-rc01")'
+        : "    implementation 'androidx.lifecycle:lifecycle-runtime:2.2.0-rc01'";
+
+    // Desugaring is required for interactive_media_ads.
+    final desugaringDependency = gradleFileIsKotlin
+        ? '    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")'
+        : "    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'";
 
     _adjustFile(
       gradleFile,
       replacements: <String, List<String>>{
-        // minSdkVersion 21 is required by camera_android.
-        'minSdkVersion': <String>['minSdkVersion 21'],
-        // compileSdkVersion 33 is required by local_auth.
-        'compileSdkVersion': <String>['compileSdkVersion 33'],
-      },
-      additions: <String, List<String>>{
-        'defaultConfig {': <String>['        multiDexEnabled true'],
+        if (gradleFileIsKotlin)
+          'compileSdk': <String>['compileSdk = 36']
+        else ...<String, List<String>>{
+          'compileSdkVersion': <String>['compileSdk 36'],
+        },
       },
       regexReplacements: <RegExp, List<String>>{
+        // Desugaring is required for interactive_media_ads.
+        RegExp(r'compileOptions\s+{$'): <String>[
+          'compileOptions {',
+          if (gradleFileIsKotlin)
+            'isCoreLibraryDesugaringEnabled = true'
+          else
+            'coreLibraryDesugaringEnabled true',
+        ],
         // Tests for https://github.com/flutter/flutter/issues/43383
         // Handling of 'dependencies' is more complex since it hasn't been very
         // stable across template versions.
@@ -248,12 +279,14 @@ dependencies {}
         RegExp(r'^dependencies\s+{\s*}$'): <String>[
           'dependencies {',
           lifecycleDependency,
+          desugaringDependency,
           '}',
         ],
         // - Handle a normal dependencies section.
         RegExp(r'^dependencies\s+{$'): <String>[
           'dependencies {',
           lifecycleDependency,
+          desugaringDependency,
         ],
         // - See below for handling of the case where there is no dependencies
         // section.
@@ -267,36 +300,44 @@ dependencies {}
     // specific language features via SDK version, so using a different one
     // can cause compilation failures.
     final Pubspec originalPubspec = app.parsePubspec();
-    const String dartSdkKey = 'sdk';
+    const dartSdkKey = 'sdk';
     final VersionConstraint dartSdkConstraint =
-        originalPubspec.environment?[dartSdkKey] ??
-            VersionConstraint.compatibleWith(
-              Version.parse('2.12.0'),
-            );
+        originalPubspec.environment[dartSdkKey] ??
+        VersionConstraint.compatibleWith(Version.parse('3.0.0'));
 
     final Map<String, PathDependency> pluginDeps =
         await _getValidPathDependencies();
-    final Pubspec pubspec = Pubspec(
+    final pubspec = Pubspec(
       allPackagesProjectName,
       description: 'Flutter app containing all 1st party plugins.',
       version: Version.parse('1.0.0+1'),
-      environment: <String, VersionConstraint>{
-        dartSdkKey: dartSdkConstraint,
-      },
-      dependencies: <String, Dependency>{
-        'flutter': SdkDependency('flutter'),
-      }..addAll(pluginDeps),
+      environment: <String, VersionConstraint>{dartSdkKey: dartSdkConstraint},
+      dependencies: <String, Dependency>{'flutter': SdkDependency('flutter')}
+        ..addAll(pluginDeps),
       devDependencies: <String, Dependency>{
         'flutter_test': SdkDependency('flutter'),
       },
       dependencyOverrides: pluginDeps,
     );
+
+    // An application cannot depend directly on multiple federated
+    // implementations of the same plugin for the same platform, which means the
+    // app cannot directly depend on both camera_android and
+    // camera_android_androidx. Since camera_android_androidx is endorsed, it
+    // will be included transitively already, so exclude it from the direct
+    // dependency list to allow including camera_android to ensure that they
+    // don't conflict at build time (if they did, it would be impossible to use
+    // camera_android while camera_android_androidx is endorsed).
+    // This is special-cased here, rather than being done via the normal
+    // exclusion config file mechanism, because it still needs to be in the
+    // depenedency overrides list to ensure that the version from path is used.
+    pubspec.dependencies.remove('camera_android_camerax');
+
     app.pubspecFile.writeAsStringSync(_pubspecToString(pubspec));
   }
 
   Future<Map<String, PathDependency>> _getValidPathDependencies() async {
-    final Map<String, PathDependency> pathDependencies =
-        <String, PathDependency>{};
+    final pathDependencies = <String, PathDependency>{};
 
     await for (final PackageEnumerationEntry entry in getTargetPackages()) {
       final RepositoryPackage package = entry.package;
@@ -320,7 +361,7 @@ publish_to: none
 
 version: ${pubspec.version}
 
-environment:${_pubspecMapString(pubspec.environment!)}
+environment:${_pubspecMapString(pubspec.environment)}
 
 dependencies:${_pubspecMapString(pubspec.dependencies)}
 
@@ -331,13 +372,13 @@ dev_dependencies:${_pubspecMapString(pubspec.devDependencies)}
   }
 
   String _pubspecMapString(Map<String, Object?> values) {
-    final StringBuffer buffer = StringBuffer();
+    final buffer = StringBuffer();
 
     for (final MapEntry<String, Object?> entry in values.entries) {
       buffer.writeln();
       final Object? entryValue = entry.value;
       if (entryValue is VersionConstraint) {
-        String value = entryValue.toString();
+        var value = entryValue.toString();
         // Range constraints require quoting.
         if (value.startsWith('>') || value.startsWith('<')) {
           value = "'$value'";
@@ -355,8 +396,10 @@ dev_dependencies:${_pubspecMapString(pubspec.devDependencies)}
           // path.split leaves a \ on drive components that isn't necessary,
           // and confuses pub, so remove it.
           if (firstComponent.endsWith(r':\')) {
-            components[0] =
-                firstComponent.substring(0, firstComponent.length - 1);
+            components[0] = firstComponent.substring(
+              0,
+              firstComponent.length - 1,
+            );
           }
           depPath = p.posix.joinAll(components);
         }
@@ -371,15 +414,6 @@ dev_dependencies:${_pubspecMapString(pubspec.devDependencies)}
     return buffer.toString();
   }
 
-  Future<bool> _genNativeBuildFiles() async {
-    final int exitCode = await processRunner.runAndStream(
-      flutterCommand,
-      <String>['pub', 'get'],
-      workingDir: _appDirectory,
-    );
-    return exitCode == 0;
-  }
-
   Future<void> _updateMacosPodfile() async {
     /// Only change the macOS deployment target if the host platform is macOS.
     /// The Podfile is not generated on other platforms.
@@ -387,8 +421,9 @@ dev_dependencies:${_pubspecMapString(pubspec.devDependencies)}
       return;
     }
 
-    final File podfile =
-        app.platformDirectory(FlutterPlatform.macos).childFile('Podfile');
+    final File podfile = app
+        .platformDirectory(FlutterPlatform.macos)
+        .childFile('Podfile');
     _adjustFile(
       podfile,
       replacements: <String, List<String>>{
@@ -398,7 +433,7 @@ dev_dependencies:${_pubspecMapString(pubspec.devDependencies)}
     );
   }
 
-  Future<void> _updateMacosPbxproj() async {
+  Future<void> _updateMacOSPbxproj() async {
     final File pbxprojFile = app
         .platformDirectory(FlutterPlatform.macos)
         .childDirectory('Runner.xcodeproj')
@@ -408,7 +443,23 @@ dev_dependencies:${_pubspecMapString(pubspec.devDependencies)}
       replacements: <String, List<String>>{
         // macOS 10.15 is required by in_app_purchase.
         'MACOSX_DEPLOYMENT_TARGET': <String>[
-          '				MACOSX_DEPLOYMENT_TARGET = 10.15;'
+          '				MACOSX_DEPLOYMENT_TARGET = 10.15;',
+        ],
+      },
+    );
+  }
+
+  Future<void> _updateIOSPbxproj() async {
+    final File pbxprojFile = app
+        .platformDirectory(FlutterPlatform.ios)
+        .childDirectory('Runner.xcodeproj')
+        .childFile('project.pbxproj');
+    _adjustFile(
+      pbxprojFile,
+      replacements: <String, List<String>>{
+        // iOS 15 is required by google_maps_flutter_ios_sdk9.
+        'IPHONEOS_DEPLOYMENT_TARGET': <String>[
+          '				IPHONEOS_DEPLOYMENT_TARGET = 15.0;',
         ],
       },
     );

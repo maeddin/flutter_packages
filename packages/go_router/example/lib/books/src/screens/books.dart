@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -37,15 +37,12 @@ class _BooksScreenState extends State<BooksScreen>
     switch (widget.kind) {
       case 'popular':
         _tabController.index = 0;
-        break;
 
       case 'new':
         _tabController.index = 1;
-        break;
 
       case 'all':
         _tabController.index = 2;
-        break;
     }
   }
 
@@ -57,45 +54,27 @@ class _BooksScreenState extends State<BooksScreen>
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: const Text('Books'),
-          bottom: TabBar(
-            controller: _tabController,
-            onTap: _handleTabTapped,
-            tabs: const <Tab>[
-              Tab(
-                text: 'Popular',
-                icon: Icon(Icons.people),
-              ),
-              Tab(
-                text: 'New',
-                icon: Icon(Icons.new_releases),
-              ),
-              Tab(
-                text: 'All',
-                icon: Icon(Icons.list),
-              ),
-            ],
-          ),
-        ),
-        body: TabBarView(
-          controller: _tabController,
-          children: <Widget>[
-            BookList(
-              books: libraryInstance.popularBooks,
-              onTap: _handleBookTapped,
-            ),
-            BookList(
-              books: libraryInstance.newBooks,
-              onTap: _handleBookTapped,
-            ),
-            BookList(
-              books: libraryInstance.allBooks,
-              onTap: _handleBookTapped,
-            ),
-          ],
-        ),
-      );
+    appBar: AppBar(
+      title: const Text('Books'),
+      bottom: TabBar(
+        controller: _tabController,
+        onTap: _handleTabTapped,
+        tabs: const <Tab>[
+          Tab(text: 'Popular', icon: Icon(Icons.people)),
+          Tab(text: 'New', icon: Icon(Icons.new_releases)),
+          Tab(text: 'All', icon: Icon(Icons.list)),
+        ],
+      ),
+    ),
+    body: TabBarView(
+      controller: _tabController,
+      children: <Widget>[
+        BookList(books: libraryInstance.popularBooks, onTap: _handleBookTapped),
+        BookList(books: libraryInstance.newBooks, onTap: _handleBookTapped),
+        BookList(books: libraryInstance.allBooks, onTap: _handleBookTapped),
+      ],
+    ),
+  );
 
   void _handleBookTapped(Book book) {
     context.go('/book/${book.id}');
@@ -105,14 +84,11 @@ class _BooksScreenState extends State<BooksScreen>
     switch (index) {
       case 1:
         context.go('/books/new');
-        break;
       case 2:
         context.go('/books/all');
-        break;
       case 0:
       default:
         context.go('/books/popular');
-        break;
     }
   }
 }

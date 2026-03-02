@@ -1,18 +1,21 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 import 'package:pigeon/pigeon.dart';
 
-@ConfigurePigeon(PigeonOptions(
-  input: 'pigeons/messages.dart',
-  javaOut:
-      'android/src/main/java/io/flutter/plugins/pathprovider/Messages.java',
-  javaOptions: JavaOptions(
-      className: 'Messages', package: 'io.flutter.plugins.pathprovider'),
-  dartOut: 'lib/messages.g.dart',
-  dartTestOut: 'test/messages_test.g.dart',
-  copyrightHeader: 'pigeons/copyright.txt',
-))
+@ConfigurePigeon(
+  PigeonOptions(
+    input: 'pigeons/messages.dart',
+    javaOut:
+        'android/src/main/java/io/flutter/plugins/pathprovider/Messages.java',
+    javaOptions: JavaOptions(
+      className: 'Messages',
+      package: 'io.flutter.plugins.pathprovider',
+    ),
+    dartOut: 'lib/messages.g.dart',
+    copyrightHeader: 'pigeons/copyright.txt',
+  ),
+)
 enum StorageDirectory {
   root,
   music,
@@ -27,7 +30,7 @@ enum StorageDirectory {
   documents,
 }
 
-@HostApi(dartHostTestHandler: 'TestPathProviderApi')
+@HostApi()
 abstract class PathProviderApi {
   @TaskQueue(type: TaskQueueType.serialBackgroundThread)
   String? getTemporaryPath();
@@ -36,9 +39,11 @@ abstract class PathProviderApi {
   @TaskQueue(type: TaskQueueType.serialBackgroundThread)
   String? getApplicationDocumentsPath();
   @TaskQueue(type: TaskQueueType.serialBackgroundThread)
+  String? getApplicationCachePath();
+  @TaskQueue(type: TaskQueueType.serialBackgroundThread)
   String? getExternalStoragePath();
   @TaskQueue(type: TaskQueueType.serialBackgroundThread)
-  List<String?> getExternalCachePaths();
+  List<String> getExternalCachePaths();
   @TaskQueue(type: TaskQueueType.serialBackgroundThread)
-  List<String?> getExternalStoragePaths(StorageDirectory directory);
+  List<String> getExternalStoragePaths(StorageDirectory directory);
 }

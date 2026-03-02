@@ -1,5 +1,133 @@
 ## NEXT
 
+* Updates minimum supported SDK version to Flutter 3.35/Dart 3.9.
+
+## 2.14.2
+
+* Updates README with discussion of the new `google_maps_flutter_ios_sdk*` packages.
+
+## 2.14.1
+
+* Replaces internal use of deprecated methods.
+* Updates minimum supported SDK version to Flutter 3.32/Dart 3.8.
+* Updates README to reflect currently supported OS versions for the latest
+  versions of the endorsed platform implementations.
+  * Applications built with older versions of Flutter will continue to
+    use compatible versions of the platform implementations.
+
+## 2.14.0
+
+* Adds a check that raises a `StateError`
+  when map controller is used after its widget has been disposed.
+
+## 2.13.1
+
+* Fixes exception when dispose is called while asynchronous update from
+  `didUpdateWidget` is executed.
+
+## 2.13.0
+
+* Adds support for camera control button on web.
+* Updates minimum supported SDK version to Flutter 3.29/Dart 3.7.
+
+## 2.12.3
+
+* Updates the example app to use the zIndexInt param instead of the deprecated zIndex.
+
+## 2.12.2
+
+* Fixes memory leak by disposing stream subscriptions in `GoogleMapController`.
+* Updates README to indicate that Andoid SDK <21 is no longer supported.
+
+## 2.12.1
+
+* Fixes typo in README.
+
+## 2.12.0
+
+* Adds support for animating the camera with a duration.
+
+## 2.11.0
+
+* Adds support for ground overlays.
+* Updates minimum supported SDK version to Flutter 3.27/Dart 3.6.
+
+## 2.10.1
+
+* Updates READMEs and API docs.
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+
+## 2.10.0
+
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+* Fixes detection of WebAssembly support on package site.
+
+## 2.9.0
+
+* Adds clustering support.
+
+## 2.8.0
+
+* Adds support for heatmap layers.
+
+## 2.7.1
+
+* Updates the example app to use TLHC mode, per current package guidance.
+
+## 2.7.0
+
+* Adds support for BitmapDescriptor classes `AssetMapBitmap` and `BytesMapBitmap`.
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+
+## 2.6.1
+
+* Updates the minimum version of the iOS implementation package to a version
+  with privacy manifest support.
+* Updates README and example app to reflect that the minimum supported version
+  is now iOS 14. Removal of support for iOS 12 and 13 was necessary due to the
+  upcoming App Store privary manifest requirements.
+
+## 2.6.0
+
+* Adds `style` to the GoogleMap widget constructor. This allows setting the map
+  style during creation, avoiding the possibility of the default style being
+  displayed briefly.
+* Deprecates `GoogleMapController.setMapStyle` in favor of setting the style via
+  the new widget `style` parameter.
+* Updates minimum supported SDK version to Flutter 3.19.
+
+## 2.5.3
+
+* Updates support matrix in README to indicate that iOS 11 is no longer supported.
+* Clients on versions of Flutter that still support iOS 11 can continue to
+  use this package with iOS 11, but will not receive any further
+  updates to the iOS implementation.
+
+## 2.5.2
+
+* Updates minimum required plugin_platform_interface version to 2.1.7.
+
+## 2.5.1
+
+* Fixes new lint warnings.
+
+## 2.5.0
+
+* Adds implementation for `cloudMapId` parameter to support cloud-based maps styling.
+
+## 2.4.1
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 2.4.0
+
+* Adds options for gesture handling and tilt controls on web.
+
+## 2.3.1
+
+* Fixes a regression from 2.2.8 that could cause incorrect handling of a
+  rapid series of map object updates.
 * Fixes stale ignore: prefer_const_constructors.
 * Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
 

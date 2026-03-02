@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -30,7 +30,7 @@ class MissingPlatformDirectoryException implements Exception {
 
   @override
   String toString() {
-    final String detailsAddition = details == null ? '' : ': $details';
+    final detailsAddition = details == null ? '' : ': $details';
     return 'MissingPlatformDirectoryException($message)$detailsAddition';
   }
 }
@@ -55,7 +55,8 @@ Future<Directory> getTemporaryDirectory() async {
   final String? path = await _platform.getTemporaryPath();
   if (path == null) {
     throw MissingPlatformDirectoryException(
-        'Unable to get temporary directory');
+      'Unable to get temporary directory',
+    );
   }
   return Directory(path);
 }
@@ -78,7 +79,8 @@ Future<Directory> getApplicationSupportDirectory() async {
   final String? path = await _platform.getApplicationSupportPath();
   if (path == null) {
     throw MissingPlatformDirectoryException(
-        'Unable to get application support directory');
+      'Unable to get application support directory',
+    );
   }
 
   return Directory(path);
@@ -107,8 +109,9 @@ Future<Directory> getLibraryDirectory() async {
 /// Path to a directory where the application may place data that is
 /// user-generated, or that cannot otherwise be recreated by your application.
 ///
-/// Consider using another path, such as [getApplicationSupportDirectory] or
-/// [getExternalStorageDirectory], if the data is not user-generated.
+/// Consider using another path, such as [getApplicationSupportDirectory],
+/// [getApplicationCacheDirectory], or [getExternalStorageDirectory], if the
+/// data is not user-generated.
 ///
 /// Example implementations:
 /// - `NSDocumentDirectory` on iOS and macOS.
@@ -120,7 +123,25 @@ Future<Directory> getApplicationDocumentsDirectory() async {
   final String? path = await _platform.getApplicationDocumentsPath();
   if (path == null) {
     throw MissingPlatformDirectoryException(
-        'Unable to get application documents directory');
+      'Unable to get application documents directory',
+    );
+  }
+  return Directory(path);
+}
+
+/// Path to a directory where the application may place application-specific
+/// cache files.
+///
+/// If this directory does not exist, it is created automatically.
+///
+/// Throws a [MissingPlatformDirectoryException] if the system is unable to
+/// provide the directory.
+Future<Directory> getApplicationCacheDirectory() async {
+  final String? path = await _platform.getApplicationCachePath();
+  if (path == null) {
+    throw MissingPlatformDirectoryException(
+      'Unable to get application cache directory',
+    );
   }
   return Directory(path);
 }
@@ -181,8 +202,9 @@ Future<List<Directory>?> getExternalStorageDirectories({
   /// how this type translates to Android storage directories.
   StorageDirectory? type,
 }) async {
-  final List<String>? paths =
-      await _platform.getExternalStoragePaths(type: type);
+  final List<String>? paths = await _platform.getExternalStoragePaths(
+    type: type,
+  );
   if (paths == null) {
     return null;
   }

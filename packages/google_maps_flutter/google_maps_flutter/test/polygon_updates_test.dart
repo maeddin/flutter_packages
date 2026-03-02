@@ -1,13 +1,13 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 
-import 'fake_maps_controllers.dart';
+import 'fake_google_maps_flutter_platform.dart';
 
 Widget _mapWithPolygons(Set<Polygon> polygons) {
   return Directionality(
@@ -43,260 +43,248 @@ Polygon _polygonWithPointsAndHole(PolygonId polygonId) {
 }
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-
-  final FakePlatformViewsController fakePlatformViewsController =
-      FakePlatformViewsController();
-
-  setUpAll(() {
-    _ambiguate(TestDefaultBinaryMessengerBinding.instance)!
-        .defaultBinaryMessenger
-        .setMockMethodCallHandler(
-          SystemChannels.platform_views,
-          fakePlatformViewsController.fakePlatformViewsMethodHandler,
-        );
-  });
+  late FakeGoogleMapsFlutterPlatform platform;
 
   setUp(() {
-    fakePlatformViewsController.reset();
+    platform = FakeGoogleMapsFlutterPlatform();
+    GoogleMapsFlutterPlatform.instance = platform;
   });
 
   testWidgets('Initializing a polygon', (WidgetTester tester) async {
-    const Polygon p1 = Polygon(polygonId: PolygonId('polygon_1'));
+    const p1 = Polygon(polygonId: PolygonId('polygon_1'));
     await tester.pumpWidget(_mapWithPolygons(<Polygon>{p1}));
 
-    final FakePlatformGoogleMap platformGoogleMap =
-        fakePlatformViewsController.lastCreatedView!;
-    expect(platformGoogleMap.polygonsToAdd.length, 1);
+    final PlatformMapStateRecorder map = platform.lastCreatedMap;
+    expect(map.polygonUpdates.last.polygonsToAdd.length, 1);
 
-    final Polygon initializedPolygon = platformGoogleMap.polygonsToAdd.first;
+    final Polygon initializedPolygon =
+        map.polygonUpdates.last.polygonsToAdd.first;
     expect(initializedPolygon, equals(p1));
-    expect(platformGoogleMap.polygonIdsToRemove.isEmpty, true);
-    expect(platformGoogleMap.polygonsToChange.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonIdsToRemove.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToChange.isEmpty, true);
   });
 
   testWidgets('Adding a polygon', (WidgetTester tester) async {
-    const Polygon p1 = Polygon(polygonId: PolygonId('polygon_1'));
-    const Polygon p2 = Polygon(polygonId: PolygonId('polygon_2'));
+    const p1 = Polygon(polygonId: PolygonId('polygon_1'));
+    const p2 = Polygon(polygonId: PolygonId('polygon_2'));
 
     await tester.pumpWidget(_mapWithPolygons(<Polygon>{p1}));
     await tester.pumpWidget(_mapWithPolygons(<Polygon>{p1, p2}));
 
-    final FakePlatformGoogleMap platformGoogleMap =
-        fakePlatformViewsController.lastCreatedView!;
-    expect(platformGoogleMap.polygonsToAdd.length, 1);
+    final PlatformMapStateRecorder map = platform.lastCreatedMap;
+    expect(map.polygonUpdates.last.polygonsToAdd.length, 1);
 
-    final Polygon addedPolygon = platformGoogleMap.polygonsToAdd.first;
+    final Polygon addedPolygon = map.polygonUpdates.last.polygonsToAdd.first;
     expect(addedPolygon, equals(p2));
 
-    expect(platformGoogleMap.polygonIdsToRemove.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonIdsToRemove.isEmpty, true);
 
-    expect(platformGoogleMap.polygonsToChange.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToChange.isEmpty, true);
   });
 
   testWidgets('Removing a polygon', (WidgetTester tester) async {
-    const Polygon p1 = Polygon(polygonId: PolygonId('polygon_1'));
+    const p1 = Polygon(polygonId: PolygonId('polygon_1'));
 
     await tester.pumpWidget(_mapWithPolygons(<Polygon>{p1}));
     await tester.pumpWidget(_mapWithPolygons(<Polygon>{}));
 
-    final FakePlatformGoogleMap platformGoogleMap =
-        fakePlatformViewsController.lastCreatedView!;
-    expect(platformGoogleMap.polygonIdsToRemove.length, 1);
-    expect(platformGoogleMap.polygonIdsToRemove.first, equals(p1.polygonId));
+    final PlatformMapStateRecorder map = platform.lastCreatedMap;
+    expect(map.polygonUpdates.last.polygonIdsToRemove.length, 1);
+    expect(
+      map.polygonUpdates.last.polygonIdsToRemove.first,
+      equals(p1.polygonId),
+    );
 
-    expect(platformGoogleMap.polygonsToChange.isEmpty, true);
-    expect(platformGoogleMap.polygonsToAdd.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToChange.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToAdd.isEmpty, true);
   });
 
   testWidgets('Updating a polygon', (WidgetTester tester) async {
-    const Polygon p1 = Polygon(polygonId: PolygonId('polygon_1'));
-    const Polygon p2 =
-        Polygon(polygonId: PolygonId('polygon_1'), geodesic: true);
+    const p1 = Polygon(polygonId: PolygonId('polygon_1'));
+    const p2 = Polygon(polygonId: PolygonId('polygon_1'), geodesic: true);
 
     await tester.pumpWidget(_mapWithPolygons(<Polygon>{p1}));
     await tester.pumpWidget(_mapWithPolygons(<Polygon>{p2}));
 
-    final FakePlatformGoogleMap platformGoogleMap =
-        fakePlatformViewsController.lastCreatedView!;
-    expect(platformGoogleMap.polygonsToChange.length, 1);
-    expect(platformGoogleMap.polygonsToChange.first, equals(p2));
+    final PlatformMapStateRecorder map = platform.lastCreatedMap;
+    expect(map.polygonUpdates.last.polygonsToChange.length, 1);
+    expect(map.polygonUpdates.last.polygonsToChange.first, equals(p2));
 
-    expect(platformGoogleMap.polygonIdsToRemove.isEmpty, true);
-    expect(platformGoogleMap.polygonsToAdd.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonIdsToRemove.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToAdd.isEmpty, true);
   });
 
   testWidgets('Mutate a polygon', (WidgetTester tester) async {
-    final List<LatLng> points = <LatLng>[const LatLng(0.0, 0.0)];
-    final Polygon p1 = Polygon(
-      polygonId: const PolygonId('polygon_1'),
-      points: points,
-    );
+    final points = <LatLng>[const LatLng(0.0, 0.0)];
+    final p1 = Polygon(polygonId: const PolygonId('polygon_1'), points: points);
     await tester.pumpWidget(_mapWithPolygons(<Polygon>{p1}));
 
     p1.points.add(const LatLng(1.0, 1.0));
     await tester.pumpWidget(_mapWithPolygons(<Polygon>{p1}));
 
-    final FakePlatformGoogleMap platformGoogleMap =
-        fakePlatformViewsController.lastCreatedView!;
-    expect(platformGoogleMap.polygonsToChange.length, 1);
-    expect(platformGoogleMap.polygonsToChange.first, equals(p1));
+    final PlatformMapStateRecorder map = platform.lastCreatedMap;
+    expect(map.polygonUpdates.last.polygonsToChange.length, 1);
+    expect(map.polygonUpdates.last.polygonsToChange.first, equals(p1));
 
-    expect(platformGoogleMap.polygonIdsToRemove.isEmpty, true);
-    expect(platformGoogleMap.polygonsToAdd.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonIdsToRemove.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToAdd.isEmpty, true);
   });
 
   testWidgets('Multi Update', (WidgetTester tester) async {
-    Polygon p1 = const Polygon(polygonId: PolygonId('polygon_1'));
-    Polygon p2 = const Polygon(polygonId: PolygonId('polygon_2'));
-    final Set<Polygon> prev = <Polygon>{p1, p2};
+    var p1 = const Polygon(polygonId: PolygonId('polygon_1'));
+    var p2 = const Polygon(polygonId: PolygonId('polygon_2'));
+    final prev = <Polygon>{p1, p2};
     p1 = const Polygon(polygonId: PolygonId('polygon_1'), visible: false);
     p2 = const Polygon(polygonId: PolygonId('polygon_2'), geodesic: true);
-    final Set<Polygon> cur = <Polygon>{p1, p2};
+    final cur = <Polygon>{p1, p2};
 
     await tester.pumpWidget(_mapWithPolygons(prev));
     await tester.pumpWidget(_mapWithPolygons(cur));
 
-    final FakePlatformGoogleMap platformGoogleMap =
-        fakePlatformViewsController.lastCreatedView!;
+    final PlatformMapStateRecorder map = platform.lastCreatedMap;
 
-    expect(platformGoogleMap.polygonsToChange, cur);
-    expect(platformGoogleMap.polygonIdsToRemove.isEmpty, true);
-    expect(platformGoogleMap.polygonsToAdd.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToChange, cur);
+    expect(map.polygonUpdates.last.polygonIdsToRemove.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToAdd.isEmpty, true);
   });
 
   testWidgets('Multi Update', (WidgetTester tester) async {
-    Polygon p2 = const Polygon(polygonId: PolygonId('polygon_2'));
-    const Polygon p3 = Polygon(polygonId: PolygonId('polygon_3'));
-    final Set<Polygon> prev = <Polygon>{p2, p3};
+    var p2 = const Polygon(polygonId: PolygonId('polygon_2'));
+    const p3 = Polygon(polygonId: PolygonId('polygon_3'));
+    final prev = <Polygon>{p2, p3};
 
     // p1 is added, p2 is updated, p3 is removed.
-    const Polygon p1 = Polygon(polygonId: PolygonId('polygon_1'));
+    const p1 = Polygon(polygonId: PolygonId('polygon_1'));
     p2 = const Polygon(polygonId: PolygonId('polygon_2'), geodesic: true);
-    final Set<Polygon> cur = <Polygon>{p1, p2};
+    final cur = <Polygon>{p1, p2};
 
     await tester.pumpWidget(_mapWithPolygons(prev));
     await tester.pumpWidget(_mapWithPolygons(cur));
 
-    final FakePlatformGoogleMap platformGoogleMap =
-        fakePlatformViewsController.lastCreatedView!;
+    final PlatformMapStateRecorder map = platform.lastCreatedMap;
 
-    expect(platformGoogleMap.polygonsToChange.length, 1);
-    expect(platformGoogleMap.polygonsToAdd.length, 1);
-    expect(platformGoogleMap.polygonIdsToRemove.length, 1);
+    expect(map.polygonUpdates.last.polygonsToChange.length, 1);
+    expect(map.polygonUpdates.last.polygonsToAdd.length, 1);
+    expect(map.polygonUpdates.last.polygonIdsToRemove.length, 1);
 
-    expect(platformGoogleMap.polygonsToChange.first, equals(p2));
-    expect(platformGoogleMap.polygonsToAdd.first, equals(p1));
-    expect(platformGoogleMap.polygonIdsToRemove.first, equals(p3.polygonId));
+    expect(map.polygonUpdates.last.polygonsToChange.first, equals(p2));
+    expect(map.polygonUpdates.last.polygonsToAdd.first, equals(p1));
+    expect(
+      map.polygonUpdates.last.polygonIdsToRemove.first,
+      equals(p3.polygonId),
+    );
   });
 
   testWidgets('Partial Update', (WidgetTester tester) async {
-    const Polygon p1 = Polygon(polygonId: PolygonId('polygon_1'));
-    const Polygon p2 = Polygon(polygonId: PolygonId('polygon_2'));
-    Polygon p3 = const Polygon(polygonId: PolygonId('polygon_3'));
-    final Set<Polygon> prev = <Polygon>{p1, p2, p3};
+    const p1 = Polygon(polygonId: PolygonId('polygon_1'));
+    const p2 = Polygon(polygonId: PolygonId('polygon_2'));
+    var p3 = const Polygon(polygonId: PolygonId('polygon_3'));
+    final prev = <Polygon>{p1, p2, p3};
     p3 = const Polygon(polygonId: PolygonId('polygon_3'), geodesic: true);
-    final Set<Polygon> cur = <Polygon>{p1, p2, p3};
+    final cur = <Polygon>{p1, p2, p3};
 
     await tester.pumpWidget(_mapWithPolygons(prev));
     await tester.pumpWidget(_mapWithPolygons(cur));
 
-    final FakePlatformGoogleMap platformGoogleMap =
-        fakePlatformViewsController.lastCreatedView!;
+    final PlatformMapStateRecorder map = platform.lastCreatedMap;
 
-    expect(platformGoogleMap.polygonsToChange, <Polygon>{p3});
-    expect(platformGoogleMap.polygonIdsToRemove.isEmpty, true);
-    expect(platformGoogleMap.polygonsToAdd.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToChange, <Polygon>{p3});
+    expect(map.polygonUpdates.last.polygonIdsToRemove.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToAdd.isEmpty, true);
   });
 
   testWidgets('Update non platform related attr', (WidgetTester tester) async {
-    Polygon p1 = const Polygon(polygonId: PolygonId('polygon_1'));
-    final Set<Polygon> prev = <Polygon>{p1};
+    var p1 = const Polygon(polygonId: PolygonId('polygon_1'));
+    final prev = <Polygon>{p1};
     p1 = Polygon(polygonId: const PolygonId('polygon_1'), onTap: () {});
-    final Set<Polygon> cur = <Polygon>{p1};
+    final cur = <Polygon>{p1};
 
     await tester.pumpWidget(_mapWithPolygons(prev));
     await tester.pumpWidget(_mapWithPolygons(cur));
 
-    final FakePlatformGoogleMap platformGoogleMap =
-        fakePlatformViewsController.lastCreatedView!;
+    final PlatformMapStateRecorder map = platform.lastCreatedMap;
 
-    expect(platformGoogleMap.polygonsToChange.isEmpty, true);
-    expect(platformGoogleMap.polygonIdsToRemove.isEmpty, true);
-    expect(platformGoogleMap.polygonsToAdd.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToChange.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonIdsToRemove.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToAdd.isEmpty, true);
   });
 
-  testWidgets('Initializing a polygon with points and hole',
-      (WidgetTester tester) async {
+  testWidgets('Initializing a polygon with points and hole', (
+    WidgetTester tester,
+  ) async {
     final Polygon p1 = _polygonWithPointsAndHole(const PolygonId('polygon_1'));
     await tester.pumpWidget(_mapWithPolygons(<Polygon>{p1}));
 
-    final FakePlatformGoogleMap platformGoogleMap =
-        fakePlatformViewsController.lastCreatedView!;
-    expect(platformGoogleMap.polygonsToAdd.length, 1);
+    final PlatformMapStateRecorder map = platform.lastCreatedMap;
+    expect(map.polygonUpdates.last.polygonsToAdd.length, 1);
 
-    final Polygon initializedPolygon = platformGoogleMap.polygonsToAdd.first;
+    final Polygon initializedPolygon =
+        map.polygonUpdates.last.polygonsToAdd.first;
     expect(initializedPolygon, equals(p1));
-    expect(platformGoogleMap.polygonIdsToRemove.isEmpty, true);
-    expect(platformGoogleMap.polygonsToChange.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonIdsToRemove.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToChange.isEmpty, true);
   });
 
-  testWidgets('Adding a polygon with points and hole',
-      (WidgetTester tester) async {
-    const Polygon p1 = Polygon(polygonId: PolygonId('polygon_1'));
+  testWidgets('Adding a polygon with points and hole', (
+    WidgetTester tester,
+  ) async {
+    const p1 = Polygon(polygonId: PolygonId('polygon_1'));
     final Polygon p2 = _polygonWithPointsAndHole(const PolygonId('polygon_2'));
 
     await tester.pumpWidget(_mapWithPolygons(<Polygon>{p1}));
     await tester.pumpWidget(_mapWithPolygons(<Polygon>{p1, p2}));
 
-    final FakePlatformGoogleMap platformGoogleMap =
-        fakePlatformViewsController.lastCreatedView!;
-    expect(platformGoogleMap.polygonsToAdd.length, 1);
+    final PlatformMapStateRecorder map = platform.lastCreatedMap;
+    expect(map.polygonUpdates.last.polygonsToAdd.length, 1);
 
-    final Polygon addedPolygon = platformGoogleMap.polygonsToAdd.first;
+    final Polygon addedPolygon = map.polygonUpdates.last.polygonsToAdd.first;
     expect(addedPolygon, equals(p2));
 
-    expect(platformGoogleMap.polygonIdsToRemove.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonIdsToRemove.isEmpty, true);
 
-    expect(platformGoogleMap.polygonsToChange.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToChange.isEmpty, true);
   });
 
-  testWidgets('Removing a polygon with points and hole',
-      (WidgetTester tester) async {
+  testWidgets('Removing a polygon with points and hole', (
+    WidgetTester tester,
+  ) async {
     final Polygon p1 = _polygonWithPointsAndHole(const PolygonId('polygon_1'));
 
     await tester.pumpWidget(_mapWithPolygons(<Polygon>{p1}));
     await tester.pumpWidget(_mapWithPolygons(<Polygon>{}));
 
-    final FakePlatformGoogleMap platformGoogleMap =
-        fakePlatformViewsController.lastCreatedView!;
-    expect(platformGoogleMap.polygonIdsToRemove.length, 1);
-    expect(platformGoogleMap.polygonIdsToRemove.first, equals(p1.polygonId));
+    final PlatformMapStateRecorder map = platform.lastCreatedMap;
+    expect(map.polygonUpdates.last.polygonIdsToRemove.length, 1);
+    expect(
+      map.polygonUpdates.last.polygonIdsToRemove.first,
+      equals(p1.polygonId),
+    );
 
-    expect(platformGoogleMap.polygonsToChange.isEmpty, true);
-    expect(platformGoogleMap.polygonsToAdd.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToChange.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToAdd.isEmpty, true);
   });
 
-  testWidgets('Updating a polygon by adding points and hole',
-      (WidgetTester tester) async {
-    const Polygon p1 = Polygon(polygonId: PolygonId('polygon_1'));
+  testWidgets('Updating a polygon by adding points and hole', (
+    WidgetTester tester,
+  ) async {
+    const p1 = Polygon(polygonId: PolygonId('polygon_1'));
     final Polygon p2 = _polygonWithPointsAndHole(const PolygonId('polygon_1'));
 
     await tester.pumpWidget(_mapWithPolygons(<Polygon>{p1}));
     await tester.pumpWidget(_mapWithPolygons(<Polygon>{p2}));
 
-    final FakePlatformGoogleMap platformGoogleMap =
-        fakePlatformViewsController.lastCreatedView!;
-    expect(platformGoogleMap.polygonsToChange.length, 1);
-    expect(platformGoogleMap.polygonsToChange.first, equals(p2));
+    final PlatformMapStateRecorder map = platform.lastCreatedMap;
+    expect(map.polygonUpdates.last.polygonsToChange.length, 1);
+    expect(map.polygonUpdates.last.polygonsToChange.first, equals(p2));
 
-    expect(platformGoogleMap.polygonIdsToRemove.isEmpty, true);
-    expect(platformGoogleMap.polygonsToAdd.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonIdsToRemove.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToAdd.isEmpty, true);
   });
 
-  testWidgets('Mutate a polygon with points and holes',
-      (WidgetTester tester) async {
-    final Polygon p1 = Polygon(
+  testWidgets('Mutate a polygon with points and holes', (
+    WidgetTester tester,
+  ) async {
+    final p1 = Polygon(
       polygonId: const PolygonId('polygon_1'),
       points: _rectPoints(size: 1),
       holes: <List<LatLng>>[_rectPoints(size: 0.5)],
@@ -311,51 +299,51 @@ void main() {
       ..addAll(<List<LatLng>>[_rectPoints(size: 1)]);
     await tester.pumpWidget(_mapWithPolygons(<Polygon>{p1}));
 
-    final FakePlatformGoogleMap platformGoogleMap =
-        fakePlatformViewsController.lastCreatedView!;
-    expect(platformGoogleMap.polygonsToChange.length, 1);
-    expect(platformGoogleMap.polygonsToChange.first, equals(p1));
+    final PlatformMapStateRecorder map = platform.lastCreatedMap;
+    expect(map.polygonUpdates.last.polygonsToChange.length, 1);
+    expect(map.polygonUpdates.last.polygonsToChange.first, equals(p1));
 
-    expect(platformGoogleMap.polygonIdsToRemove.isEmpty, true);
-    expect(platformGoogleMap.polygonsToAdd.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonIdsToRemove.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToAdd.isEmpty, true);
   });
 
-  testWidgets('Multi Update polygons with points and hole',
-      (WidgetTester tester) async {
-    Polygon p1 = const Polygon(polygonId: PolygonId('polygon_1'));
-    Polygon p2 = Polygon(
+  testWidgets('Multi Update polygons with points and hole', (
+    WidgetTester tester,
+  ) async {
+    var p1 = const Polygon(polygonId: PolygonId('polygon_1'));
+    var p2 = Polygon(
       polygonId: const PolygonId('polygon_2'),
       points: _rectPoints(size: 2),
       holes: <List<LatLng>>[_rectPoints(size: 1)],
     );
-    final Set<Polygon> prev = <Polygon>{p1, p2};
+    final prev = <Polygon>{p1, p2};
     p1 = const Polygon(polygonId: PolygonId('polygon_1'), visible: false);
     p2 = p2.copyWith(
       pointsParam: _rectPoints(size: 5),
       holesParam: <List<LatLng>>[_rectPoints(size: 2)],
     );
-    final Set<Polygon> cur = <Polygon>{p1, p2};
+    final cur = <Polygon>{p1, p2};
 
     await tester.pumpWidget(_mapWithPolygons(prev));
     await tester.pumpWidget(_mapWithPolygons(cur));
 
-    final FakePlatformGoogleMap platformGoogleMap =
-        fakePlatformViewsController.lastCreatedView!;
+    final PlatformMapStateRecorder map = platform.lastCreatedMap;
 
-    expect(platformGoogleMap.polygonsToChange, cur);
-    expect(platformGoogleMap.polygonIdsToRemove.isEmpty, true);
-    expect(platformGoogleMap.polygonsToAdd.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToChange, cur);
+    expect(map.polygonUpdates.last.polygonIdsToRemove.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToAdd.isEmpty, true);
   });
 
-  testWidgets('Multi Update polygons with points and hole',
-      (WidgetTester tester) async {
-    Polygon p2 = Polygon(
+  testWidgets('Multi Update polygons with points and hole', (
+    WidgetTester tester,
+  ) async {
+    var p2 = Polygon(
       polygonId: const PolygonId('polygon_2'),
       points: _rectPoints(size: 2),
       holes: <List<LatLng>>[_rectPoints(size: 1)],
     );
-    const Polygon p3 = Polygon(polygonId: PolygonId('polygon_3'));
-    final Set<Polygon> prev = <Polygon>{p2, p3};
+    const p3 = Polygon(polygonId: PolygonId('polygon_3'));
+    final prev = <Polygon>{p2, p3};
 
     // p1 is added, p2 is updated, p3 is removed.
     final Polygon p1 = _polygonWithPointsAndHole(const PolygonId('polygon_1'));
@@ -363,53 +351,84 @@ void main() {
       pointsParam: _rectPoints(size: 5),
       holesParam: <List<LatLng>>[_rectPoints(size: 3)],
     );
-    final Set<Polygon> cur = <Polygon>{p1, p2};
+    final cur = <Polygon>{p1, p2};
 
     await tester.pumpWidget(_mapWithPolygons(prev));
     await tester.pumpWidget(_mapWithPolygons(cur));
 
-    final FakePlatformGoogleMap platformGoogleMap =
-        fakePlatformViewsController.lastCreatedView!;
+    final PlatformMapStateRecorder map = platform.lastCreatedMap;
 
-    expect(platformGoogleMap.polygonsToChange.length, 1);
-    expect(platformGoogleMap.polygonsToAdd.length, 1);
-    expect(platformGoogleMap.polygonIdsToRemove.length, 1);
+    expect(map.polygonUpdates.last.polygonsToChange.length, 1);
+    expect(map.polygonUpdates.last.polygonsToAdd.length, 1);
+    expect(map.polygonUpdates.last.polygonIdsToRemove.length, 1);
 
-    expect(platformGoogleMap.polygonsToChange.first, equals(p2));
-    expect(platformGoogleMap.polygonsToAdd.first, equals(p1));
-    expect(platformGoogleMap.polygonIdsToRemove.first, equals(p3.polygonId));
+    expect(map.polygonUpdates.last.polygonsToChange.first, equals(p2));
+    expect(map.polygonUpdates.last.polygonsToAdd.first, equals(p1));
+    expect(
+      map.polygonUpdates.last.polygonIdsToRemove.first,
+      equals(p3.polygonId),
+    );
   });
 
-  testWidgets('Partial Update polygons with points and hole',
-      (WidgetTester tester) async {
+  testWidgets('Partial Update polygons with points and hole', (
+    WidgetTester tester,
+  ) async {
     final Polygon p1 = _polygonWithPointsAndHole(const PolygonId('polygon_1'));
-    const Polygon p2 = Polygon(polygonId: PolygonId('polygon_2'));
-    Polygon p3 = Polygon(
+    const p2 = Polygon(polygonId: PolygonId('polygon_2'));
+    var p3 = Polygon(
       polygonId: const PolygonId('polygon_3'),
       points: _rectPoints(size: 2),
       holes: <List<LatLng>>[_rectPoints(size: 1)],
     );
-    final Set<Polygon> prev = <Polygon>{p1, p2, p3};
+    final prev = <Polygon>{p1, p2, p3};
     p3 = p3.copyWith(
       pointsParam: _rectPoints(size: 5),
       holesParam: <List<LatLng>>[_rectPoints(size: 3)],
     );
-    final Set<Polygon> cur = <Polygon>{p1, p2, p3};
+    final cur = <Polygon>{p1, p2, p3};
 
     await tester.pumpWidget(_mapWithPolygons(prev));
     await tester.pumpWidget(_mapWithPolygons(cur));
 
-    final FakePlatformGoogleMap platformGoogleMap =
-        fakePlatformViewsController.lastCreatedView!;
+    final PlatformMapStateRecorder map = platform.lastCreatedMap;
 
-    expect(platformGoogleMap.polygonsToChange, <Polygon>{p3});
-    expect(platformGoogleMap.polygonIdsToRemove.isEmpty, true);
-    expect(platformGoogleMap.polygonsToAdd.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToChange, <Polygon>{p3});
+    expect(map.polygonUpdates.last.polygonIdsToRemove.isEmpty, true);
+    expect(map.polygonUpdates.last.polygonsToAdd.isEmpty, true);
+  });
+
+  testWidgets('multi-update with delays', (WidgetTester tester) async {
+    platform.simulatePlatformDelay = true;
+
+    const p1 = Polygon(polygonId: PolygonId('polygon_1'));
+    const p2 = Polygon(polygonId: PolygonId('polygon_2'));
+    const p3 = Polygon(polygonId: PolygonId('polygon_3'), strokeWidth: 1);
+    const p3updated = Polygon(
+      polygonId: PolygonId('polygon_3'),
+      strokeWidth: 2,
+    );
+
+    // First remove one and add another, then update the new one.
+    await tester.pumpWidget(_mapWithPolygons(<Polygon>{p1, p2}));
+    await tester.pumpWidget(_mapWithPolygons(<Polygon>{p1, p3}));
+    await tester.pumpWidget(_mapWithPolygons(<Polygon>{p1, p3updated}));
+
+    final PlatformMapStateRecorder map = platform.lastCreatedMap;
+
+    expect(map.polygonUpdates.length, 3);
+
+    expect(map.polygonUpdates[0].polygonsToChange.isEmpty, true);
+    expect(map.polygonUpdates[0].polygonsToAdd, <Polygon>{p1, p2});
+    expect(map.polygonUpdates[0].polygonIdsToRemove.isEmpty, true);
+
+    expect(map.polygonUpdates[1].polygonsToChange.isEmpty, true);
+    expect(map.polygonUpdates[1].polygonsToAdd, <Polygon>{p3});
+    expect(map.polygonUpdates[1].polygonIdsToRemove, <PolygonId>{p2.polygonId});
+
+    expect(map.polygonUpdates[2].polygonsToChange, <Polygon>{p3updated});
+    expect(map.polygonUpdates[2].polygonsToAdd.isEmpty, true);
+    expect(map.polygonUpdates[2].polygonIdsToRemove.isEmpty, true);
+
+    await tester.pumpAndSettle();
   });
 }
-
-/// This allows a value of type T or T? to be treated as a value of type T?.
-///
-/// We use this so that APIs that have become non-nullable can still be used
-/// with `!` and `?` on the stable branch.
-T? _ambiguate<T>(T? value) => value;

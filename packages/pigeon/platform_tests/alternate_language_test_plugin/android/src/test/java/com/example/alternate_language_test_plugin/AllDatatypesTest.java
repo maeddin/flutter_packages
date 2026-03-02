@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,15 +8,94 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 import com.example.alternate_language_test_plugin.CoreTests.AllNullableTypes;
+import com.example.alternate_language_test_plugin.CoreTests.AllTypes;
 import com.example.alternate_language_test_plugin.CoreTests.FlutterIntegrationCoreApi;
 import io.flutter.plugin.common.BinaryMessenger;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.junit.Test;
 
 public class AllDatatypesTest {
+
+  void compareAllTypes(AllTypes firstTypes, AllTypes secondTypes) {
+    assertEquals(firstTypes == null, secondTypes == null);
+    if (firstTypes == null || secondTypes == null) {
+      return;
+    }
+    // Check all the fields individually to ensure that everything is as expected.
+    assertEquals(firstTypes.getABool(), secondTypes.getABool());
+    assertEquals(firstTypes.getAnInt(), secondTypes.getAnInt());
+    assertEquals(firstTypes.getAnInt64(), secondTypes.getAnInt64());
+    assertEquals(firstTypes.getADouble(), secondTypes.getADouble());
+    assertArrayEquals(firstTypes.getAByteArray(), secondTypes.getAByteArray());
+    assertArrayEquals(firstTypes.getA4ByteArray(), secondTypes.getA4ByteArray());
+    assertArrayEquals(firstTypes.getA8ByteArray(), secondTypes.getA8ByteArray());
+    assertTrue(floatArraysEqual(firstTypes.getAFloatArray(), secondTypes.getAFloatArray()));
+    assertEquals(firstTypes.getAnEnum(), secondTypes.getAnEnum());
+    assertEquals(firstTypes.getAnotherEnum(), secondTypes.getAnotherEnum());
+    assertEquals(firstTypes.getAnObject(), secondTypes.getAnObject());
+    assertArrayEquals(firstTypes.getList().toArray(), secondTypes.getList().toArray());
+    assertArrayEquals(firstTypes.getStringList().toArray(), secondTypes.getStringList().toArray());
+    assertArrayEquals(firstTypes.getBoolList().toArray(), secondTypes.getBoolList().toArray());
+    assertArrayEquals(firstTypes.getDoubleList().toArray(), secondTypes.getDoubleList().toArray());
+    assertArrayEquals(firstTypes.getIntList().toArray(), secondTypes.getIntList().toArray());
+    assertArrayEquals(
+        firstTypes.getMap().keySet().toArray(), secondTypes.getMap().keySet().toArray());
+    assertArrayEquals(
+        firstTypes.getMap().values().toArray(), secondTypes.getMap().values().toArray());
+
+    // Also check that the implementation of equality works.
+    assertEquals(firstTypes, secondTypes);
+    assertEquals(firstTypes.hashCode(), secondTypes.hashCode());
+  }
+
+  void compareAllNullableTypes(AllNullableTypes firstTypes, AllNullableTypes secondTypes) {
+    assertEquals(firstTypes == null, secondTypes == null);
+    if (firstTypes == null || secondTypes == null) {
+      return;
+    }
+    // Check all the fields individually to ensure that everything is as expected.
+    assertEquals(firstTypes.getANullableBool(), secondTypes.getANullableBool());
+    assertEquals(firstTypes.getANullableInt(), secondTypes.getANullableInt());
+    assertEquals(firstTypes.getANullableDouble(), secondTypes.getANullableDouble());
+    assertEquals(firstTypes.getANullableString(), secondTypes.getANullableString());
+    assertArrayEquals(firstTypes.getANullableByteArray(), secondTypes.getANullableByteArray());
+    assertArrayEquals(firstTypes.getANullable4ByteArray(), secondTypes.getANullable4ByteArray());
+    assertArrayEquals(firstTypes.getANullable8ByteArray(), secondTypes.getANullable8ByteArray());
+    assertTrue(
+        floatArraysEqual(
+            firstTypes.getANullableFloatArray(), secondTypes.getANullableFloatArray()));
+    assertEquals(firstTypes.getANullableObject(), secondTypes.getANullableObject());
+    assertArrayEquals(firstTypes.getList().toArray(), secondTypes.getList().toArray());
+    assertArrayEquals(firstTypes.getStringList().toArray(), secondTypes.getStringList().toArray());
+    assertArrayEquals(firstTypes.getBoolList().toArray(), secondTypes.getBoolList().toArray());
+    assertArrayEquals(firstTypes.getDoubleList().toArray(), secondTypes.getDoubleList().toArray());
+    assertArrayEquals(firstTypes.getIntList().toArray(), secondTypes.getIntList().toArray());
+    assertArrayEquals(firstTypes.getListList().toArray(), secondTypes.getListList().toArray());
+    assertArrayEquals(
+        firstTypes.getMap().keySet().toArray(), secondTypes.getMap().keySet().toArray());
+    assertArrayEquals(
+        firstTypes.getMap().values().toArray(), secondTypes.getMap().values().toArray());
+    assertArrayEquals(
+        firstTypes.getStringMap().keySet().toArray(),
+        secondTypes.getStringMap().keySet().toArray());
+    assertArrayEquals(
+        firstTypes.getStringMap().values().toArray(),
+        secondTypes.getStringMap().values().toArray());
+    assertArrayEquals(
+        firstTypes.getIntMap().keySet().toArray(), secondTypes.getIntMap().keySet().toArray());
+    assertArrayEquals(
+        firstTypes.getIntMap().values().toArray(), secondTypes.getIntMap().values().toArray());
+
+    // Also check that the implementation of equality works.
+    assertEquals(firstTypes, secondTypes);
+    assertEquals(firstTypes.hashCode(), secondTypes.hashCode());
+  }
+
   @Test
   public void nullValues() {
     AllNullableTypes everything = new AllNullableTypes();
@@ -29,8 +108,7 @@ public class AllDatatypesTest {
               @SuppressWarnings("unchecked")
               ArrayList<Object> args =
                   (ArrayList<Object>) FlutterIntegrationCoreApi.getCodec().decodeMessage(message);
-              ByteBuffer replyData =
-                  FlutterIntegrationCoreApi.getCodec().encodeMessage(args.get(0));
+              ByteBuffer replyData = FlutterIntegrationCoreApi.getCodec().encodeMessage(args);
               replyData.position(0);
               reply.reply(replyData);
               return null;
@@ -41,31 +119,37 @@ public class AllDatatypesTest {
     boolean[] didCall = {false};
     api.echoAllNullableTypes(
         everything,
-        (result) -> {
-          didCall[0] = true;
-          assertNull(everything.getANullableBool());
-          assertNull(everything.getANullableInt());
-          assertNull(everything.getANullableDouble());
-          assertNull(everything.getANullableString());
-          assertNull(everything.getANullableByteArray());
-          assertNull(everything.getANullable4ByteArray());
-          assertNull(everything.getANullable8ByteArray());
-          assertNull(everything.getANullableFloatArray());
-          assertNull(everything.getANullableList());
-          assertNull(everything.getANullableMap());
-          assertNull(everything.getNullableMapWithObject());
+        new CoreTests.NullableResult<AllNullableTypes>() {
+          public void success(AllNullableTypes result) {
+            didCall[0] = true;
+            assertNull(everything.getANullableBool());
+            assertNull(everything.getANullableInt());
+            assertNull(everything.getANullableDouble());
+            assertNull(everything.getANullableString());
+            assertNull(everything.getANullableByteArray());
+            assertNull(everything.getANullable4ByteArray());
+            assertNull(everything.getANullable8ByteArray());
+            assertNull(everything.getANullableFloatArray());
+            assertNull(everything.getList());
+            assertNull(everything.getDoubleList());
+            assertNull(everything.getIntList());
+            assertNull(everything.getStringList());
+            assertNull(everything.getBoolList());
+            assertNull(everything.getListList());
+            assertNull(everything.getMap());
+            assertNull(everything.getStringMap());
+            assertNull(everything.getIntMap());
+          }
+
+          public void error(Throwable error) {
+            assertEquals(error, null);
+          }
         });
     assertTrue(didCall[0]);
   }
 
-  private static HashMap<Object, Object> makeMap(String key, Integer value) {
-    HashMap<Object, Object> result = new HashMap<Object, Object>();
-    result.put(key, value);
-    return result;
-  }
-
-  private static HashMap<String, Object> makeStringMap(String key, Integer value) {
-    HashMap<String, Object> result = new HashMap<String, Object>();
+  private static <K, J> HashMap<K, J> makeMap(K key, J value) {
+    HashMap<K, J> result = new HashMap<K, J>();
     result.put(key, value);
     return result;
   }
@@ -84,18 +168,72 @@ public class AllDatatypesTest {
 
   @Test
   public void hasValues() {
-    AllNullableTypes everything = new AllNullableTypes();
-    everything.setANullableBool(false);
-    everything.setANullableInt(1234L);
-    everything.setANullableDouble(2.0);
-    everything.setANullableString("hello");
-    everything.setANullableByteArray(new byte[] {1, 2, 3, 4});
-    everything.setANullable4ByteArray(new int[] {1, 2, 3, 4});
-    everything.setANullable8ByteArray(new long[] {1, 2, 3, 4});
-    everything.setANullableFloatArray(new double[] {0.5, 0.25, 1.5, 1.25});
-    everything.setANullableList(Arrays.asList(new int[] {1, 2, 3}));
-    everything.setANullableMap(makeMap("hello", 1234));
-    everything.setNullableMapWithObject(makeStringMap("hello", 1234));
+    // Not inline due to warnings about an ambiguous varargs call when inline.
+    final List<Object> genericList = Arrays.asList(new Object[] {"hello", 1, true, false, null});
+    final List<List<Object>> listList = new ArrayList<>(Arrays.asList());
+    final List<Map<Object, Object>> mapList = new ArrayList<>(Arrays.asList());
+    final Map<Long, List<Object>> listMap = new HashMap<Long, List<Object>>();
+    final Map<Long, Map<Object, Object>> mapMap = new HashMap<Long, Map<Object, Object>>();
+    listList.add(genericList);
+    mapList.add(makeMap("hello", 1234));
+    listMap.put(1L, genericList);
+    mapMap.put(1L, makeMap("hello", 1234));
+    AllTypes allEverything =
+        new AllTypes.Builder()
+            .setABool(false)
+            .setAnInt(1234L)
+            .setAnInt64(4321L)
+            .setADouble(2.0)
+            .setAString("hello")
+            .setAByteArray(new byte[] {1, 2, 3, 4})
+            .setA4ByteArray(new int[] {1, 2, 3, 4})
+            .setA8ByteArray(new long[] {1, 2, 3, 4})
+            .setAFloatArray(new double[] {0.5, 0.25, 1.5, 1.25})
+            .setAnEnum(CoreTests.AnEnum.ONE)
+            .setAnotherEnum(CoreTests.AnotherEnum.JUST_IN_CASE)
+            .setAnObject(0)
+            .setList(genericList)
+            .setBoolList(Arrays.asList(new Boolean[] {true, false}))
+            .setDoubleList(Arrays.asList(new Double[] {0.5, 0.25, 1.5, 1.25}))
+            .setIntList(Arrays.asList(new Long[] {1l, 2l, 3l, 4l}))
+            .setStringList(Arrays.asList(new String[] {"string", "another one"}))
+            .setObjectList(genericList)
+            .setEnumList(
+                Arrays.asList(
+                    new CoreTests.AnEnum[] {CoreTests.AnEnum.ONE, CoreTests.AnEnum.FORTY_TWO}))
+            .setListList(listList)
+            .setMapList(mapList)
+            .setMap(makeMap("hello", 1234))
+            .setIntMap(makeMap(1L, 0L))
+            .setStringMap(makeMap("hello", "you"))
+            .setObjectMap(makeMap("E", 4321))
+            .setEnumMap(makeMap(CoreTests.AnEnum.ONE, CoreTests.AnEnum.FOUR_HUNDRED_TWENTY_TWO))
+            .setListMap(listMap)
+            .setMapMap(mapMap)
+            .build();
+
+    AllNullableTypes everything =
+        new AllNullableTypes.Builder()
+            .setANullableBool(false)
+            .setANullableInt(1234L)
+            .setANullableDouble(2.0)
+            .setANullableString("hello")
+            .setANullableByteArray(new byte[] {1, 2, 3, 4})
+            .setANullable4ByteArray(new int[] {1, 2, 3, 4})
+            .setANullable8ByteArray(new long[] {1, 2, 3, 4})
+            .setANullableFloatArray(new double[] {0.5, 0.25, 1.5, 1.25})
+            .setANullableObject(0)
+            .setList(Arrays.asList(genericList))
+            .setBoolList(Arrays.asList(new Boolean[] {true, false}))
+            .setDoubleList(Arrays.asList(new Double[] {0.5, 0.25, 1.5, 1.25}))
+            .setIntList(Arrays.asList(new Long[] {1l, 2l, 3l, 4l}))
+            .setStringList(Arrays.asList(new String[] {"string", "another one"}))
+            .setListList(listList)
+            .setMap(makeMap("hello", 1234))
+            .setStringMap(makeMap("hello", "you"))
+            .setIntMap(makeMap(2L, -2L))
+            .build();
+
     BinaryMessenger binaryMessenger = mock(BinaryMessenger.class);
     doAnswer(
             invocation -> {
@@ -105,8 +243,7 @@ public class AllDatatypesTest {
               @SuppressWarnings("unchecked")
               ArrayList<Object> args =
                   (ArrayList<Object>) FlutterIntegrationCoreApi.getCodec().decodeMessage(message);
-              ByteBuffer replyData =
-                  FlutterIntegrationCoreApi.getCodec().encodeMessage(args.get(0));
+              ByteBuffer replyData = FlutterIntegrationCoreApi.getCodec().encodeMessage(args);
               replyData.position(0);
               reply.reply(replyData);
               return null;
@@ -117,43 +254,16 @@ public class AllDatatypesTest {
     boolean[] didCall = {false};
     api.echoAllNullableTypes(
         everything,
-        (result) -> {
-          didCall[0] = true;
-          assertEquals(everything.getANullableBool(), result.getANullableBool());
-          assertEquals(everything.getANullableInt(), result.getANullableInt());
-          assertEquals(everything.getANullableDouble(), result.getANullableDouble());
-          assertEquals(everything.getANullableString(), result.getANullableString());
-          assertArrayEquals(everything.getANullableByteArray(), result.getANullableByteArray());
-          assertArrayEquals(everything.getANullable4ByteArray(), result.getANullable4ByteArray());
-          assertArrayEquals(everything.getANullable8ByteArray(), result.getANullable8ByteArray());
-          assertTrue(
-              floatArraysEqual(
-                  everything.getANullableFloatArray(), result.getANullableFloatArray()));
-          assertArrayEquals(
-              everything.getANullableList().toArray(), result.getANullableList().toArray());
-          assertArrayEquals(
-              everything.getANullableMap().keySet().toArray(),
-              result.getANullableMap().keySet().toArray());
-          assertArrayEquals(
-              everything.getANullableMap().values().toArray(),
-              result.getANullableMap().values().toArray());
-          assertArrayEquals(
-              everything.getNullableMapWithObject().values().toArray(),
-              result.getNullableMapWithObject().values().toArray());
+        new CoreTests.NullableResult<AllNullableTypes>() {
+          public void success(AllNullableTypes result) {
+            didCall[0] = true;
+            compareAllNullableTypes(everything, result);
+          }
+
+          public void error(Throwable error) {
+            assertEquals(error, null);
+          }
         });
     assertTrue(didCall[0]);
-  }
-
-  @Test
-  public void integerToLong() {
-    AllNullableTypes everything = new AllNullableTypes();
-    everything.setANullableInt(123L);
-    ArrayList<Object> list = everything.toList();
-    assertNotNull(list);
-    assertNull(list.get(0));
-    assertNotNull(list.get(1));
-    list.set(1, 123);
-    AllNullableTypes readEverything = AllNullableTypes.fromList(list);
-    assertEquals(readEverything.getANullableInt(), everything.getANullableInt());
   }
 }

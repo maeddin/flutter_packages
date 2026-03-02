@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,10 +6,14 @@ import 'package:file/file.dart';
 import 'package:path/path.dart' as p;
 import 'package:pubspec_parse/pubspec_parse.dart';
 
+import 'ci_config.dart';
 import 'core.dart';
+import 'pending_changelog_entry.dart';
 
 export 'package:pubspec_parse/pubspec_parse.dart' show Pubspec;
+export 'ci_config.dart';
 export 'core.dart' show FlutterPlatform;
+export 'pending_changelog_entry.dart';
 
 /// A package in the repository.
 //
@@ -60,11 +64,26 @@ class RepositoryPackage {
   /// The package's top-level README.
   File get authorsFile => directory.childFile('AUTHORS');
 
+  /// The package's top-level ci_config.yaml.
+  File get ciConfigFile => directory.childFile('ci_config.yaml');
+
   /// The lib directory containing the package's code.
   Directory get libDirectory => directory.childDirectory('lib');
 
   /// The test directory containing the package's Dart tests.
   Directory get testDirectory => directory.childDirectory('test');
+
+  /// The path to the script that is run by the `custom-test` command.
+  File get customTestScript =>
+      directory.childDirectory('tool').childFile('run_tests.dart');
+
+  /// The path to the script that is run before publishing.
+  File get prePublishScript =>
+      directory.childDirectory('tool').childFile('pre_publish.dart');
+
+  /// The directory containing pending changelog entries.
+  Directory get pendingChangelogsDirectory =>
+      directory.childDirectory('pending_changelogs');
 
   /// Returns the directory containing support for [platform].
   Directory platformDirectory(FlutterPlatform platform) {
@@ -72,38 +91,54 @@ class RepositoryPackage {
     switch (platform) {
       case FlutterPlatform.android:
         directoryName = 'android';
-        break;
       case FlutterPlatform.ios:
         directoryName = 'ios';
-        break;
       case FlutterPlatform.linux:
         directoryName = 'linux';
-        break;
       case FlutterPlatform.macos:
         directoryName = 'macos';
-        break;
       case FlutterPlatform.web:
         directoryName = 'web';
-        break;
       case FlutterPlatform.windows:
         directoryName = 'windows';
-        break;
     }
     return directory.childDirectory(directoryName);
   }
 
-  late final Pubspec _parsedPubspec =
-      Pubspec.parse(pubspecFile.readAsStringSync());
+  /// Returns true if the package is an app that supports [platform].
+  ///
+  /// The "app" prefix on this method is because this currently only works
+  /// for app packages (e.g., examples).
+  // TODO(stuartmorgan): Add support for non-app packages, by parsing the
+  // pubspec for `flutter:platform:` or `platform:` sections.
+  bool appSupportsPlatform(FlutterPlatform platform) {
+    return platformDirectory(platform).existsSync();
+  }
+
+  late final Pubspec _parsedPubspec = Pubspec.parse(
+    pubspecFile.readAsStringSync(),
+  );
 
   /// Returns the parsed [pubspecFile].
   ///
   /// Caches for future use.
   Pubspec parsePubspec() => _parsedPubspec;
 
+  late final CIConfig? _parsedCIConfig = ciConfigFile.existsSync()
+      ? CIConfig.parse(ciConfigFile.readAsStringSync())
+      : null;
+
+  /// Returns the parsed [ciConfigFile], or null if it does not exist.
+  ///
+  /// Throws if the file exists but is not a valid ci_config.yaml.
+  CIConfig? parseCIConfig() => _parsedCIConfig;
+
   /// Returns true if the package depends on Flutter.
   bool requiresFlutter() {
+    const flutterDependency = 'flutter';
     final Pubspec pubspec = parsePubspec();
-    return pubspec.dependencies.containsKey('flutter');
+    return pubspec.dependencies.containsKey(flutterDependency) ||
+        pubspec.devDependencies.containsKey(flutterDependency);
   }
 
   /// True if this appears to be a federated plugin package, according to
@@ -132,6 +167,20 @@ class RepositoryPackage {
       !isPlatformInterface &&
       directory.basename != directory.parent.basename;
 
+  /// True if this appears to be an example package, according to package
+  /// conventions.
+  bool get isExample {
+    final RepositoryPackage? enclosingPackage = getEnclosingPackage();
+    if (enclosingPackage == null) {
+      // An example package is enclosed in another package.
+      return false;
+    }
+    // Check whether this is one of the enclosing package's examples.
+    return enclosingPackage.getExamples().any(
+      (RepositoryPackage p) => p.path == path,
+    );
+  }
+
   /// Returns the Flutter example packages contained in the package, if any.
   Iterable<RepositoryPackage> getExamples() {
     final Directory exampleDirectory = directory.childDirectory('example');
@@ -148,8 +197,9 @@ class RepositoryPackage {
         .listSync()
         .where((FileSystemEntity entity) => isPackage(entity))
         // isPackage guarantees that the cast to Directory is safe.
-        .map((FileSystemEntity entity) =>
-            RepositoryPackage(entity as Directory));
+        .map(
+          (FileSystemEntity entity) => RepositoryPackage(entity as Directory),
+        );
   }
 
   /// Returns the package that this package is a part of, if any.
@@ -165,5 +215,69 @@ class RepositoryPackage {
       return RepositoryPackage(parent.parent);
     }
     return null;
+  }
+
+  /// Returns all Dart package folders (e.g., examples) under this package.
+  Iterable<RepositoryPackage> getSubpackages({bool includeExamples = true}) {
+    return directory
+        .listSync(recursive: true, followLinks: false)
+        .where(isPackage)
+        .map(
+          (FileSystemEntity directory) =>
+              // isPackage guarantees that this cast is valid.
+              RepositoryPackage(directory as Directory),
+        )
+        .where(
+          (RepositoryPackage p) =>
+              includeExamples || (p.directory.basename != 'example'),
+        );
+  }
+
+  /// Returns true if the package is not marked as "publish_to: none".
+  bool isPublishable() {
+    return parsePubspec().publishTo != 'none';
+  }
+
+  /// Returns the parsed changelog entries for the package.
+  ///
+  /// This method reads through the files in the pending_changelogs folder
+  /// and parses each file as a changelog entry.
+  ///
+  /// Throws if the folder does not exist, or if any of the files are not
+  /// valid changelog entries.
+  List<PendingChangelogEntry> getPendingChangelogs() {
+    final entries = <PendingChangelogEntry>[];
+
+    final Directory pendingChangelogsDir = pendingChangelogsDirectory;
+    if (!pendingChangelogsDir.existsSync()) {
+      throw FormatException(
+        'No pending_changelogs folder found for $displayName.',
+      );
+    }
+
+    final List<File> pendingChangelogFiles = pendingChangelogsDir
+        .listSync()
+        .whereType<File>()
+        .where((File file) => !PendingChangelogEntry.isTemplate(file))
+        .toList();
+    final Iterable<File> unexpectedFiles = pendingChangelogFiles.where(
+      (File file) => !file.basename.endsWith('.yaml'),
+    );
+    if (unexpectedFiles.isNotEmpty) {
+      throw FormatException(
+        'Found non-YAML file(s) in pending_changelogs: ${unexpectedFiles.map((file) => file.path).join(',')}',
+      );
+    }
+
+    for (final file in pendingChangelogFiles) {
+      try {
+        entries.add(PendingChangelogEntry.parse(file.readAsStringSync(), file));
+      } on FormatException catch (e) {
+        throw FormatException(
+          'Malformed pending changelog file: ${file.path}\n$e',
+        );
+      }
+    }
+    return entries;
   }
 }

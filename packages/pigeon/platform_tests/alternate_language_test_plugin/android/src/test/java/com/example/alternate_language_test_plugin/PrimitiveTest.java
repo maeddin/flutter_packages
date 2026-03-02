@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -32,15 +32,9 @@ public class PrimitiveTest {
               ArrayList<Object> args =
                   (ArrayList<Object>) PrimitiveFlutterApi.getCodec().decodeMessage(message);
               Object arg = args.get(0);
-              if (arg instanceof Long) {
-                Long longArg = (Long) arg;
-                if (longArg.intValue() == longArg.longValue()) {
-                  // Value fits in the Integer so gets sent as such
-                  // https://docs.flutter.dev/development/platform-integration/platform-channels?tab=type-mappings-java-tab#codec
-                  arg = Integer.valueOf(longArg.intValue());
-                }
-              }
-              ByteBuffer replyData = PrimitiveFlutterApi.getCodec().encodeMessage(arg);
+              ArrayList<Object> wrapped = new ArrayList<Object>();
+              wrapped.add(0, arg);
+              ByteBuffer replyData = PrimitiveFlutterApi.getCodec().encodeMessage(wrapped);
               replyData.position(0);
               reply.reply(replyData);
               return null;
@@ -57,9 +51,15 @@ public class PrimitiveTest {
     boolean[] didCall = {false};
     api.anInt(
         1L,
-        (Long result) -> {
-          didCall[0] = true;
-          assertEquals(result, (Long) 1L);
+        new Primitive.Result<Long>() {
+          public void success(Long result) {
+            didCall[0] = true;
+            assertEquals(result, (Long) 1L);
+          }
+
+          public void error(Throwable error) {
+            assertEquals(error, null);
+          }
         });
     assertTrue(didCall[0]);
   }
@@ -71,9 +71,15 @@ public class PrimitiveTest {
     boolean[] didCall = {false};
     api.anInt(
         1L << 50,
-        (Long result) -> {
-          didCall[0] = true;
-          assertEquals(result.longValue(), 1L << 50);
+        new Primitive.Result<Long>() {
+          public void success(Long result) {
+            didCall[0] = true;
+            assertEquals(result.longValue(), 1L << 50);
+          }
+
+          public void error(Throwable error) {
+            assertEquals(error, null);
+          }
         });
     assertTrue(didCall[0]);
   }
@@ -83,14 +89,16 @@ public class PrimitiveTest {
     PrimitiveHostApi mockApi = mock(PrimitiveHostApi.class);
     when(mockApi.anInt(1L)).thenReturn(1L);
     BinaryMessenger binaryMessenger = mock(BinaryMessenger.class);
-    PrimitiveHostApi.setup(binaryMessenger, mockApi);
+    PrimitiveHostApi.setUp(binaryMessenger, mockApi);
     ArgumentCaptor<BinaryMessenger.BinaryMessageHandler> handler =
         ArgumentCaptor.forClass(BinaryMessenger.BinaryMessageHandler.class);
     verify(binaryMessenger)
-        .setMessageHandler(eq("dev.flutter.pigeon.PrimitiveHostApi.anInt"), handler.capture());
+        .setMessageHandler(
+            eq("dev.flutter.pigeon.pigeon_integration_tests.PrimitiveHostApi.anInt"),
+            handler.capture());
     MessageCodec<Object> codec = PrimitiveHostApi.getCodec();
     @SuppressWarnings("unchecked")
-    ByteBuffer message = codec.encodeMessage(new ArrayList<Object>(Arrays.asList((Integer) 1)));
+    ByteBuffer message = codec.encodeMessage(new ArrayList<Object>(Arrays.asList(1L)));
     message.rewind();
     handler
         .getValue()
@@ -112,9 +120,15 @@ public class PrimitiveTest {
     boolean[] didCall = {false};
     api.aBool(
         true,
-        (Boolean result) -> {
-          didCall[0] = true;
-          assertEquals(result, (Boolean) true);
+        new Primitive.Result<Boolean>() {
+          public void success(Boolean result) {
+            didCall[0] = true;
+            assertEquals(result, (Boolean) true);
+          }
+
+          public void error(Throwable error) {
+            assertEquals(error, null);
+          }
         });
     assertTrue(didCall[0]);
   }
@@ -126,9 +140,15 @@ public class PrimitiveTest {
     boolean[] didCall = {false};
     api.aString(
         "hello",
-        (String result) -> {
-          didCall[0] = true;
-          assertEquals(result, "hello");
+        new Primitive.Result<String>() {
+          public void success(String result) {
+            didCall[0] = true;
+            assertEquals(result, "hello");
+          }
+
+          public void error(Throwable error) {
+            assertEquals(error, null);
+          }
         });
     assertTrue(didCall[0]);
   }
@@ -140,9 +160,15 @@ public class PrimitiveTest {
     boolean[] didCall = {false};
     api.aDouble(
         1.5,
-        (Double result) -> {
-          didCall[0] = true;
-          assertEquals(result, 1.5, 0.01);
+        new Primitive.Result<Double>() {
+          public void success(Double result) {
+            didCall[0] = true;
+            assertEquals(result, 1.5, 0.01);
+          }
+
+          public void error(Throwable error) {
+            assertEquals(error, null);
+          }
         });
     assertTrue(didCall[0]);
   }
@@ -154,9 +180,15 @@ public class PrimitiveTest {
     boolean[] didCall = {false};
     api.aMap(
         Collections.singletonMap("hello", 1),
-        (Map<Object, Object> result) -> {
-          didCall[0] = true;
-          assertEquals(result, Collections.singletonMap("hello", 1));
+        new Primitive.Result<Map<Object, Object>>() {
+          public void success(Map<Object, Object> result) {
+            didCall[0] = true;
+            assertEquals(result, Collections.singletonMap("hello", 1));
+          }
+
+          public void error(Throwable error) {
+            assertEquals(error, null);
+          }
         });
     assertTrue(didCall[0]);
   }
@@ -168,9 +200,15 @@ public class PrimitiveTest {
     boolean[] didCall = {false};
     api.aList(
         Collections.singletonList("hello"),
-        (List<Object> result) -> {
-          didCall[0] = true;
-          assertEquals(result, Collections.singletonList("hello"));
+        new Primitive.Result<List<Object>>() {
+          public void success(List<Object> result) {
+            didCall[0] = true;
+            assertEquals(result, Collections.singletonList("hello"));
+          }
+
+          public void error(Throwable error) {
+            assertEquals(error, null);
+          }
         });
     assertTrue(didCall[0]);
   }

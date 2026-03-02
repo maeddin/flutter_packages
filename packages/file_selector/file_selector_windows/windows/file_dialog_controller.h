@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #ifndef PACKAGES_FILE_SELECTOR_FILE_SELECTOR_WINDOWS_WINDOWS_FILE_DIALOG_CONTROLLER_H_
@@ -38,6 +38,7 @@ class FileDialogController {
   virtual HRESULT SetOptions(FILEOPENDIALOGOPTIONS options);
   virtual HRESULT Show(HWND parent);
   virtual HRESULT GetResult(IShellItem** out_item) const;
+  virtual HRESULT GetFileTypeIndex(UINT* out_index) const;
 
   // IFileOpenDialog wrapper. This will fail if the IFileDialog* provided to the
   // constructor was not an IFileOpenDialog instance.

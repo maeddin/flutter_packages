@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -29,9 +29,8 @@
 - (void)sendOnChannel:(nonnull NSString *)channel
               message:(NSData *_Nullable)message
           binaryReply:(FlutterBinaryReply _Nullable)callback {
-  NSArray *args = [self.codec decode:message];
-  id firstArg = args[0];
-  callback([self.codec encode:firstArg]);
+  NSArray<id> *args = [self.codec decode:message];
+  callback([self.codec encode:args]);
 }
 
 - (FlutterBinaryMessengerConnection)setMessageHandlerOnChannel:(nonnull NSString *)channel

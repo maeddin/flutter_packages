@@ -1,8 +1,7 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:html';
 import 'dart:typed_data';
 
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
@@ -10,6 +9,7 @@ import 'package:file_selector_web/file_selector_web.dart';
 import 'package:file_selector_web/src/dom_helper.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:web/web.dart';
 
 void main() {
   group('FileSelectorWeb', () {
@@ -19,27 +19,42 @@ void main() {
       testWidgets('works', (WidgetTester _) async {
         final XFile mockFile = createXFile('1001', 'identity.png');
 
-        final MockDomHelper mockDomHelper = MockDomHelper(
-            files: <XFile>[mockFile],
-            expectAccept: '.jpg,.jpeg,image/png,image/*');
+        final mockDomHelper = MockDomHelper(
+          files: <XFile>[mockFile],
+          expectAccept: '.jpg,.jpeg,image/png,image/*',
+        );
 
-        final FileSelectorWeb plugin =
-            FileSelectorWeb(domHelper: mockDomHelper);
+        final plugin = FileSelectorWeb(domHelper: mockDomHelper);
 
-        const XTypeGroup typeGroup = XTypeGroup(
+        const typeGroup = XTypeGroup(
           label: 'images',
           extensions: <String>['jpg', 'jpeg'],
           mimeTypes: <String>['image/png'],
           webWildCards: <String>['image/*'],
         );
 
-        final XFile file =
-            await plugin.openFile(acceptedTypeGroups: <XTypeGroup>[typeGroup]);
+        final XFile? file = await plugin.openFile(
+          acceptedTypeGroups: <XTypeGroup>[typeGroup],
+        );
 
-        expect(file.name, mockFile.name);
+        expect(file, isNotNull);
+        expect(file!.name, mockFile.name);
         expect(await file.length(), 4);
         expect(await file.readAsString(), '1001');
         expect(await file.lastModified(), isNotNull);
+      });
+
+      testWidgets('returns null when getFiles returns an empty list', (
+        WidgetTester _,
+      ) async {
+        // Simulate returning an empty list of files from the DomHelper...
+        final mockDomHelper = MockDomHelper(files: <XFile>[]);
+
+        final plugin = FileSelectorWeb(domHelper: mockDomHelper);
+
+        final XFile? file = await plugin.openFile();
+
+        expect(file, isNull);
       });
     });
 
@@ -48,21 +63,22 @@ void main() {
         final XFile mockFile1 = createXFile('123456', 'file1.txt');
         final XFile mockFile2 = createXFile('', 'file2.txt');
 
-        final MockDomHelper mockDomHelper = MockDomHelper(
-            files: <XFile>[mockFile1, mockFile2],
-            expectAccept: '.txt',
-            expectMultiple: true);
+        final mockDomHelper = MockDomHelper(
+          files: <XFile>[mockFile1, mockFile2],
+          expectAccept: '.txt',
+          expectMultiple: true,
+        );
 
-        final FileSelectorWeb plugin =
-            FileSelectorWeb(domHelper: mockDomHelper);
+        final plugin = FileSelectorWeb(domHelper: mockDomHelper);
 
-        const XTypeGroup typeGroup = XTypeGroup(
+        const typeGroup = XTypeGroup(
           label: 'files',
           extensions: <String>['.txt'],
         );
 
-        final List<XFile> files =
-            await plugin.openFiles(acceptedTypeGroups: <XTypeGroup>[typeGroup]);
+        final List<XFile> files = await plugin.openFiles(
+          acceptedTypeGroups: <XTypeGroup>[typeGroup],
+        );
 
         expect(files.length, 2);
 
@@ -80,7 +96,7 @@ void main() {
 
     group('getSavePath', () {
       testWidgets('returns non-null', (WidgetTester _) async {
-        final FileSelectorWeb plugin = FileSelectorWeb();
+        final plugin = FileSelectorWeb();
         final Future<String?> savePath = plugin.getSavePath();
         expect(await savePath, isNotNull);
       });
@@ -93,9 +109,9 @@ class MockDomHelper implements DomHelper {
     List<XFile> files = const <XFile>[],
     String expectAccept = '',
     bool expectMultiple = false,
-  })  : _files = files,
-        _expectedAccept = expectAccept,
-        _expectedMultiple = expectMultiple;
+  }) : _files = files,
+       _expectedAccept = expectAccept,
+       _expectedMultiple = expectMultiple;
 
   final List<XFile> _files;
   final String _expectedAccept;
@@ -105,17 +121,23 @@ class MockDomHelper implements DomHelper {
   Future<List<XFile>> getFiles({
     String accept = '',
     bool multiple = false,
-    FileUploadInputElement? input,
+    HTMLInputElement? input,
   }) {
-    expect(accept, _expectedAccept,
-        reason: 'Expected "accept" value does not match.');
-    expect(multiple, _expectedMultiple,
-        reason: 'Expected "multiple" value does not match.');
+    expect(
+      accept,
+      _expectedAccept,
+      reason: 'Expected "accept" value does not match.',
+    );
+    expect(
+      multiple,
+      _expectedMultiple,
+      reason: 'Expected "multiple" value does not match.',
+    );
     return Future<List<XFile>>.value(_files);
   }
 }
 
 XFile createXFile(String content, String name) {
-  final Uint8List data = Uint8List.fromList(content.codeUnits);
+  final data = Uint8List.fromList(content.codeUnits);
   return XFile.fromData(data, name: name, lastModified: DateTime.now());
 }

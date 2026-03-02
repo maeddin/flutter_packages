@@ -1,66 +1,66 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
 import 'dart:io' as io;
 
 import 'package:file/file.dart';
-import 'package:platform/platform.dart';
 import 'package:uuid/uuid.dart';
 
 import 'common/core.dart';
+import 'common/file_filters.dart';
+import 'common/flutter_command_utils.dart';
 import 'common/gradle.dart';
+import 'common/output_utils.dart';
 import 'common/package_looping_command.dart';
 import 'common/plugin_utils.dart';
-import 'common/process_runner.dart';
 import 'common/repository_package.dart';
 
-const int _exitGcloudAuthFailed = 2;
+const int _exitGcloudAuthFailed = 3;
 
 /// A command to run tests via Firebase test lab.
 class FirebaseTestLabCommand extends PackageLoopingCommand {
   /// Creates an instance of the test runner command.
   FirebaseTestLabCommand(
-    Directory packagesDir, {
-    ProcessRunner processRunner = const ProcessRunner(),
-    Platform platform = const LocalPlatform(),
-  }) : super(packagesDir, processRunner: processRunner, platform: platform) {
+    super.packagesDir, {
+    super.processRunner,
+    super.platform,
+    super.gitDir,
+  }) {
+    argParser.addOption(_gCloudProjectArg, help: 'The Firebase project name.');
     argParser.addOption(
-      'project',
-      defaultsTo: 'flutter-cirrus',
-      help: 'The Firebase project name.',
+      _gCloudServiceKeyArg,
+      help:
+          'The path to the service key for gcloud authentication.\n'
+          'If not provided, setup will be skipped, so testing will fail '
+          'unless gcloud is already configured.',
     );
-    final String? homeDir = io.Platform.environment['HOME'];
-    argParser.addOption('service-key',
-        defaultsTo: homeDir == null
-            ? null
-            : path.join(homeDir, 'gcloud-service-key.json'),
-        help: 'The path to the service key for gcloud authentication.\n'
-            r'If not provided, \$HOME/gcloud-service-key.json will be '
-            r'assumed if $HOME is set.');
-    argParser.addOption('test-run-id',
-        defaultsTo: const Uuid().v4(),
-        help:
-            'Optional string to append to the results path, to avoid conflicts. '
-            'Randomly chosen on each invocation if none is provided. '
-            'The default shown here is just an example.');
-    argParser.addOption('build-id',
-        defaultsTo:
-            io.Platform.environment['CIRRUS_BUILD_ID'] ?? 'unknown_build',
-        help:
-            'Optional string to append to the results path, to avoid conflicts. '
-            r'Defaults to $CIRRUS_BUILD_ID if that is set.');
-    argParser.addMultiOption('device',
-        splitCommas: false,
-        defaultsTo: <String>[
-          'model=walleye,version=26',
-          'model=redfin,version=30'
-        ],
-        help:
-            'Device model(s) to test. See https://cloud.google.com/sdk/gcloud/reference/firebase/test/android/run for more info');
-    argParser.addOption('results-bucket',
-        defaultsTo: 'gs://flutter_cirrus_testlab');
+    argParser.addOption(
+      'test-run-id',
+      defaultsTo: const Uuid().v4(),
+      help:
+          'Optional string to append to the results path, to avoid conflicts. '
+          'Randomly chosen on each invocation if none is provided. '
+          'The default shown here is just an example.',
+    );
+    argParser.addOption(
+      'build-id',
+      defaultsTo: io.Platform.environment['CIRRUS_BUILD_ID'] ?? 'unknown_build',
+      help:
+          'Optional string to append to the results path, to avoid conflicts. '
+          r'Defaults to $CIRRUS_BUILD_ID if that is set.',
+    );
+    argParser.addMultiOption(
+      'device',
+      splitCommas: false,
+      defaultsTo: <String>[
+        'model=walleye,version=26',
+        'model=redfin,version=30',
+      ],
+      help:
+          'Device model(s) to test. See https://cloud.google.com/sdk/gcloud/reference/firebase/test/android/run for more info',
+    );
+    argParser.addOption(_gCloudResultsBucketArg, mandatory: true);
     argParser.addOption(
       kEnableExperiment,
       defaultsTo: '',
@@ -68,11 +68,16 @@ class FirebaseTestLabCommand extends PackageLoopingCommand {
     );
   }
 
+  static const String _gCloudServiceKeyArg = 'service-key';
+  static const String _gCloudProjectArg = 'project';
+  static const String _gCloudResultsBucketArg = 'results-bucket';
+
   @override
   final String name = 'firebase-test-lab';
 
   @override
-  final String description = 'Runs the instrumentation tests of the example '
+  final String description =
+      'Runs the instrumentation tests of the example '
       'apps on Firebase Test Lab.\n\n'
       'Runs tests in test_instrumentation folder using the '
       'instrumentation_test package.';
@@ -84,56 +89,68 @@ class FirebaseTestLabCommand extends PackageLoopingCommand {
       return;
     }
 
-    final String serviceKey = getStringArg('service-key');
+    final String serviceKey = getStringArg(_gCloudServiceKeyArg);
     if (serviceKey.isEmpty) {
-      print('No --service-key provided; skipping gcloud authorization');
+      print(
+        'No --$_gCloudServiceKeyArg provided; skipping gcloud authorization',
+      );
     } else {
       final io.ProcessResult result = await processRunner.run(
         'gcloud',
-        <String>[
-          'auth',
-          'activate-service-account',
-          '--key-file=$serviceKey',
-        ],
+        <String>['auth', 'activate-service-account', '--key-file=$serviceKey'],
         logOnError: true,
       );
       if (result.exitCode != 0) {
         printError('Unable to activate gcloud account.');
         throw ToolExit(_exitGcloudAuthFailed);
       }
+    }
+    final String project = getStringArg(_gCloudProjectArg);
+    if (project.isEmpty) {
+      print('No --$_gCloudProjectArg provided; skipping gcloud config');
+    } else {
       final int exitCode = await processRunner.runAndStream('gcloud', <String>[
         'config',
         'set',
         'project',
-        getStringArg('project'),
+        project,
       ]);
       print('');
       if (exitCode == 0) {
         print('Firebase project configured.');
       } else {
         logWarning(
-            'Warning: gcloud config set returned a non-zero exit code. Continuing anyway.');
+          'Warning: gcloud config set returned a non-zero exit code. Continuing anyway.',
+        );
       }
     }
     _firebaseProjectConfigured = true;
   }
 
   @override
+  bool shouldIgnoreFile(String path) {
+    return isRepoLevelNonCodeImpactingFile(path) || isPackageSupportFile(path);
+  }
+
+  @override
   Future<PackageResult> runForPackage(RepositoryPackage package) async {
-    final List<PackageResult> results = <PackageResult>[];
+    final results = <PackageResult>[];
     for (final RepositoryPackage example in package.getExamples()) {
       results.add(await _runForExample(example, package: package));
     }
 
     // If all results skipped, report skip overall.
-    if (results
-        .every((PackageResult result) => result.state == RunState.skipped)) {
+    if (results.every(
+      (PackageResult result) => result.state == RunState.skipped,
+    )) {
       return PackageResult.skip('No examples support Android.');
     }
     // Otherwise, report failure if there were any failures.
     final List<String> allErrors = results
-        .map((PackageResult result) =>
-            result.state == RunState.failed ? result.details : <String>[])
+        .map(
+          (PackageResult result) =>
+              result.state == RunState.failed ? result.details : <String>[],
+        )
         .expand((List<String> list) => list)
         .toList();
     return allErrors.isEmpty
@@ -146,11 +163,13 @@ class FirebaseTestLabCommand extends PackageLoopingCommand {
     RepositoryPackage example, {
     required RepositoryPackage package,
   }) async {
-    final Directory androidDirectory =
-        example.platformDirectory(FlutterPlatform.android);
+    final Directory androidDirectory = example.platformDirectory(
+      FlutterPlatform.android,
+    );
     if (!androidDirectory.existsSync()) {
       return PackageResult.skip(
-          '${example.displayName} does not support Android.');
+        '${example.displayName} does not support Android.',
+      );
     }
 
     final Directory uiTestDirectory = androidDirectory
@@ -160,26 +179,33 @@ class FirebaseTestLabCommand extends PackageLoopingCommand {
     if (!uiTestDirectory.existsSync()) {
       printError('No androidTest directory found.');
       if (isFlutterPlugin(package)) {
-        return PackageResult.fail(
-            <String>['No tests ran (use --exclude if this is intentional).']);
+        return PackageResult.fail(<String>[
+          'No tests ran (use --exclude if this is intentional).',
+        ]);
       } else {
         return PackageResult.skip(
-            '${example.displayName} has no native Android tests.');
+          '${example.displayName} has no native Android tests.',
+        );
       }
     }
 
     // Ensure that the Dart integration tests will be run, not just native UI
     // tests.
     if (!await _testsContainDartIntegrationTestRunner(uiTestDirectory)) {
-      printError('No integration_test runner found. '
-          'See the integration_test package README for setup instructions.');
+      printError(
+        'No integration_test runner found. '
+        'See the integration_test package README for setup instructions.',
+      );
       return PackageResult.fail(<String>['No integration_test runner.']);
     }
 
     // Ensures that gradle wrapper exists
-    final GradleProject project = GradleProject(example,
-        processRunner: processRunner, platform: platform);
-    if (!await _ensureGradleWrapperExists(project)) {
+    final project = GradleProject(
+      example,
+      processRunner: processRunner,
+      platform: platform,
+    );
+    if (!await _ensureGradleWrapperExists(example, project)) {
       return PackageResult.fail(<String>['Unable to build example apk']);
     }
 
@@ -189,14 +215,16 @@ class FirebaseTestLabCommand extends PackageLoopingCommand {
       return PackageResult.fail(<String>['Unable to assemble androidTest']);
     }
 
-    final List<String> errors = <String>[];
+    final errors = <String>[];
 
     // Used within the loop to ensure a unique GCS output location for each
     // test file's run.
-    int resultsCounter = 0;
+    var resultsCounter = 0;
     for (final File test in _findIntegrationTestFiles(example)) {
-      final String testName =
-          getRelativePosixPath(test, from: package.directory);
+      final String testName = getRelativePosixPath(
+        test,
+        from: package.directory,
+      );
       print('Testing $testName...');
       if (!await _runGradle(project, 'app:assembleDebug', testFile: test)) {
         printError('Could not build $testName');
@@ -205,7 +233,7 @@ class FirebaseTestLabCommand extends PackageLoopingCommand {
       }
       final String buildId = getStringArg('build-id');
       final String testRunId = getStringArg('test-run-id');
-      final String resultsDir =
+      final resultsDir =
           'plugins_android_test/${package.displayName}/$buildId/$testRunId/'
           '${example.directory.basename}/${resultsCounter++}/';
 
@@ -214,9 +242,9 @@ class FirebaseTestLabCommand extends PackageLoopingCommand {
       // entire shard for a flake in any one test is extremely slow. This should
       // be removed once the root cause of the flake is understood.
       // See https://github.com/flutter/flutter/issues/95063
-      const int maxRetries = 2;
-      bool passing = false;
-      for (int i = 1; i <= maxRetries && !passing; ++i) {
+      const maxRetries = 2;
+      var passing = false;
+      for (var i = 1; i <= maxRetries && !passing; ++i) {
         if (i > 1) {
           logWarning('$testName failed on attempt ${i - 1}. Retrying...');
         }
@@ -242,24 +270,24 @@ class FirebaseTestLabCommand extends PackageLoopingCommand {
   /// Flutter build to generate it.
   ///
   /// Returns true if either gradlew was already present, or the build succeeds.
-  Future<bool> _ensureGradleWrapperExists(GradleProject project) async {
-    if (!project.isConfigured()) {
-      print('Running flutter build apk...');
-      final String experiment = getStringArg(kEnableExperiment);
-      final int exitCode = await processRunner.runAndStream(
-          flutterCommand,
-          <String>[
-            'build',
-            'apk',
-            if (experiment.isNotEmpty) '--enable-experiment=$experiment',
-          ],
-          workingDir: project.androidDirectory);
-
-      if (exitCode != 0) {
-        return false;
-      }
-    }
-    return true;
+  Future<bool> _ensureGradleWrapperExists(
+    RepositoryPackage package,
+    GradleProject project,
+  ) async {
+    // Unconditionally re-run build with --debug --config-only, to ensure that
+    // the project is in a debug state even if it was previously configured.
+    print('Running flutter build apk...');
+    final String experiment = getStringArg(kEnableExperiment);
+    return runConfigOnlyBuild(
+      package,
+      processRunner,
+      platform,
+      FlutterPlatform.android,
+      buildDebug: true,
+      extraArgs: <String>[
+        if (experiment.isNotEmpty) '--enable-experiment=$experiment',
+      ],
+    );
   }
 
   /// Runs [test] from [example] as a Firebase Test Lab test, returning true if
@@ -272,7 +300,7 @@ class FirebaseTestLabCommand extends PackageLoopingCommand {
     File test, {
     required String resultsDir,
   }) async {
-    final List<String> args = <String>[
+    final args = <String>[
       'firebase',
       'test',
       'android',
@@ -285,15 +313,18 @@ class FirebaseTestLabCommand extends PackageLoopingCommand {
       'build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk',
       '--timeout',
       '7m',
-      '--results-bucket=${getStringArg('results-bucket')}',
+      '--results-bucket=gs://${getStringArg(_gCloudResultsBucketArg)}',
       '--results-dir=$resultsDir',
       for (final String device in getStringListArg('device')) ...<String>[
         '--device',
-        device
+        device,
       ],
     ];
-    final int exitCode = await processRunner.runAndStream('gcloud', args,
-        workingDir: example.directory);
+    final int exitCode = await processRunner.runAndStream(
+      'gcloud',
+      args,
+      workingDir: example.directory,
+    );
 
     return exitCode == 0;
   }
@@ -333,8 +364,9 @@ class FirebaseTestLabCommand extends PackageLoopingCommand {
 
   /// Finds and returns all integration test files for [example].
   Iterable<File> _findIntegrationTestFiles(RepositoryPackage example) sync* {
-    final Directory integrationTestDir =
-        example.directory.childDirectory('integration_test');
+    final Directory integrationTestDir = example.directory.childDirectory(
+      'integration_test',
+    );
 
     if (!integrationTestDir.existsSync()) {
       return;
@@ -342,8 +374,10 @@ class FirebaseTestLabCommand extends PackageLoopingCommand {
 
     yield* integrationTestDir
         .listSync(recursive: true)
-        .where((FileSystemEntity file) =>
-            file is File && file.basename.endsWith('_test.dart'))
+        .where(
+          (FileSystemEntity file) =>
+              file is File && file.basename.endsWith('_test.dart'),
+        )
         .cast<File>();
   }
 
@@ -351,14 +385,23 @@ class FirebaseTestLabCommand extends PackageLoopingCommand {
   /// annotation that means that the test will reports the results of running
   /// the Dart integration tests.
   Future<bool> _testsContainDartIntegrationTestRunner(
-      Directory uiTestDirectory) async {
+    Directory uiTestDirectory,
+  ) async {
     return uiTestDirectory
         .list(recursive: true, followLinks: false)
         .where((FileSystemEntity entity) => entity is File)
         .cast<File>()
         .any((File file) {
-      return file.basename.endsWith('.java') &&
-          file.readAsStringSync().contains('@RunWith(FlutterTestRunner.class)');
-    });
+          if (file.basename.endsWith('.java')) {
+            return file.readAsStringSync().contains(
+              '@RunWith(FlutterTestRunner.class)',
+            );
+          } else if (file.basename.endsWith('.kt')) {
+            return file.readAsStringSync().contains(
+              '@RunWith(FlutterTestRunner::class)',
+            );
+          }
+          return false;
+        });
   }
 }

@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -11,8 +11,7 @@ class MethodChannelMock {
     this.delay,
     required this.methods,
   }) : methodChannel = MethodChannel(channelName) {
-    _ambiguate(TestDefaultBinaryMessengerBinding.instance)!
-        .defaultBinaryMessenger
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(methodChannel, _handler);
   }
 
@@ -25,8 +24,10 @@ class MethodChannelMock {
     log.add(methodCall);
 
     if (!methods.containsKey(methodCall.method)) {
-      throw MissingPluginException('No implementation found for method '
-          '${methodCall.method} on channel ${methodChannel.name}');
+      throw MissingPluginException(
+        'No implementation found for method '
+        '${methodCall.method} on channel ${methodChannel.name}',
+      );
     }
 
     return Future<dynamic>.delayed(delay ?? Duration.zero, () {
@@ -39,9 +40,3 @@ class MethodChannelMock {
     });
   }
 }
-
-/// This allows a value of type T or T? to be treated as a value of type T?.
-///
-/// We use this so that APIs that have become non-nullable can still be used
-/// with `!` and `?` on the stable branch.
-T? _ambiguate<T>(T? value) => value;

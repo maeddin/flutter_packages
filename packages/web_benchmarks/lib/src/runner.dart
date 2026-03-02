@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -18,6 +18,8 @@ import 'package:shelf_static/shelf_static.dart';
 import 'benchmark_result.dart';
 import 'browser.dart';
 import 'common.dart';
+import 'compilation_options.dart';
+import 'metrics.dart';
 
 /// The default port number used by the local benchmark server.
 const int defaultBenchmarkServerPort = 9999;
@@ -38,8 +40,6 @@ class BenchmarkServer {
   /// can be different (and typically is) from the production entry point of the
   /// app.
   ///
-  /// If [useCanvasKit] is true, builds the app in CanvasKit mode.
-  ///
   /// [benchmarkServerPort] is the port this benchmark server serves the app on.
   ///
   /// [chromeDebugPort] is the port Chrome uses for DevTool Protocol used to
@@ -47,13 +47,25 @@ class BenchmarkServer {
   ///
   /// If [headless] is true, runs Chrome without UI. In particular, this is
   /// useful in environments (e.g. CI) that doesn't have a display.
+  ///
+  /// If [treeShakeIcons] is false, '--no-tree-shake-icons' will be passed as a
+  /// build argument when building the benchmark app.
+  ///
+  /// [compilationOptions] specify the compiler and renderer to use for the
+  /// benchmark app. This can either use dart2wasm & skwasm or
+  /// dart2js & canvaskit.
+  ///
+  /// [benchmarkPath] specifies the path for the URL that will be loaded upon
+  /// opening the benchmark app in Chrome.
   BenchmarkServer({
     required this.benchmarkAppDirectory,
     required this.entryPoint,
-    required this.useCanvasKit,
     required this.benchmarkServerPort,
     required this.chromeDebugPort,
     required this.headless,
+    required this.treeShakeIcons,
+    this.compilationOptions = const CompilationOptions.js(),
+    this.benchmarkPath = defaultInitialPath,
   });
 
   final ProcessManager _processManager = const LocalProcessManager();
@@ -70,8 +82,8 @@ class BenchmarkServer {
   /// the app.
   final String entryPoint;
 
-  /// Whether to build the app in CanvasKit mode.
-  final bool useCanvasKit;
+  /// The compilation options to use for building the benchmark web app.
+  final CompilationOptions compilationOptions;
 
   /// The port this benchmark server serves the app on.
   final int benchmarkServerPort;
@@ -84,6 +96,27 @@ class BenchmarkServer {
   /// This is useful in environments (e.g. CI) that doesn't have a display.
   final bool headless;
 
+  /// Whether to tree shake icons during the build.
+  ///
+  /// When false, '--no-tree-shake-icons' will be passed as a build argument.
+  final bool treeShakeIcons;
+
+  /// The initial path for the URL that will be loaded upon opening the
+  /// benchmark app in Chrome.
+  ///
+  /// This path should contain the path segments, fragment, and/or query
+  /// parameters that are required for the benchmark. This value will be parsed
+  /// by `Uri.parse` and combined with the benchmark URI scheme ('http'), host
+  /// ('localhost'), and port [benchmarkServerPort] to create the URL for
+  /// loading in Chrome. See [_benchmarkAppUrl].
+  ///
+  /// The default value is [defaultInitialPath].
+  final String benchmarkPath;
+
+  String get _benchmarkAppUrl => Uri.parse(benchmarkPath)
+      .replace(scheme: 'http', host: 'localhost', port: benchmarkServerPort)
+      .toString();
+
   /// Builds and serves the benchmark app, and collects benchmark results.
   Future<BenchmarkResults> run() async {
     // Reduce logging level. Otherwise, package:webkit_inspection_protocol is way too spammy.
@@ -91,22 +124,30 @@ class BenchmarkServer {
 
     if (!_processManager.canRun('flutter')) {
       throw Exception(
-          "flutter executable is not runnable. Make sure it's in the PATH.");
+        "flutter executable is not runnable. Make sure it's in the PATH.",
+      );
     }
 
-    final io.ProcessResult buildResult = await _processManager.run(
-      <String>[
-        'flutter',
-        'build',
-        'web',
-        '--dart-define=FLUTTER_WEB_ENABLE_PROFILING=true',
-        if (useCanvasKit) '--dart-define=FLUTTER_WEB_USE_SKIA=true',
-        '--profile',
-        '-t',
-        entryPoint,
-      ],
-      workingDirectory: benchmarkAppDirectory.path,
-    );
+    final startTime = DateTime.now();
+    print('Building Flutter web app $compilationOptions...');
+    final io.ProcessResult buildResult = await _processManager.run(<String>[
+      'flutter',
+      'build',
+      'web',
+      if (compilationOptions.useWasm) ...<String>['--wasm', '--no-strip-wasm'],
+      '--dart-define=FLUTTER_WEB_ENABLE_PROFILING=true',
+      if (!treeShakeIcons) '--no-tree-shake-icons',
+      '--profile',
+      '-t',
+      entryPoint,
+    ], workingDirectory: benchmarkAppDirectory.path);
+
+    final int buildTime = Duration(
+      milliseconds:
+          DateTime.now().millisecondsSinceEpoch -
+          startTime.millisecondsSinceEpoch,
+    ).inSeconds;
+    print('Build took ${buildTime}s to complete.');
 
     if (buildResult.exitCode != 0) {
       io.stderr.writeln(buildResult.stdout);
@@ -114,10 +155,8 @@ class BenchmarkServer {
       throw Exception('Failed to build the benchmark.');
     }
 
-    final Completer<List<Map<String, dynamic>>> profileData =
-        Completer<List<Map<String, dynamic>>>();
-    final List<Map<String, dynamic>> collectedProfiles =
-        <Map<String, dynamic>>[];
+    final profileData = Completer<List<Map<String, dynamic>>>();
+    final collectedProfiles = <Map<String, dynamic>>[];
     List<String>? benchmarks;
     late Iterator<String> benchmarkIterator;
 
@@ -128,13 +167,32 @@ class BenchmarkServer {
     Chrome? chrome;
     late io.HttpServer server;
     List<Map<String, dynamic>>? latestPerformanceTrace;
-    Cascade cascade = Cascade();
+    var cascade = Cascade();
 
     // Serves the static files built for the app (html, js, images, fonts, etc)
-    cascade = cascade.add(createStaticHandler(
+    final Handler buildFolderHandler = createStaticHandler(
       path.join(benchmarkAppDirectory.path, 'build', 'web'),
       defaultDocument: 'index.html',
-    ));
+    );
+
+    // We want our page to be crossOriginIsolated. This will allow us to run the
+    // skwasm renderer, which uses a SharedArrayBuffer, which requires the page
+    // to be crossOriginIsolated. But also, even in the non-skwasm case, running
+    // in crossOriginIsolated gives us access to more accurate timers which are
+    // useful for capturing good benchmarking data.
+    // See https://developer.mozilla.org/en-US/docs/Web/API/Performance_API/High_precision_timing#reduced_precision
+    cascade = cascade.add((Request request) async {
+      final Response response = await buildFolderHandler(request);
+      if (response.mimeType == 'text/html') {
+        return response.change(
+          headers: <String, String>{
+            'Cross-Origin-Opener-Policy': 'same-origin',
+            'Cross-Origin-Embedder-Policy': 'require-corp',
+          },
+        );
+      }
+      return response;
+    });
 
     // Serves the benchmark server API used by the benchmark app to coordinate
     // the running of benchmarks.
@@ -142,47 +200,53 @@ class BenchmarkServer {
       try {
         chrome ??= await whenChromeIsReady;
         if (request.requestedUri.path.endsWith('/profile-data')) {
-          final Map<String, dynamic> profile =
+          final profile =
               json.decode(await request.readAsString()) as Map<String, dynamic>;
-          final String? benchmarkName = profile['name'] as String?;
+          final benchmarkName = profile['name'] as String?;
           if (benchmarkName != benchmarkIterator.current) {
-            profileData.completeError(Exception(
-              'Browser returned benchmark results from a wrong benchmark.\n'
-              'Requested to run benchmark ${benchmarkIterator.current}, but '
-              'got results for $benchmarkName.',
-            ));
+            profileData.completeError(
+              Exception(
+                'Browser returned benchmark results from a wrong benchmark.\n'
+                'Requested to run benchmark ${benchmarkIterator.current}, but '
+                'got results for $benchmarkName.',
+              ),
+            );
             unawaited(server.close());
           }
 
           // Trace data is null when the benchmark is not frame-based, such as RawRecorder.
           if (latestPerformanceTrace != null) {
-            final BlinkTraceSummary? traceSummary =
-                BlinkTraceSummary.fromJson(latestPerformanceTrace!);
-            profile['totalUiFrame.average'] =
+            final BlinkTraceSummary? traceSummary = BlinkTraceSummary.fromJson(
+              latestPerformanceTrace!,
+            );
+            profile[totalUiFrameAverage] =
                 traceSummary?.averageTotalUIFrameTime.inMicroseconds;
             profile['scoreKeys'] ??=
                 <dynamic>[]; // using dynamic for consistency with JSON
-            (profile['scoreKeys'] as List<dynamic>).add('totalUiFrame.average');
+            (profile['scoreKeys'] as List<dynamic>).add(totalUiFrameAverage);
             latestPerformanceTrace = null;
           }
           collectedProfiles.add(profile);
           return Response.ok('Profile received');
-        } else if (request.requestedUri.path
-            .endsWith('/start-performance-tracing')) {
+        } else if (request.requestedUri.path.endsWith(
+          '/start-performance-tracing',
+        )) {
           latestPerformanceTrace = null;
           await chrome!.beginRecordingPerformance(
-              request.requestedUri.queryParameters['label']);
+            request.requestedUri.queryParameters['label'],
+          );
           return Response.ok('Started performance tracing');
-        } else if (request.requestedUri.path
-            .endsWith('/stop-performance-tracing')) {
+        } else if (request.requestedUri.path.endsWith(
+          '/stop-performance-tracing',
+        )) {
           latestPerformanceTrace = await chrome!.endRecordingPerformance();
           return Response.ok('Stopped performance tracing');
         } else if (request.requestedUri.path.endsWith('/on-error')) {
-          final Map<String, dynamic> errorDetails =
+          final errorDetails =
               json.decode(await request.readAsString()) as Map<String, dynamic>;
           unawaited(server.close());
           // Keep the stack trace as a string. It's thrown in the browser, not this Dart VM.
-          final String errorMessage =
+          final errorMessage =
               'Caught browser-side error: ${errorDetails['error']}\n${errorDetails['stackTrace']}';
           if (!profileData.isCompleted) {
             profileData.completeError(errorMessage);
@@ -214,7 +278,8 @@ class BenchmarkServer {
           return Response.ok('Reported.');
         } else {
           return Response.notFound(
-              'This request is not handled by the profile-data handler.');
+            'This request is not handled by the profile-data handler.',
+          );
         }
       } catch (error, stackTrace) {
         if (!profileData.isCompleted) {
@@ -227,9 +292,20 @@ class BenchmarkServer {
       }
     });
 
-    // If all previous handlers returned HTTP 404, this is the last handler
-    // that simply warns about the unrecognized path.
-    cascade = cascade.add((Request request) {
+    // If all previous handlers returned HTTP 404, this handler either serves
+    // the static handler at the default document (for GET requests only) or
+    // warns about the unrecognized path.
+    cascade = cascade.add((Request request) async {
+      if (request.method == 'GET') {
+        final Uri newRequestUri = request.requestedUri.replace(path: '/');
+        final newRequest = Request(
+          request.method,
+          newRequestUri,
+          headers: request.headers,
+        );
+        return await buildFolderHandler(newRequest);
+      }
+
       io.stderr.writeln('Unrecognized URL path: ${request.requestedUri.path}');
       return Response.notFound('Not found: ${request.requestedUri.path}');
     });
@@ -238,14 +314,16 @@ class BenchmarkServer {
     try {
       shelf_io.serveRequests(server, cascade.handler);
 
-      final String dartToolDirectory =
-          path.join(benchmarkAppDirectory.path, '.dart_tool');
-      final String userDataDir = io.Directory(dartToolDirectory)
-          .createTempSync('chrome_user_data_')
-          .path;
+      final String dartToolDirectory = path.join(
+        benchmarkAppDirectory.path,
+        '.dart_tool',
+      );
+      final String userDataDir = io.Directory(
+        dartToolDirectory,
+      ).createTempSync('chrome_user_data_').path;
 
-      final ChromeOptions options = ChromeOptions(
-        url: 'http://localhost:$benchmarkServerPort/index.html',
+      final options = ChromeOptions(
+        url: _benchmarkAppUrl,
         userDataDirectory: userDataDir,
         headless: headless,
         debugPort: chromeDebugPort,
@@ -268,36 +346,34 @@ class BenchmarkServer {
       final List<Map<String, dynamic>> profiles = await profileData.future;
 
       print('Received profile data');
-      final Map<String, List<BenchmarkScore>> results =
-          <String, List<BenchmarkScore>>{};
-      for (final Map<String, dynamic> profile in profiles) {
-        final String benchmarkName = profile['name'] as String;
+      final results = <String, List<BenchmarkScore>>{};
+      for (final profile in profiles) {
+        final benchmarkName = profile['name'] as String;
         if (benchmarkName.isEmpty) {
           throw StateError('Benchmark name is empty');
         }
 
-        final List<String> scoreKeys =
-            List<String>.from(profile['scoreKeys'] as Iterable<dynamic>);
+        final scoreKeys = List<String>.from(
+          profile['scoreKeys'] as Iterable<dynamic>,
+        );
         if (scoreKeys.isEmpty) {
           throw StateError('No score keys in benchmark "$benchmarkName"');
         }
-        for (final String scoreKey in scoreKeys) {
+        for (final scoreKey in scoreKeys) {
           if (scoreKey.isEmpty) {
             throw StateError(
-                'Score key is empty in benchmark "$benchmarkName". '
-                'Received [${scoreKeys.join(', ')}]');
+              'Score key is empty in benchmark "$benchmarkName". '
+              'Received [${scoreKeys.join(', ')}]',
+            );
           }
         }
 
-        final List<BenchmarkScore> scores = <BenchmarkScore>[];
+        final scores = <BenchmarkScore>[];
         for (final String key in profile.keys) {
           if (key == 'name' || key == 'scoreKeys') {
             continue;
           }
-          scores.add(BenchmarkScore(
-            metric: key,
-            value: profile[key] as num,
-          ));
+          scores.add(BenchmarkScore(metric: key, value: profile[key] as num));
         }
         results[benchmarkName] = scores;
       }

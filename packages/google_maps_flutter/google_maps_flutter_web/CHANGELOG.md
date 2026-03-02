@@ -1,3 +1,132 @@
+## 0.6.1
+
+* Batches clustered marker add/remove operations to avoid redundant re-rendering.
+
+## 0.6.0
+
+* **BREAKING CHANGES**: Adds type constraints to generic type parameters:
+  * `ClusterManagersController<T>` now requires `T extends Object`
+  * `MarkersController<T, O>` now requires `T extends Object`
+* Adds support for Google Maps JavaScript API Advanced Markers (`AdvancedMarker`), including new `AdvancedMarkerController` and `AdvancedMarkersController` classes, support for `PinConfig` with customizable background, border, and glyph, and custom marker content via `BitmapDescriptor` (including `AssetMapBitmap`, `BytesMapBitmap`, and `PinConfig`). Advanced markers require the `marker` library - add `&libraries=marker` to your Google Maps API script URL in `web/index.html`.
+* Adds `isAdvancedMarkersAvailable()` method to check if advanced markers are supported.
+* Refactors marker architecture to support both legacy `Marker` and new `AdvancedMarker` types through unified controller interfaces.
+* Updates minimum supported SDK version to Flutter 3.35/Dart 3.9.
+
+## 0.5.14+3
+
+* Replaces uses of deprecated `Color` properties.
+
+## 0.5.14+2
+
+* Fixes a bug where using `cloudMapId` for cloud-based styling would fail if the `style` property was also present.
+
+## 0.5.14+1
+
+* Stops processing events and cancels subscriptions when controller is disposed.
+
+## 0.5.14
+
+* Adds support for disabling or moving the camera control button on web.
+
+## 0.5.13
+
+* Updates minimum supported SDK version to Flutter 3.29/Dart 3.7.
+* Fixes `consumeTapEvents` for Circles, Polygons & Polyline on web.
+
+## 0.5.12+2
+
+* Fix broken cameraTargetBounds option on web.
+
+## 0.5.12+1
+
+* Deprecates `zIndex` parameter in Marker in favor of `zIndexInt`.
+* Updates minimum supported SDK version to Flutter 3.27/Dart 3.6.
+
+## 0.5.12
+
+* Adds support for ground overlay.
+
+## 0.5.11
+
+* Adds support for marker anchor.
+* Updates READMEs and API docs.
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+
+## 0.5.10
+
+* Adds support for heatmap layers.
+
+## 0.5.9+2
+
+* Restores support for Dart `^3.3.0` and Flutter `^3.19.0`.
+
+## 0.5.9+1
+
+* Fixes a typo in the formatting of the CHANGELOG.
+
+## 0.5.9
+
+* Updates `package:google_maps` dependency to latest (`^8.0.0`).
+* Adds support for `web: ^1.0.0`.
+* Updates SDK version to Dart `^3.4.0`. Flutter `^3.22.0`.
+
+## 0.5.8
+
+* Adds support for BitmapDescriptor classes `AssetMapBitmap` and `BytesMapBitmap`.
+
+## 0.5.7
+
+* Adds support for marker clustering.
+
+## 0.5.6+2
+
+* Uses `TrustedTypes` from `web: ^0.5.1`.
+
+## 0.5.6+1
+
+* Fixes an issue where `dart:js_interop` object literal factories did not
+  compile with dart2js.
+
+## 0.5.6
+
+* Adds support for `MapConfiguration.style`.
+* Adds support for `getStyleError`.
+
+## 0.5.5
+* Migrates to `dart:js_interop` and `package:web` APIs.
+* Updates minimum supported SDK version to Flutter 3.19/Dart 3.3.
+
+## 0.5.4+3
+
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+* Fixes new lint warnings.
+
+## 0.5.4+2
+
+* Migrates to `dart:ui_web` APIs.
+* Updates minimum supported SDK version to Flutter 3.13.0/Dart 3.1.0.
+
+## 0.5.4+1
+
+* Adds pub topics to package metadata.
+
+## 0.5.4
+
+* Adds implementation for `cloudMapId` parameter to support cloud-based maps styling.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 0.5.3
+
+* Initial support for custom overlays. [#98596](https://github.com/flutter/flutter/issues/98596).
+
+## 0.5.2
+
+* Adds options for gesture handling and tilt controls.
+
+## 0.5.1
+
+* Adds padding support to `CameraUpdate.newLatLngBounds`. Issue [#122192](https://github.com/flutter/flutter/issues/122192).
+
 ## 0.5.0+1
 
 * Updates the README to mention that this package is the endorsed implementation

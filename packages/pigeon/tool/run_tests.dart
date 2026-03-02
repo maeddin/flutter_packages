@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -9,8 +9,11 @@
 ///
 /// For any use other than CI, use test.dart instead.
 ////////////////////////////////////////////////////////////////////////////////
+library;
+
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:path/path.dart' as p;
 
 import 'shared/generation.dart';
@@ -25,7 +28,7 @@ void _validateTestCoverage(List<List<String>> shards) {
 
   if (missing.isNotEmpty) {
     print('The following test suites are not being run on any host:');
-    for (final String suite in missing) {
+    for (final suite in missing) {
       print('  $suite');
     }
     exit(1);
@@ -33,21 +36,74 @@ void _validateTestCoverage(List<List<String>> shards) {
 }
 
 Future<void> _validateGeneratedTestFiles() async {
+  await _validateGeneratedFiles(
+    (String baseDir) => generateTestPigeons(baseDir: baseDir),
+    generationMessage: 'Generating test output',
+    incorrectFilesMessage:
+        'The following files are not updated, or not formatted correctly:',
+  );
+}
+
+Future<void> _validateGeneratedExampleFiles() async {
+  await _validateGeneratedFiles(
+    (String _) => generateExamplePigeons(),
+    generationMessage: 'Generating example output',
+    incorrectFilesMessage:
+        'Either messages.dart and messages_test.dart have non-matching definitions or\n'
+        'the following files are not updated, or not formatted correctly:',
+  );
+}
+
+Future<void> _validateGeneratedFiles(
+  Future<int> Function(String baseDirectory) generator, {
+  required String generationMessage,
+  required String incorrectFilesMessage,
+}) async {
+  // Generated file validation is split by platform, both to avoid duplication
+  // of work, and to avoid issues if different CI configurations have different
+  // setups (e.g., different clang-format versions or no clang-format at all).
+  final Set<GeneratorLanguage> languagesToValidate;
+  if (Platform.isLinux) {
+    languagesToValidate = <GeneratorLanguage>{
+      GeneratorLanguage.cpp,
+      GeneratorLanguage.dart,
+      GeneratorLanguage.gobject,
+      GeneratorLanguage.java,
+      GeneratorLanguage.kotlin,
+      GeneratorLanguage.objc,
+    };
+  } else if (Platform.isMacOS) {
+    languagesToValidate = <GeneratorLanguage>{GeneratorLanguage.swift};
+  } else {
+    return;
+  }
+
   final String baseDir = p.dirname(p.dirname(Platform.script.toFilePath()));
   final String repositoryRoot = p.dirname(p.dirname(baseDir));
   final String relativePigeonPath = p.relative(baseDir, from: repositoryRoot);
 
   print('Validating generated files:');
-  print('  Generating output...');
-  final int generateExitCode = await generatePigeons(baseDir: baseDir);
+  print('  $generationMessage...');
+
+  int generateExitCode = await generateExamplePigeons();
+
+  if (generateExitCode != 0) {
+    print('Generation failed; see above for errors.');
+    exit(generateExitCode);
+  }
+
+  generateExitCode = await generateTestPigeons(baseDir: baseDir);
+
   if (generateExitCode != 0) {
     print('Generation failed; see above for errors.');
     exit(generateExitCode);
   }
 
   print('  Formatting output...');
-  final int formatExitCode =
-      await formatAllFiles(repositoryRoot: repositoryRoot);
+  final int formatExitCode = await formatAllFiles(
+    repositoryRoot: repositoryRoot,
+    languages: languagesToValidate,
+  );
   if (formatExitCode != 0) {
     print('Formatting failed; see above for errors.');
     exit(formatExitCode);
@@ -55,23 +111,34 @@ Future<void> _validateGeneratedTestFiles() async {
 
   print('  Checking for changes...');
   final List<String> modifiedFiles = await _modifiedFiles(
-      repositoryRoot: repositoryRoot, relativePigeonPath: relativePigeonPath);
+    repositoryRoot: repositoryRoot,
+    relativePigeonPath: relativePigeonPath,
+  );
+  final Set<String> extensions = languagesToValidate
+      .map((GeneratorLanguage lang) => _extensionsForLanguage(lang))
+      .flattened
+      .toSet();
+  final Iterable<String> filteredFiles = modifiedFiles.where(
+    (String path) =>
+        extensions.contains(p.extension(path).replaceFirst('.', '')),
+  );
 
-  if (modifiedFiles.isEmpty) {
+  if (filteredFiles.isEmpty) {
     return;
   }
 
-  print('The following files are not updated, or not formatted correctly:');
-  modifiedFiles.map((String line) => '  $line').forEach(print);
+  print(incorrectFilesMessage);
+  filteredFiles.map((String line) => '  $line').forEach(print);
 
-  print('\nTo fix run "dart run tool/generate.dart --format" from the pigeon/ '
-      'directory, or apply the diff with the command below.\n');
-
-  final ProcessResult diffResult = await Process.run(
-    'git',
-    <String>['diff', relativePigeonPath],
-    workingDirectory: repositoryRoot,
+  print(
+    '\nTo fix run "dart run tool/generate.dart --format" from the pigeon/ '
+    'directory, or apply the diff with the command below.\n',
   );
+
+  final ProcessResult diffResult = await Process.run('git', <String>[
+    'diff',
+    ...filteredFiles,
+  ], workingDirectory: repositoryRoot);
   if (diffResult.exitCode != 0) {
     print('Unable to determine diff.');
     exit(1);
@@ -82,14 +149,27 @@ Future<void> _validateGeneratedTestFiles() async {
   exit(1);
 }
 
-Future<List<String>> _modifiedFiles(
-    {required String repositoryRoot,
-    required String relativePigeonPath}) async {
-  final ProcessResult result = await Process.run(
-    'git',
-    <String>['ls-files', '--modified', relativePigeonPath],
-    workingDirectory: repositoryRoot,
-  );
+Set<String> _extensionsForLanguage(GeneratorLanguage language) {
+  return switch (language) {
+    GeneratorLanguage.cpp => <String>{'cc', 'cpp', 'h'},
+    GeneratorLanguage.dart => <String>{'dart'},
+    GeneratorLanguage.gobject => <String>{'cc', 'h'},
+    GeneratorLanguage.java => <String>{'java'},
+    GeneratorLanguage.kotlin => <String>{'kt'},
+    GeneratorLanguage.swift => <String>{'swift'},
+    GeneratorLanguage.objc => <String>{'h', 'm', 'mm'},
+  };
+}
+
+Future<List<String>> _modifiedFiles({
+  required String repositoryRoot,
+  required String relativePigeonPath,
+}) async {
+  final ProcessResult result = await Process.run('git', <String>[
+    'ls-files',
+    '--modified',
+    relativePigeonPath,
+  ], workingDirectory: repositoryRoot);
   if (result.exitCode != 0) {
     print('Unable to determine changed files.');
     print(result.stdout);
@@ -105,83 +185,61 @@ Future<List<String>> _modifiedFiles(
 
 Future<void> main(List<String> args) async {
   // Run most tests on Linux, since Linux tends to be the easiest and cheapest.
-  const List<String> linuxHostTests = <String>[
-    dartUnitTests,
-    flutterUnitTests,
-    mockHandlerTests,
+  const linuxHostTests = <String>[
     commandLineTests,
     androidJavaUnitTests,
     androidJavaLint,
     androidKotlinUnitTests,
-    // TODO(stuartmorgan): Include these once CI supports running simulator
-    // tests. Currently these tests aren't run in CI.
-    // See https://github.com/flutter/flutter/issues/111505.
-    // androidJavaIntegrationTests,
-    // androidKotlinIntegrationTests,
+    androidKotlinLint,
+    androidJavaIntegrationTests,
+    androidKotlinIntegrationTests,
+    linuxUnitTests,
+    linuxIntegrationTests,
   ];
-  // Run macOS and iOS tests on macOS, since that's the only place they can run.
-  // TODO(stuartmorgan): Move everything to LUCI, and eliminate the LUCI/Cirrus
-  // separation. See https://github.com/flutter/flutter/issues/120231.
-  const List<String> macOSHostLuciTests = <String>[
+  const macOSHostTests = <String>[
     iOSObjCUnitTests,
-    // TODO(stuartmorgan): Enable by default once CI issues are solved; see
-    // https://github.com/flutter/packages/pull/2816.
-    //iOSObjCIntegrationTests,
     // Currently these are testing exactly the same thing as
-    // macOSSwiftIntegrationTests, so we don't need to run both by default. This
+    // macOS*IntegrationTests, so we don't need to run both by default. This
     // should be enabled if any iOS-only tests are added (e.g., for a feature
     // not supported by macOS).
+    // iOSObjCIntegrationTests,
     // iOSSwiftIntegrationTests,
-  ];
-  const List<String> macOSHostCirrusTests = <String>[
     iOSSwiftUnitTests,
+    macOSObjCIntegrationTests,
     macOSSwiftUnitTests,
     macOSSwiftIntegrationTests,
   ];
   // Run Windows tests on Windows, since that's the only place they can run.
-  const List<String> windowsHostTests = <String>[
-    windowsUnitTests,
-    windowsIntegrationTests,
-  ];
+  const windowsHostTests = <String>[windowsUnitTests, windowsIntegrationTests];
 
   _validateTestCoverage(<List<String>>[
     linuxHostTests,
-    macOSHostLuciTests,
-    macOSHostCirrusTests,
+    macOSHostTests,
     windowsHostTests,
     // Tests that are deliberately not included in CI:
     <String>[
-      // See comment in linuxHostTests:
-      androidJavaIntegrationTests,
-      androidKotlinIntegrationTests,
       // See comments in macOSHostTests:
       iOSObjCIntegrationTests,
       iOSSwiftIntegrationTests,
+      // These are Dart unit tests, which are already run by the normal
+      // test-dart repo tools command.
+      dartUnitTests,
+      flutterUnitTests,
     ],
   ]);
 
-  // Ensure that all generated files are up to date. This is run only on Linux
-  // both to avoid duplication of work, and to avoid issues if different CI
-  // configurations have different setups (e.g., different clang-format versions
-  // or no clang-format at all).
-  if (Platform.isLinux) {
-    // Only run on master, since Dart format can change between versions.
-    // TODO(stuartmorgan): Make a more generic way to run this check only on
-    // master; this currently won't work for anything but Cirrus.
-    if (Platform.environment['CHANNEL'] == 'stable') {
-      print('Skipping generated file validation on stable.');
-    } else {
-      await _validateGeneratedTestFiles();
-    }
+  // Ensure that all generated files are up to date.
+  // Only run on master, since Dart format can change between versions.
+  if (Platform.environment['CHANNEL'] == 'stable') {
+    print('Skipping generated file validation on stable.');
+  } else {
+    await _validateGeneratedTestFiles();
+    await _validateGeneratedExampleFiles();
   }
 
   final List<String> testsToRun;
   if (Platform.isMacOS) {
-    if (Platform.environment['LUCI_CI'] != null) {
-      testsToRun = macOSHostLuciTests;
-    } else {
-      testsToRun = macOSHostCirrusTests;
-    }
+    testsToRun = macOSHostTests;
   } else if (Platform.isWindows) {
     testsToRun = windowsHostTests;
   } else if (Platform.isLinux) {
@@ -191,5 +249,5 @@ Future<void> main(List<String> args) async {
     exit(2);
   }
 
-  await runTests(testsToRun);
+  await runTests(testsToRun, ciMode: true, includeOverflow: true);
 }

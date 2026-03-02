@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,7 +6,8 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
-import '../channel.dart';
+import '../in_app_purchase_apis.dart';
+import '../messages.g.dart';
 import 'sk_product_wrapper.dart';
 
 /// A request maker that handles all the requests made by SKRequest subclasses.
@@ -25,19 +26,20 @@ class SKRequestMaker {
   /// [SkProductResponseWrapper] is returned if there is no error during the request.
   /// A [PlatformException] is thrown if the platform code making the request fails.
   Future<SkProductResponseWrapper> startProductRequest(
-      List<String> productIdentifiers) async {
-    final Map<String, dynamic>? productResponseMap =
-        await channel.invokeMapMethod<String, dynamic>(
-      '-[InAppPurchasePlugin startProductRequest:result:]',
-      productIdentifiers,
-    );
-    if (productResponseMap == null) {
+    List<String> productIdentifiers,
+  ) async {
+    final SKProductsResponseMessage productResponsePigeon = await hostApi
+        .startProductRequest(productIdentifiers);
+
+    // should products be null or <String>[] ?
+    if (productResponsePigeon.products == null) {
       throw PlatformException(
         code: 'storekit_no_response',
         message: 'StoreKit: Failed to get response from platform.',
       );
     }
-    return SkProductResponseWrapper.fromJson(productResponseMap);
+
+    return SkProductResponseWrapper.convertFromPigeon(productResponsePigeon);
   }
 
   /// Uses [SKReceiptRefreshRequest](https://developer.apple.com/documentation/storekit/skreceiptrefreshrequest?language=objc) to request a new receipt.
@@ -49,11 +51,14 @@ class SKRequestMaker {
   /// * isExpired: whether the receipt is expired.
   /// * isRevoked: whether the receipt has been revoked.
   /// * isVolumePurchase: whether the receipt is a Volume Purchase Plan receipt.
-  Future<void> startRefreshReceiptRequest(
-      {Map<String, dynamic>? receiptProperties}) {
-    return channel.invokeMethod<void>(
-      '-[InAppPurchasePlugin refreshReceipt:result:]',
-      receiptProperties,
-    );
+  Future<void> startRefreshReceiptRequest({
+    Map<String, Object?>? receiptProperties,
+  }) {
+    return hostApi.refreshReceipt(receiptProperties: receiptProperties);
+  }
+
+  /// Check if current device supports StoreKit 2.
+  static Future<bool> supportsStoreKit2() async {
+    return hostApi.supportsStoreKit2();
   }
 }

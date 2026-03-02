@@ -1,11 +1,13 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #import "ImagePickerTestImages.h"
 
 @import image_picker_ios;
+#if __has_include(<image_picker_ios/image_picker_ios-umbrella.h>)
 @import image_picker_ios.Test;
+#endif
 @import XCTest;
 
 @interface MetaDataUtilTests : XCTestCase

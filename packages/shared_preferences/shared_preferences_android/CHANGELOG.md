@@ -1,5 +1,143 @@
-## NEXT
+## 2.4.21
 
+* Reverts `androidx.datastore:datastore` to 1.1.7 due to a regression 16 KB
+  page size support in 1.2.0.
+* Updates minimum supported SDK version to Flutter 3.35/Dart 3.9.
+
+## 2.4.20
+
+* Bumps androidx.datastore:datastore from 1.1.7 to 1.2.0.
+
+## 2.4.19
+
+* Bumps kotlin_version to 2.3.0.
+
+## 2.4.18
+
+* Bumps kotlin_version to 2.2.21.
+
+## 2.4.17
+
+* Bumps com.android.tools.build:gradle from 8.12.1 to 8.13.1.
+
+## 2.4.16
+
+* Updates to Pigeon 26.
+* Updates minimum supported SDK version to Flutter 3.32/Dart 3.8.
+
+## 2.4.15
+
+* Resolves Gradle 9 deprecations.
+
+## 2.4.14
+
+* Updates Java compatibility version to 17.
+* Updates minimum supported SDK version to Flutter 3.35/Dart 3.9.
+
+## 2.4.13
+
+* Bumps androidx.datastore:datastore from 1.1.3 to 1.1.7.
+
+## 2.4.12
+
+* Bumps com.android.tools.build:gradle to 8.12.1 and kotlin_version to 2.2.10.
+* Updates minimum supported SDK version to Flutter 3.29/Dart 3.7.
+
+## 2.4.11
+
+* Updates kotlin version to 2.2.0 to enable gradle 8.11 support.
+
+## 2.4.10
+
+* Removes obsolete code related to supporting SDK <21.
+
+## 2.4.9
+
+* Enables callers to use `getInt` to read preference of type `int` that was written to shared preferences by native code without passing though plugin code.
+
+## 2.4.8
+
+* Updates compileSdk 34 to flutter.compileSdkVersion.
+
+## 2.4.7
+
+* Updates datastore to 1.1.3.
+
+## 2.4.6
+
+* Ensures that platform messages on background queues are handled in order.
+
+## 2.4.5
+
+* Bumps gradle-plugin to 2.1.10.
+
+## 2.4.4
+
+* Restores the behavior of throwing a `TypeError` when calling `getStringList`
+  on a value stored with `setString`.
+
+## 2.4.3
+
+* Migrates `List<String>` value encoding to JSON.
+
+## 2.4.2
+
+* Bumps gradle-plugin to 2.1.0.
+
+## 2.4.1
+
+* Bumps kotlin version to 1.9.10 androidx.datastore:datastore from 1.0.0 to 1.1.1.
+
+## 2.4.0
+
+* Adds `SharedPreferences` support within `SharedPreferencesAsyncAndroid` API.
+
+## 2.3.4
+
+* Restrict types when decoding preferences.
+
+## 2.3.3
+
+* Updates Java compatibility version to 11.
+* Updates minimum supported SDK version to Flutter 3.24/Dart 3.5.
+
+## 2.3.2
+
+* Bumps `com.android.tools.build:gradle` from 7.2.2 to 8.5.1.
+
+## 2.3.1
+
+* Fixes `getStringList` returning immutable list.
+
+## 2.3.0
+
+* Adds new `SharedPreferencesAsyncAndroid` API.
+
+## 2.2.4
+
+* Updates lint checks to ignore NewerVersionAvailable.
+
+## 2.2.3
+
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+* Removes support for apps using the v1 Android embedding.
+
+## 2.2.2
+
+* Updates minSdkVersion to 19.
+* Updates minimum supported SDK version to Flutter 3.16/Dart 3.2.
+* Updates compileSdk version to 34.
+* Updates mockito to 5.2.0.
+
+## 2.2.1
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+* Deletes deprecated splash screen meta-data element.
+
+## 2.2.0
+
+* Adds `clearWithParameters` and `getAllWithParameters` methods.
 * Updates minimum supported SDK version to Flutter 3.3/Dart 2.18.
 
 ## 2.1.4

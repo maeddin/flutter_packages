@@ -1,8 +1,8 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// ignore_for_file: public_member_api_docs
+// ignore_for_file: public_member_api_docs, unreachable_from_main
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -18,9 +18,8 @@ class App extends StatelessWidget {
   App({super.key});
 
   @override
-  Widget build(BuildContext context) => MaterialApp.router(
-        routerConfig: _router,
-      );
+  Widget build(BuildContext context) =>
+      MaterialApp.router(routerConfig: _router);
 
   final GoRouter _router = GoRouter(
     routes: $appRoutes,
@@ -57,7 +56,7 @@ class MyShellRouteScreen extends StatelessWidget {
   final Widget child;
 
   int getCurrentIndex(BuildContext context) {
-    final String location = GoRouter.of(context).location;
+    final String location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/users')) {
       return 1;
     }
@@ -87,10 +86,8 @@ class MyShellRouteScreen extends StatelessWidget {
               switch (index) {
                 case 0:
                   const HomeRouteData().go(context);
-                  break;
                 case 1:
                   const UsersRouteData().go(context);
-                  break;
               }
             },
           ),
@@ -102,7 +99,7 @@ class MyShellRouteScreen extends StatelessWidget {
   }
 }
 
-class HomeRouteData extends GoRouteData {
+class HomeRouteData extends GoRouteData with $HomeRouteData {
   const HomeRouteData();
 
   @override
@@ -111,7 +108,7 @@ class HomeRouteData extends GoRouteData {
   }
 }
 
-class UsersRouteData extends GoRouteData {
+class UsersRouteData extends GoRouteData with $UsersRouteData {
   const UsersRouteData();
 
   @override
@@ -145,7 +142,7 @@ class DialogPage extends Page<void> {
   }
 }
 
-class UserRouteData extends GoRouteData {
+class UserRouteData extends GoRouteData with $UserRouteData {
   const UserRouteData({required this.id});
 
   // Without this static key, the dialog will not cover the navigation rail.

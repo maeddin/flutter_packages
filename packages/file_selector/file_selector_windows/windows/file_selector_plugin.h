@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #ifndef PACKAGES_FILE_SELECTOR_FILE_SELECTOR_WINDOWS_WINDOWS_FILE_SELECTOR_PLUGIN_H_
@@ -32,10 +32,10 @@ class FileSelectorPlugin : public flutter::Plugin, public FileSelectorApi {
   virtual ~FileSelectorPlugin();
 
   // FileSelectorApi
-  ErrorOr<flutter::EncodableList> ShowOpenDialog(
+  ErrorOr<FileDialogResult> ShowOpenDialog(
       const SelectionOptions& options, const std::string* initial_directory,
       const std::string* confirm_button_text) override;
-  ErrorOr<flutter::EncodableList> ShowSaveDialog(
+  ErrorOr<FileDialogResult> ShowSaveDialog(
       const SelectionOptions& options, const std::string* initialDirectory,
       const std::string* suggestedName,
       const std::string* confirmButtonText) override;

@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,6 +6,7 @@ import 'package:file/file.dart';
 import 'package:platform/platform.dart';
 
 import 'core.dart';
+import 'output_utils.dart';
 import 'process_runner.dart';
 
 const String _cacheCommandKey = 'CMAKE_COMMAND:INTERNAL';
@@ -19,6 +20,7 @@ class CMakeProject {
     required this.buildMode,
     this.processRunner = const ProcessRunner(),
     this.platform = const LocalPlatform(),
+    this.arch,
   });
 
   /// The directory of a Flutter project to run Gradle commands in.
@@ -29,6 +31,11 @@ class CMakeProject {
 
   /// The platform that commands are being run on.
   final Platform platform;
+
+  /// The architecture subdirectory of the build.
+  // TODO(stuartmorgan): Make this non-nullable once Flutter 3.13 is no longer
+  // supported, since at that point there will always be a subdirectory.
+  final String? arch;
 
   /// The build mode (e.g., Debug, Release).
   ///
@@ -43,16 +50,16 @@ class CMakeProject {
 
   /// The project's 'example' build directory for this instance's platform.
   Directory get buildDirectory {
-    Directory buildDir =
-        flutterProject.childDirectory('build').childDirectory(_platformDirName);
+    Directory buildDir = flutterProject
+        .childDirectory('build')
+        .childDirectory(_platformDirName);
+    if (arch != null) {
+      buildDir = buildDir.childDirectory(arch!);
+    }
     if (platform.isLinux) {
-      buildDir = buildDir
-          // TODO(stuartmorgan): Support arm64 if that ever becomes a supported
-          // CI configuration for the repository.
-          .childDirectory('x64')
-          // Linux uses a single-config generator, so the base build directory
-          // includes the configuration.
-          .childDirectory(buildMode.toLowerCase());
+      // Linux uses a single-config generator, so the base build directory
+      // includes the configuration.
+      buildDir = buildDir.childDirectory(buildMode.toLowerCase());
     }
     return buildDir;
   }
@@ -103,16 +110,13 @@ class CMakeProject {
     String target, {
     List<String> arguments = const <String>[],
   }) {
-    return processRunner.runAndStream(
-      getCmakeCommand(),
-      <String>[
-        '--build',
-        buildDirectory.path,
-        '--target',
-        target,
-        if (platform.isWindows) ...<String>['--config', buildMode],
-        ...arguments,
-      ],
-    );
+    return processRunner.runAndStream(getCmakeCommand(), <String>[
+      '--build',
+      buildDirectory.path,
+      '--target',
+      target,
+      if (platform.isWindows) ...<String>['--config', buildMode],
+      ...arguments,
+    ]);
   }
 }

@@ -1,6 +1,6 @@
 # google\_maps\_flutter\_android
 
-<?code-excerpt path-base="excerpts/packages/google_maps_flutter_example"?>
+<?code-excerpt path-base="example/lib"?>
 
 The Android implementation of [`google_maps_flutter`][1].
 
@@ -30,51 +30,47 @@ void main() {
   final GoogleMapsFlutterPlatform mapsImplementation =
       GoogleMapsFlutterPlatform.instance;
   if (mapsImplementation is GoogleMapsFlutterAndroid) {
+    // Force Hybrid Composition mode.
     mapsImplementation.useAndroidViewSurface = true;
   }
   // ···
 }
 ```
 
-### Hybrid Composition
-
-This is the current default mode, and corresponds to
-`useAndroidViewSurface = true`. It ensures that the map display will work as
-expected, at the cost of some performance.
-
 ### Texture Layer Hybrid Composition
 
-This is a new display mode used by most plugins starting with Flutter 3.0, and
-corresponds to `useAndroidViewSurface = false`. This is more performant than
-Hybrid Composition, but currently [misses certain map updates][4].
+This is the current default mode and corresponds to `useAndroidViewSurface = false`.
+This mode is more performant than Hybrid Composition and we recommend that you use this mode.
 
-This mode will likely become the default in future versions if/when the
-missed updates issue can be resolved.
+### Hybrid Composition
 
-## Map renderer
+This mode is available for backwards compatability and corresponds to `useAndroidViewSurface = true`.
+We do not recommend its use as it is less performant than Texture Layer Hybrid Composition and
+certain flutter rendering effects are not supported.
 
-This plugin supports the option to request a specific [map renderer][5].
+If you require this mode for correctness, please file a bug so we can investigate and fix
+the issue in the TLHC mode.
 
-The renderer must be requested before creating GoogleMap instances, as the renderer can be initialized only once per application context.
+## Supported Heatmap Options
 
-<?code-excerpt "readme_excerpts.dart (MapRenderer)"?>
-```dart
-AndroidMapRenderer mapRenderer = AndroidMapRenderer.platformDefault;
-// ···
-  final GoogleMapsFlutterPlatform mapsImplementation =
-      GoogleMapsFlutterPlatform.instance;
-  if (mapsImplementation is GoogleMapsFlutterAndroid) {
-    WidgetsFlutterBinding.ensureInitialized();
-    mapRenderer = await mapsImplementation
-        .initializeWithRenderer(AndroidMapRenderer.latest);
-  }
-```
+| Field                        | Supported |
+| ---------------------------- | :-------: |
+| Heatmap.dissipating          |     x     |
+| Heatmap.maxIntensity         |     ✓     |
+| Heatmap.minimumZoomIntensity |     x     |
+| Heatmap.maximumZoomIntensity |     x     |
+| HeatmapGradient.colorMapSize |     ✓     |
 
-Available values are `AndroidMapRenderer.latest`, `AndroidMapRenderer.legacy`, `AndroidMapRenderer.platformDefault`.
-Note that getting the requested renderer as a response is not guaranteed.
+## Warmup
+
+The first time a map is shown, the Google Maps SDK may briefly block 
+the main thread, which could cause UI jank. 
+If you prefer to control when this happens, you can call
+`GoogleMapsFlutterAndroid.warmup()` at some point before showing any maps to
+pre-warm the SDK. See this plugin's example code for one way of using this API.
 
 [1]: https://pub.dev/packages/google_maps_flutter
-[2]: https://flutter.dev/docs/development/packages-and-plugins/developing-packages#endorsed-federated-plugin
+[2]: https://flutter.dev/to/endorsed-federated-plugin
 [3]: https://docs.flutter.dev/development/platform-integration/android/platform-views
 [4]: https://github.com/flutter/flutter/issues/103686
 [5]: https://developers.google.com/maps/documentation/android-sdk/renderer

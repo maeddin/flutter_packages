@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -91,8 +91,9 @@ public class ResolutionFeatureTest {
   public void before() {
     mockProfileLow = mock(EncoderProfiles.class);
     EncoderProfiles mockProfile = mock(EncoderProfiles.class);
-    EncoderProfiles.VideoProfile mockVideoProfile = mock(EncoderProfiles.VideoProfile.class);
-    List<EncoderProfiles.VideoProfile> mockVideoProfilesList = List.of(mockVideoProfile);
+    List<EncoderProfiles.VideoProfile> mockVideoProfilesList =
+        new ArrayList<EncoderProfiles.VideoProfile>();
+    mockVideoProfilesList.add(null);
 
     mockedStaticProfile
         .when(() -> CamcorderProfile.getAll("1", CamcorderProfile.QUALITY_HIGH))
@@ -117,8 +118,6 @@ public class ResolutionFeatureTest {
         .thenReturn(mockProfileLow);
 
     when(mockProfile.getVideoProfiles()).thenReturn(mockVideoProfilesList);
-    when(mockVideoProfile.getHeight()).thenReturn(100);
-    when(mockVideoProfile.getWidth()).thenReturn(100);
   }
 
   @After
@@ -386,7 +385,7 @@ public class ResolutionFeatureTest {
   @Config(minSdk = 31)
   @Test
   public void resolutionFeatureShouldUseLegacyBehaviorWhenEncoderProfilesNull() {
-    beforeLegacy();
+    before();
     try (MockedStatic<ResolutionFeature> mockedResolutionFeature =
         mockStatic(ResolutionFeature.class)) {
       mockedResolutionFeature

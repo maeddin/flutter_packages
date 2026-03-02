@@ -1,5 +1,55 @@
 ## NEXT
 
+* Updates minimum supported SDK version to Flutter 3.35/Dart 3.9.
+
+## 3.1.1
+
+* Uses `CanvasRenderingContext2D.drawImage` instead of the deprecated `drawImageScaled`.
+* Updates minimum supported SDK version to Flutter 3.32/Dart 3.8.
+
+## 3.1.0
+
+* Adds support for `getMultiVideoWithOptions`.
+* Updates minimum supported SDK version to Flutter 3.27/Dart 3.6.
+
+## 3.0.6
+
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+* Extends the `mime` package version constraint from `^1.0.4` to `>=1.0.4 <3.0.0`.
+
+## 3.0.5
+
+* Adds support for `web: ^1.0.0`.
+
+## 3.0.4
+
+* Improves README example and updates it to use code excerpts.
+
+## 3.0.3
+
+* Migrates package and tests to `package:web`.
+* Updates minimum supported SDK version to Flutter 3.19/Dart 3.3.
+
+## 3.0.2
+
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+* Removes input element after completion
+
+## 3.0.1
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 3.0.0
+
+* **BREAKING CHANGE:** Removes all code and tests mentioning `PickedFile`.
+* Listens to `cancel` event on file selection. When the selection is canceled:
+  * `Future<XFile?>` methods return `null`
+  * `Future<List<XFile>>` methods return an empty list.
+
+## 2.2.0
+
+* Adds `getMedia` method.
 * Updates minimum supported SDK version to Flutter 3.3/Dart 2.18.
 
 ## 2.1.12

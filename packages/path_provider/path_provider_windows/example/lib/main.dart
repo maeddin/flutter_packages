@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -24,6 +24,7 @@ class _MyAppState extends State<MyApp> {
   String? _downloadsDirectory = 'Unknown';
   String? _appSupportDirectory = 'Unknown';
   String? _documentsDirectory = 'Unknown';
+  String? _cacheDirectory = 'Unknown';
 
   @override
   void initState() {
@@ -37,7 +38,8 @@ class _MyAppState extends State<MyApp> {
     String? downloadsDirectory;
     String? appSupportDirectory;
     String? documentsDirectory;
-    final PathProviderWindows provider = PathProviderWindows();
+    String? cacheDirectory;
+    final provider = PathProviderWindows();
 
     try {
       tempDirectory = await provider.getTemporaryPath();
@@ -62,11 +64,18 @@ class _MyAppState extends State<MyApp> {
       appSupportDirectory = 'Failed to get app support directory: $exception';
     }
 
+    try {
+      cacheDirectory = await provider.getApplicationCachePath();
+    } catch (exception) {
+      cacheDirectory = 'Failed to get cache directory: $exception';
+    }
+
     setState(() {
       _tempDirectory = tempDirectory;
       _downloadsDirectory = downloadsDirectory;
       _appSupportDirectory = appSupportDirectory;
       _documentsDirectory = documentsDirectory;
+      _cacheDirectory = cacheDirectory;
     });
   }
 
@@ -74,9 +83,7 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Path Provider example app'),
-        ),
+        appBar: AppBar(title: const Text('Path Provider example app')),
         body: Center(
           child: Column(
             children: <Widget>[
@@ -84,6 +91,7 @@ class _MyAppState extends State<MyApp> {
               Text('Documents Directory: $_documentsDirectory\n'),
               Text('Downloads Directory: $_downloadsDirectory\n'),
               Text('Application Support Directory: $_appSupportDirectory\n'),
+              Text('Cache Directory: $_cacheDirectory\n'),
             ],
           ),
         ),

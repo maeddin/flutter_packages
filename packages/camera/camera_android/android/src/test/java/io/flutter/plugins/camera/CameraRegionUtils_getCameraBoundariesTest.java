@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 package io.flutter.plugins.camera;
@@ -15,7 +15,6 @@ import android.graphics.Rect;
 import android.hardware.camera2.CaptureRequest;
 import android.os.Build;
 import android.util.Size;
-import io.flutter.plugins.camera.utils.TestUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.MockedStatic;
@@ -242,6 +241,6 @@ public class CameraRegionUtils_getCameraBoundariesTest {
   }
 
   private static void updateSdkVersion(int version) {
-    TestUtils.setFinalStatic(Build.VERSION.class, "SDK_INT", version);
+    SdkCapabilityChecker.SDK_VERSION = version;
   }
 }

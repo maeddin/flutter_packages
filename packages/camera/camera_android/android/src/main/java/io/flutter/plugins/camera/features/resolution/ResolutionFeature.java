@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -15,6 +15,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import io.flutter.plugins.camera.CameraProperties;
+import io.flutter.plugins.camera.SdkCapabilityChecker;
 import io.flutter.plugins.camera.features.CameraFeature;
 import java.util.List;
 
@@ -111,7 +112,7 @@ public class ResolutionFeature extends CameraFeature<ResolutionPreset> {
   }
 
   @Override
-  public boolean checkIsSupported() {
+  public final boolean checkIsSupported() {
     return cameraId >= 0;
   }
 
@@ -126,7 +127,7 @@ public class ResolutionFeature extends CameraFeature<ResolutionPreset> {
     if (preset.ordinal() > ResolutionPreset.high.ordinal()) {
       preset = ResolutionPreset.high;
     }
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    if (SdkCapabilityChecker.supportsEncoderProfiles()) {
       EncoderProfiles profile =
           getBestAvailableCamcorderProfileForResolutionPreset(cameraId, preset);
       List<EncoderProfiles.VideoProfile> videoProfiles = profile.getVideoProfiles();
@@ -155,6 +156,7 @@ public class ResolutionFeature extends CameraFeature<ResolutionPreset> {
    * @return The best possible {@link android.media.CamcorderProfile} that matches the supplied
    *     {@link ResolutionPreset}.
    */
+  @SuppressLint("UseRequiresApi")
   @TargetApi(Build.VERSION_CODES.R)
   // All of these cases deliberately fall through to get the best available profile.
   @SuppressWarnings({"fallthrough", "deprecation"})
@@ -207,6 +209,7 @@ public class ResolutionFeature extends CameraFeature<ResolutionPreset> {
     }
   }
 
+  @SuppressLint("UseRequiresApi")
   @TargetApi(Build.VERSION_CODES.S)
   // All of these cases deliberately fall through to get the best available profile.
   @SuppressWarnings("fallthrough")
@@ -268,7 +271,7 @@ public class ResolutionFeature extends CameraFeature<ResolutionPreset> {
     }
     boolean captureSizeCalculated = false;
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    if (SdkCapabilityChecker.supportsEncoderProfiles()) {
       recordingProfileLegacy = null;
       recordingProfile =
           getBestAvailableCamcorderProfileForResolutionPreset(cameraId, resolutionPreset);

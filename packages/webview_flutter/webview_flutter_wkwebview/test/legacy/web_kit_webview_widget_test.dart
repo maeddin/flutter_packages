@@ -1,31 +1,31 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:math';
-// TODO(a14n): remove this import once Flutter 3.1 or later reaches stable (including flutter/flutter#106316)
-// ignore: unnecessary_import
-import 'dart:typed_data';
+import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:webview_flutter_platform_interface/src/webview_flutter_platform_interface_legacy.dart';
-import 'package:webview_flutter_wkwebview/src/foundation/foundation.dart';
+import 'package:webview_flutter_wkwebview/src/common/platform_webview.dart';
+import 'package:webview_flutter_wkwebview/src/common/web_kit.g.dart';
+import 'package:webview_flutter_wkwebview/src/common/webkit_constants.dart';
 import 'package:webview_flutter_wkwebview/src/legacy/web_kit_webview_widget.dart';
-import 'package:webview_flutter_wkwebview/src/ui_kit/ui_kit.dart';
-import 'package:webview_flutter_wkwebview/src/web_kit/web_kit.dart';
 
 import 'web_kit_webview_widget_test.mocks.dart';
 
 @GenerateMocks(<Type>[
   UIScrollView,
+  URLRequest,
   WKNavigationDelegate,
   WKPreferences,
   WKScriptMessageHandler,
   WKWebView,
+  UIViewWKWebView,
   WKWebViewConfiguration,
   WKWebsiteDataStore,
   WKUIDelegate,
@@ -33,136 +33,180 @@ import 'web_kit_webview_widget_test.mocks.dart';
   JavascriptChannelRegistry,
   WebViewPlatformCallbacksHandler,
   WebViewWidgetProxy,
+  WKWebpagePreferences,
 ])
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  setUp(() {
+    PigeonOverrides.pigeon_reset();
+  });
+
+  tearDown(() {
+    debugDefaultTargetPlatformOverride = null;
+  });
+
   group('WebKitWebViewWidget', () {
-    late MockWKWebView mockWebView;
-    late MockWebViewWidgetProxy mockWebViewWidgetProxy;
-    late MockWKUserContentController mockUserContentController;
-    late MockWKPreferences mockPreferences;
-    late MockWKWebViewConfiguration mockWebViewConfiguration;
-    late MockWKUIDelegate mockUIDelegate;
-    late MockUIScrollView mockScrollView;
-    late MockWKWebsiteDataStore mockWebsiteDataStore;
-    late MockWKNavigationDelegate mockNavigationDelegate;
-
-    late MockWebViewPlatformCallbacksHandler mockCallbacksHandler;
-    late MockJavascriptChannelRegistry mockJavascriptChannelRegistry;
-
-    late WebKitWebViewPlatformController testController;
-
-    setUp(() {
-      mockWebView = MockWKWebView();
-      mockWebViewConfiguration = MockWKWebViewConfiguration();
-      mockUserContentController = MockWKUserContentController();
-      mockPreferences = MockWKPreferences();
-      mockUIDelegate = MockWKUIDelegate();
-      mockScrollView = MockUIScrollView();
-      mockWebsiteDataStore = MockWKWebsiteDataStore();
-      mockNavigationDelegate = MockWKNavigationDelegate();
-      mockWebViewWidgetProxy = MockWebViewWidgetProxy();
+    _WebViewMocks configureMocks() {
+      final mocks = _WebViewMocks(
+        webView: MockUIViewWKWebView(),
+        webViewWidgetProxy: MockWebViewWidgetProxy(),
+        userContentController: MockWKUserContentController(),
+        preferences: MockWKPreferences(),
+        webViewConfiguration: MockWKWebViewConfiguration(),
+        uiDelegate: MockWKUIDelegate(),
+        scrollView: MockUIScrollView(),
+        websiteDataStore: MockWKWebsiteDataStore(),
+        navigationDelegate: MockWKNavigationDelegate(),
+        callbacksHandler: MockWebViewPlatformCallbacksHandler(),
+        javascriptChannelRegistry: MockJavascriptChannelRegistry(),
+        webpagePreferences: MockWKWebpagePreferences(),
+      );
 
       when(
-        mockWebViewWidgetProxy.createWebView(
+        mocks.webViewWidgetProxy.createWebView(
           any,
           observeValue: anyNamed('observeValue'),
         ),
-      ).thenReturn(mockWebView);
+      ).thenReturn(PlatformWebView.fromNativeWebView(mocks.webView));
       when(
-        mockWebViewWidgetProxy.createUIDelgate(
+        mocks.webViewWidgetProxy.createUIDelgate(
           onCreateWebView: captureAnyNamed('onCreateWebView'),
         ),
-      ).thenReturn(mockUIDelegate);
-      when(mockWebViewWidgetProxy.createNavigationDelegate(
-        didFinishNavigation: anyNamed('didFinishNavigation'),
-        didStartProvisionalNavigation:
-            anyNamed('didStartProvisionalNavigation'),
-        decidePolicyForNavigationAction:
-            anyNamed('decidePolicyForNavigationAction'),
-        didFailNavigation: anyNamed('didFailNavigation'),
-        didFailProvisionalNavigation: anyNamed('didFailProvisionalNavigation'),
-        webViewWebContentProcessDidTerminate:
-            anyNamed('webViewWebContentProcessDidTerminate'),
-      )).thenReturn(mockNavigationDelegate);
-      when(mockWebView.configuration).thenReturn(mockWebViewConfiguration);
-      when(mockWebViewConfiguration.userContentController).thenReturn(
-        mockUserContentController,
+      ).thenReturn(mocks.uiDelegate);
+      when(
+        mocks.webViewWidgetProxy.createNavigationDelegate(
+          didFinishNavigation: anyNamed('didFinishNavigation'),
+          didStartProvisionalNavigation: anyNamed(
+            'didStartProvisionalNavigation',
+          ),
+          decidePolicyForNavigationAction: anyNamed(
+            'decidePolicyForNavigationAction',
+          ),
+          didFailNavigation: anyNamed('didFailNavigation'),
+          didFailProvisionalNavigation: anyNamed(
+            'didFailProvisionalNavigation',
+          ),
+          webViewWebContentProcessDidTerminate: anyNamed(
+            'webViewWebContentProcessDidTerminate',
+          ),
+          decidePolicyForNavigationResponse: anyNamed(
+            'decidePolicyForNavigationResponse',
+          ),
+          didReceiveAuthenticationChallenge: anyNamed(
+            'didReceiveAuthenticationChallenge',
+          ),
+        ),
+      ).thenReturn(mocks.navigationDelegate);
+      when(mocks.webView.configuration).thenReturn(mocks.webViewConfiguration);
+      when(mocks.webViewConfiguration.getUserContentController()).thenAnswer(
+        (_) =>
+            Future<WKUserContentController>.value(mocks.userContentController),
       );
-      when(mockWebViewConfiguration.preferences).thenReturn(mockPreferences);
-
-      when(mockWebView.scrollView).thenReturn(mockScrollView);
-
-      when(mockWebViewConfiguration.websiteDataStore).thenReturn(
-        mockWebsiteDataStore,
+      when(
+        mocks.webViewConfiguration.getPreferences(),
+      ).thenAnswer((_) => Future<WKPreferences>.value(mocks.preferences));
+      when(
+        mocks.webViewConfiguration.getDefaultWebpagePreferences(),
+      ).thenAnswer(
+        (_) => Future<WKWebpagePreferences>.value(mocks.webpagePreferences),
       );
 
-      mockCallbacksHandler = MockWebViewPlatformCallbacksHandler();
-      mockJavascriptChannelRegistry = MockJavascriptChannelRegistry();
-    });
+      when(mocks.webView.scrollView).thenReturn(mocks.scrollView);
 
-    // Builds a WebViewCupertinoWidget with default parameters.
-    Future<void> buildWidget(
-      WidgetTester tester, {
+      when(mocks.webViewConfiguration.getWebsiteDataStore()).thenAnswer(
+        (_) => Future<WKWebsiteDataStore>.value(mocks.websiteDataStore),
+      );
+      return mocks;
+    }
+
+    // Builds a WebViewCupertinoWidget with default parameters and returns its
+    // controller.
+    Future<WebKitWebViewPlatformController> buildWidget(
+      WidgetTester tester,
+      _WebViewMocks mocks, {
       CreationParams? creationParams,
       bool hasNavigationDelegate = false,
       bool hasProgressTracking = false,
     }) async {
-      await tester.pumpWidget(WebKitWebViewWidget(
-        creationParams: creationParams ??
-            CreationParams(
+      final testController = Completer<WebKitWebViewPlatformController>();
+      await tester.pumpWidget(
+        WebKitWebViewWidget(
+          creationParams:
+              creationParams ??
+              CreationParams(
                 webSettings: WebSettings(
-              userAgent: const WebSetting<String?>.absent(),
-              hasNavigationDelegate: hasNavigationDelegate,
-              hasProgressTracking: hasProgressTracking,
-            )),
-        callbacksHandler: mockCallbacksHandler,
-        javascriptChannelRegistry: mockJavascriptChannelRegistry,
-        webViewProxy: mockWebViewWidgetProxy,
-        configuration: mockWebViewConfiguration,
-        onBuildWidget: (WebKitWebViewPlatformController controller) {
-          testController = controller;
-          return Container();
-        },
-      ));
+                  userAgent: const WebSetting<String?>.absent(),
+                  hasNavigationDelegate: hasNavigationDelegate,
+                  hasProgressTracking: hasProgressTracking,
+                ),
+              ),
+          callbacksHandler: mocks.callbacksHandler,
+          javascriptChannelRegistry: mocks.javascriptChannelRegistry,
+          webViewProxy: mocks.webViewWidgetProxy,
+          configuration: mocks.webViewConfiguration,
+          onBuildWidget: (WebKitWebViewPlatformController controller) {
+            testController.complete(controller);
+            return Container();
+          },
+        ),
+      );
       await tester.pumpAndSettle();
+      return testController.future;
     }
 
-    testWidgets('build $WebKitWebViewWidget', (WidgetTester tester) async {
-      await buildWidget(tester);
+    testWidgets('build WebKitWebViewWidget', (WidgetTester tester) async {
+      final _WebViewMocks mocks = configureMocks();
+      await buildWidget(tester, mocks);
     });
 
-    testWidgets('Requests to open a new window loads request in same window',
-        (WidgetTester tester) async {
-      await buildWidget(tester);
+    testWidgets('Requests to open a new window loads request in same window', (
+      WidgetTester tester,
+    ) async {
+      final _WebViewMocks mocks = configureMocks();
+      await buildWidget(tester, mocks);
 
-      final void Function(WKWebView, WKWebViewConfiguration, WKNavigationAction)
-          onCreateWebView = verify(mockWebViewWidgetProxy.createUIDelgate(
-                      onCreateWebView: captureAnyNamed('onCreateWebView')))
-                  .captured
-                  .single
+      final onCreateWebView =
+          verify(
+                mocks.webViewWidgetProxy.createUIDelgate(
+                  onCreateWebView: captureAnyNamed('onCreateWebView'),
+                ),
+              ).captured.single
               as void Function(
-                  WKWebView, WKWebViewConfiguration, WKNavigationAction);
+                WKUIDelegate,
+                WKWebView,
+                WKWebViewConfiguration,
+                WKNavigationAction,
+              );
 
-      const NSUrlRequest request = NSUrlRequest(url: 'https://google.com');
+      final request = URLRequest.pigeon_detached();
       onCreateWebView(
-        mockWebView,
-        mockWebViewConfiguration,
-        const WKNavigationAction(
+        MockWKUIDelegate(),
+        mocks.webView,
+        mocks.webViewConfiguration,
+        WKNavigationAction.pigeon_detached(
           request: request,
-          targetFrame: WKFrameInfo(isMainFrame: false),
-          navigationType: WKNavigationType.linkActivated,
+          targetFrame: WKFrameInfo.pigeon_detached(
+            isMainFrame: false,
+            request: request,
+          ),
+          navigationType: NavigationType.linkActivated,
         ),
       );
 
-      verify(mockWebView.loadRequest(request));
+      verify(mocks.webView.load(request));
     });
 
     group('CreationParams', () {
       testWidgets('initialUrl', (WidgetTester tester) async {
+        final _WebViewMocks mocks = configureMocks();
+        when(
+          mocks.webViewWidgetProxy.createRequest(url: 'https://www.google.com'),
+        ).thenReturn(MockURLRequest());
+
         await buildWidget(
           tester,
+          mocks,
           creationParams: CreationParams(
             initialUrl: 'https://www.google.com',
             webSettings: WebSettings(
@@ -171,15 +215,43 @@ void main() {
             ),
           ),
         );
-        final NSUrlRequest request = verify(mockWebView.loadRequest(captureAny))
-            .captured
-            .single as NSUrlRequest;
-        expect(request.url, 'https://www.google.com');
+
+        verify(mocks.webView.load(captureAny)).captured.single as URLRequest;
       });
 
       testWidgets('backgroundColor', (WidgetTester tester) async {
+        final _WebViewMocks mocks = configureMocks();
+
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+
+        final transparentUiColor = UIColor.pigeon_detached();
+        final redUiColor = UIColor.pigeon_detached();
+        PigeonOverrides.uIColor_new =
+            ({
+              required double red,
+              required double green,
+              required double blue,
+              required double alpha,
+              dynamic observeValue,
+            }) {
+              if (red == Colors.transparent.r &&
+                  green == Colors.transparent.g &&
+                  blue == Colors.transparent.b &&
+                  alpha == Colors.transparent.a) {
+                return transparentUiColor;
+              } else if (red == Colors.red.r &&
+                  green == Colors.red.g &&
+                  blue == Colors.red.b &&
+                  alpha == Colors.red.a) {
+                return redUiColor;
+              }
+
+              return UIColor.pigeon_detached();
+            };
+
         await buildWidget(
           tester,
+          mocks,
           creationParams: CreationParams(
             backgroundColor: Colors.red,
             webSettings: WebSettings(
@@ -189,14 +261,18 @@ void main() {
           ),
         );
 
-        verify(mockWebView.setOpaque(false));
-        verify(mockWebView.setBackgroundColor(Colors.transparent));
-        verify(mockScrollView.setBackgroundColor(Colors.red));
+        verify(mocks.webView.setOpaque(false));
+        verify(mocks.webView.setBackgroundColor(transparentUiColor));
+        verify(mocks.scrollView.setBackgroundColor(redUiColor));
+
+        debugDefaultTargetPlatformOverride = null;
       });
 
       testWidgets('userAgent', (WidgetTester tester) async {
+        final _WebViewMocks mocks = configureMocks();
         await buildWidget(
           tester,
+          mocks,
           creationParams: CreationParams(
             userAgent: 'MyUserAgent',
             webSettings: WebSettings(
@@ -206,12 +282,14 @@ void main() {
           ),
         );
 
-        verify(mockWebView.setCustomUserAgent('MyUserAgent'));
+        verify(mocks.webView.setCustomUserAgent('MyUserAgent'));
       });
 
       testWidgets('autoMediaPlaybackPolicy true', (WidgetTester tester) async {
+        final _WebViewMocks mocks = configureMocks();
         await buildWidget(
           tester,
+          mocks,
           creationParams: CreationParams(
             webSettings: WebSettings(
               userAgent: const WebSetting<String?>.absent(),
@@ -220,15 +298,19 @@ void main() {
           ),
         );
 
-        verify(mockWebViewConfiguration
-            .setMediaTypesRequiringUserActionForPlayback(<WKAudiovisualMediaType>{
-          WKAudiovisualMediaType.all,
-        }));
+        verify(
+          mocks.webViewConfiguration
+              .setMediaTypesRequiringUserActionForPlayback(
+                AudiovisualMediaType.all,
+              ),
+        );
       });
 
       testWidgets('autoMediaPlaybackPolicy false', (WidgetTester tester) async {
+        final _WebViewMocks mocks = configureMocks();
         await buildWidget(
           tester,
+          mocks,
           creationParams: CreationParams(
             autoMediaPlaybackPolicy: AutoMediaPlaybackPolicy.always_allow,
             webSettings: WebSettings(
@@ -238,23 +320,25 @@ void main() {
           ),
         );
 
-        verify(mockWebViewConfiguration
-            .setMediaTypesRequiringUserActionForPlayback(<WKAudiovisualMediaType>{
-          WKAudiovisualMediaType.none,
-        }));
+        verify(
+          mocks.webViewConfiguration
+              .setMediaTypesRequiringUserActionForPlayback(
+                AudiovisualMediaType.none,
+              ),
+        );
       });
 
       testWidgets('javascriptChannelNames', (WidgetTester tester) async {
+        final _WebViewMocks mocks = configureMocks();
         when(
-          mockWebViewWidgetProxy.createScriptMessageHandler(
+          mocks.webViewWidgetProxy.createScriptMessageHandler(
             didReceiveScriptMessage: anyNamed('didReceiveScriptMessage'),
           ),
-        ).thenReturn(
-          MockWKScriptMessageHandler(),
-        );
+        ).thenReturn(MockWKScriptMessageHandler());
 
         await buildWidget(
           tester,
+          mocks,
           creationParams: CreationParams(
             javascriptChannelNames: <String>{'a', 'b'},
             webSettings: WebSettings(
@@ -265,27 +349,23 @@ void main() {
         );
 
         final List<dynamic> javaScriptChannels = verify(
-          mockUserContentController.addScriptMessageHandler(
+          mocks.userContentController.addScriptMessageHandler(
             captureAny,
             captureAny,
           ),
         ).captured;
-        expect(
-          javaScriptChannels[0],
-          isA<WKScriptMessageHandler>(),
-        );
+        expect(javaScriptChannels[0], isA<WKScriptMessageHandler>());
         expect(javaScriptChannels[1], 'a');
-        expect(
-          javaScriptChannels[2],
-          isA<WKScriptMessageHandler>(),
-        );
+        expect(javaScriptChannels[2], isA<WKScriptMessageHandler>());
         expect(javaScriptChannels[3], 'b');
       });
 
       group('WebSettings', () {
         testWidgets('javascriptMode', (WidgetTester tester) async {
+          final _WebViewMocks mocks = configureMocks();
           await buildWidget(
             tester,
+            mocks,
             creationParams: CreationParams(
               webSettings: WebSettings(
                 userAgent: const WebSetting<String?>.absent(),
@@ -295,12 +375,14 @@ void main() {
             ),
           );
 
-          verify(mockPreferences.setJavaScriptEnabled(true));
+          verify(mocks.webpagePreferences.setAllowsContentJavaScript(true));
         });
 
         testWidgets('userAgent', (WidgetTester tester) async {
+          final _WebViewMocks mocks = configureMocks();
           await buildWidget(
             tester,
+            mocks,
             creationParams: CreationParams(
               webSettings: WebSettings(
                 userAgent: const WebSetting<String?>.of('myUserAgent'),
@@ -309,88 +391,92 @@ void main() {
             ),
           );
 
-          verify(mockWebView.setCustomUserAgent('myUserAgent'));
+          verify(mocks.webView.setCustomUserAgent('myUserAgent'));
         });
 
-        testWidgets(
-          'enabling zoom re-adds JavaScript channels',
-          (WidgetTester tester) async {
-            when(
-              mockWebViewWidgetProxy.createScriptMessageHandler(
-                didReceiveScriptMessage: anyNamed('didReceiveScriptMessage'),
-              ),
-            ).thenReturn(
-              MockWKScriptMessageHandler(),
-            );
+        testWidgets('enabling zoom re-adds JavaScript channels', (
+          WidgetTester tester,
+        ) async {
+          final _WebViewMocks mocks = configureMocks();
+          when(
+            mocks.webViewWidgetProxy.createScriptMessageHandler(
+              didReceiveScriptMessage: anyNamed('didReceiveScriptMessage'),
+            ),
+          ).thenReturn(MockWKScriptMessageHandler());
 
-            await buildWidget(
-              tester,
-              creationParams: CreationParams(
-                webSettings: WebSettings(
-                  userAgent: const WebSetting<String?>.absent(),
-                  zoomEnabled: false,
-                  hasNavigationDelegate: false,
+          final WebKitWebViewPlatformController testController =
+              await buildWidget(
+                tester,
+                mocks,
+                creationParams: CreationParams(
+                  webSettings: WebSettings(
+                    userAgent: const WebSetting<String?>.absent(),
+                    zoomEnabled: false,
+                    hasNavigationDelegate: false,
+                  ),
+                  javascriptChannelNames: <String>{'myChannel'},
                 ),
-                javascriptChannelNames: <String>{'myChannel'},
-              ),
-            );
+              );
 
-            clearInteractions(mockUserContentController);
+          clearInteractions(mocks.userContentController);
 
-            await testController.updateSettings(WebSettings(
+          await testController.updateSettings(
+            WebSettings(
               userAgent: const WebSetting<String?>.absent(),
               zoomEnabled: true,
-            ));
+            ),
+          );
 
-            final List<dynamic> javaScriptChannels = verifyInOrder(<Object>[
-              mockUserContentController.removeAllUserScripts(),
-              mockUserContentController.removeScriptMessageHandler('myChannel'),
-              mockUserContentController.addScriptMessageHandler(
-                captureAny,
-                captureAny,
-              ),
-            ]).captured[2];
+          final List<dynamic> javaScriptChannels = verifyInOrder(<Object>[
+            mocks.userContentController.removeAllUserScripts(),
+            mocks.userContentController.removeScriptMessageHandler('myChannel'),
+            mocks.userContentController.addScriptMessageHandler(
+              captureAny,
+              captureAny,
+            ),
+          ]).captured[2];
 
-            expect(
-              javaScriptChannels[0],
-              isA<WKScriptMessageHandler>(),
-            );
-            expect(javaScriptChannels[1], 'myChannel');
-          },
-        );
+          expect(javaScriptChannels[0], isA<WKScriptMessageHandler>());
+          expect(javaScriptChannels[1], 'myChannel');
+        });
 
-        testWidgets(
-          'enabling zoom removes script',
-          (WidgetTester tester) async {
-            await buildWidget(
-              tester,
-              creationParams: CreationParams(
-                webSettings: WebSettings(
-                  userAgent: const WebSetting<String?>.absent(),
-                  zoomEnabled: false,
-                  hasNavigationDelegate: false,
+        testWidgets('enabling zoom removes script', (
+          WidgetTester tester,
+        ) async {
+          final _WebViewMocks mocks = configureMocks();
+          final WebKitWebViewPlatformController testController =
+              await buildWidget(
+                tester,
+                mocks,
+                creationParams: CreationParams(
+                  webSettings: WebSettings(
+                    userAgent: const WebSetting<String?>.absent(),
+                    zoomEnabled: false,
+                    hasNavigationDelegate: false,
+                  ),
                 ),
-              ),
-            );
+              );
 
-            clearInteractions(mockUserContentController);
+          clearInteractions(mocks.userContentController);
 
-            await testController.updateSettings(WebSettings(
+          await testController.updateSettings(
+            WebSettings(
               userAgent: const WebSetting<String?>.absent(),
               zoomEnabled: true,
-            ));
+            ),
+          );
 
-            verify(mockUserContentController.removeAllUserScripts());
-            verifyNever(mockUserContentController.addScriptMessageHandler(
-              any,
-              any,
-            ));
-          },
-        );
+          verify(mocks.userContentController.removeAllUserScripts());
+          verifyNever(
+            mocks.userContentController.addScriptMessageHandler(any, any),
+          );
+        });
 
         testWidgets('zoomEnabled is false', (WidgetTester tester) async {
+          final _WebViewMocks mocks = configureMocks();
           await buildWidget(
             tester,
+            mocks,
             creationParams: CreationParams(
               webSettings: WebSettings(
                 userAgent: const WebSetting<String?>.absent(),
@@ -400,13 +486,16 @@ void main() {
             ),
           );
 
-          final WKUserScript zoomScript =
-              verify(mockUserContentController.addUserScript(captureAny))
-                  .captured
-                  .first as WKUserScript;
-          expect(zoomScript.isMainFrameOnly, isTrue);
-          expect(zoomScript.injectionTime,
-              WKUserScriptInjectionTime.atDocumentEnd);
+          final zoomScript =
+              verify(
+                    mocks.userContentController.addUserScript(captureAny),
+                  ).captured.first
+                  as WKUserScript;
+          expect(zoomScript.isForMainFrameOnly, isTrue);
+          expect(
+            zoomScript.injectionTime,
+            UserScriptInjectionTime.atDocumentEnd,
+          );
           expect(
             zoomScript.source,
             "var meta = document.createElement('meta');\n"
@@ -418,8 +507,10 @@ void main() {
         });
 
         testWidgets('allowsInlineMediaPlayback', (WidgetTester tester) async {
+          final _WebViewMocks mocks = configureMocks();
           await buildWidget(
             tester,
+            mocks,
             creationParams: CreationParams(
               webSettings: WebSettings(
                 userAgent: const WebSetting<String?>.absent(),
@@ -428,197 +519,263 @@ void main() {
             ),
           );
 
-          verify(mockWebViewConfiguration.setAllowsInlineMediaPlayback(true));
+          verify(mocks.webViewConfiguration.setAllowsInlineMediaPlayback(true));
         });
       });
     });
 
     group('WebKitWebViewPlatformController', () {
       testWidgets('loadFile', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
         await testController.loadFile('/path/to/file.html');
-        verify(mockWebView.loadFileUrl(
-          '/path/to/file.html',
-          readAccessUrl: '/path/to',
-        ));
+        verify(mocks.webView.loadFileUrl('/path/to/file.html', '/path/to'));
       });
 
       testWidgets('loadFlutterAsset', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
         await testController.loadFlutterAsset('test_assets/index.html');
-        verify(mockWebView.loadFlutterAsset('test_assets/index.html'));
+        verify(mocks.webView.loadFlutterAsset('test_assets/index.html'));
       });
 
       testWidgets('loadHtmlString', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
-        const String htmlString = '<html><body>Test data.</body></html>';
+        const htmlString = '<html lang=""><body>Test data.</body></html>';
         await testController.loadHtmlString(htmlString, baseUrl: 'baseUrl');
 
-        verify(mockWebView.loadHtmlString(
-          '<html><body>Test data.</body></html>',
-          baseUrl: 'baseUrl',
-        ));
+        verify(
+          mocks.webView.loadHtmlString(
+            '<html lang=""><body>Test data.</body></html>',
+            'baseUrl',
+          ),
+        );
       });
 
       testWidgets('loadUrl', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
-        await testController.loadUrl(
-          'https://www.google.com',
-          <String, String>{'a': 'header'},
-        );
+        when(
+          mocks.webViewWidgetProxy.createRequest(url: 'https://www.google.com'),
+        ).thenReturn(MockURLRequest());
 
-        final NSUrlRequest request = verify(mockWebView.loadRequest(captureAny))
-            .captured
-            .single as NSUrlRequest;
-        expect(request.url, 'https://www.google.com');
-        expect(request.allHttpHeaderFields, <String, String>{'a': 'header'});
+        await testController.loadUrl('https://www.google.com', <String, String>{
+          'a': 'header',
+        });
+
+        final request =
+            verify(mocks.webView.load(captureAny)).captured.single
+                as URLRequest;
+        verify(request.setAllHttpHeaderFields(<String, String>{'a': 'header'}));
       });
 
       group('loadRequest', () {
-        testWidgets('Throws ArgumentError for empty scheme',
-            (WidgetTester tester) async {
-          await buildWidget(tester);
+        testWidgets('Throws ArgumentError for empty scheme', (
+          WidgetTester tester,
+        ) async {
+          final _WebViewMocks mocks = configureMocks();
+          final WebKitWebViewPlatformController testController =
+              await buildWidget(tester, mocks);
 
           expect(
-              () async => testController.loadRequest(
-                    WebViewRequest(
-                      uri: Uri.parse('www.google.com'),
-                      method: WebViewRequestMethod.get,
-                    ),
-                  ),
-              throwsA(const TypeMatcher<ArgumentError>()));
+            () async => testController.loadRequest(
+              WebViewRequest(
+                uri: Uri.parse('www.google.com'),
+                method: WebViewRequestMethod.get,
+              ),
+            ),
+            throwsA(const TypeMatcher<ArgumentError>()),
+          );
         });
 
         testWidgets('GET without headers', (WidgetTester tester) async {
-          await buildWidget(tester);
+          final _WebViewMocks mocks = configureMocks();
+          final WebKitWebViewPlatformController testController =
+              await buildWidget(tester, mocks);
 
-          await testController.loadRequest(WebViewRequest(
-            uri: Uri.parse('https://www.google.com'),
-            method: WebViewRequestMethod.get,
-          ));
+          when(
+            mocks.webViewWidgetProxy.createRequest(
+              url: 'https://www.google.com',
+            ),
+          ).thenReturn(MockURLRequest());
 
-          final NSUrlRequest request =
-              verify(mockWebView.loadRequest(captureAny)).captured.single
-                  as NSUrlRequest;
-          expect(request.url, 'https://www.google.com');
-          expect(request.allHttpHeaderFields, <String, String>{});
-          expect(request.httpMethod, 'get');
+          await testController.loadRequest(
+            WebViewRequest(
+              uri: Uri.parse('https://www.google.com'),
+              method: WebViewRequestMethod.get,
+            ),
+          );
+
+          final request =
+              verify(mocks.webView.load(captureAny)).captured.single
+                  as URLRequest;
+          verify(request.setAllHttpHeaderFields(<String, String>{}));
+          verify(request.setHttpMethod('get'));
         });
 
         testWidgets('GET with headers', (WidgetTester tester) async {
-          await buildWidget(tester);
+          final _WebViewMocks mocks = configureMocks();
+          final WebKitWebViewPlatformController testController =
+              await buildWidget(tester, mocks);
 
-          await testController.loadRequest(WebViewRequest(
-            uri: Uri.parse('https://www.google.com'),
-            method: WebViewRequestMethod.get,
-            headers: <String, String>{'a': 'header'},
-          ));
+          when(
+            mocks.webViewWidgetProxy.createRequest(
+              url: 'https://www.google.com',
+            ),
+          ).thenReturn(MockURLRequest());
 
-          final NSUrlRequest request =
-              verify(mockWebView.loadRequest(captureAny)).captured.single
-                  as NSUrlRequest;
-          expect(request.url, 'https://www.google.com');
-          expect(request.allHttpHeaderFields, <String, String>{'a': 'header'});
-          expect(request.httpMethod, 'get');
+          await testController.loadRequest(
+            WebViewRequest(
+              uri: Uri.parse('https://www.google.com'),
+              method: WebViewRequestMethod.get,
+              headers: <String, String>{'a': 'header'},
+            ),
+          );
+
+          final request =
+              verify(mocks.webView.load(captureAny)).captured.single
+                  as URLRequest;
+          verify(
+            request.setAllHttpHeaderFields(<String, String>{'a': 'header'}),
+          );
+          verify(request.setHttpMethod('get'));
         });
 
         testWidgets('POST without body', (WidgetTester tester) async {
-          await buildWidget(tester);
+          final _WebViewMocks mocks = configureMocks();
+          final WebKitWebViewPlatformController testController =
+              await buildWidget(tester, mocks);
 
-          await testController.loadRequest(WebViewRequest(
-            uri: Uri.parse('https://www.google.com'),
-            method: WebViewRequestMethod.post,
-          ));
+          when(
+            mocks.webViewWidgetProxy.createRequest(
+              url: 'https://www.google.com',
+            ),
+          ).thenReturn(MockURLRequest());
 
-          final NSUrlRequest request =
-              verify(mockWebView.loadRequest(captureAny)).captured.single
-                  as NSUrlRequest;
-          expect(request.url, 'https://www.google.com');
-          expect(request.httpMethod, 'post');
+          await testController.loadRequest(
+            WebViewRequest(
+              uri: Uri.parse('https://www.google.com'),
+              method: WebViewRequestMethod.post,
+            ),
+          );
+
+          final request =
+              verify(mocks.webView.load(captureAny)).captured.single
+                  as URLRequest;
+          verify(request.setHttpMethod('post'));
         });
 
         testWidgets('POST with body', (WidgetTester tester) async {
-          await buildWidget(tester);
+          final _WebViewMocks mocks = configureMocks();
+          final WebKitWebViewPlatformController testController =
+              await buildWidget(tester, mocks);
 
-          await testController.loadRequest(WebViewRequest(
+          when(
+            mocks.webViewWidgetProxy.createRequest(
+              url: 'https://www.google.com',
+            ),
+          ).thenReturn(MockURLRequest());
+
+          await testController.loadRequest(
+            WebViewRequest(
               uri: Uri.parse('https://www.google.com'),
               method: WebViewRequestMethod.post,
-              body: Uint8List.fromList('Test Body'.codeUnits)));
+              body: Uint8List.fromList('Test Body'.codeUnits),
+            ),
+          );
 
-          final NSUrlRequest request =
-              verify(mockWebView.loadRequest(captureAny)).captured.single
-                  as NSUrlRequest;
-          expect(request.url, 'https://www.google.com');
-          expect(request.httpMethod, 'post');
-          expect(
-            request.httpBody,
-            Uint8List.fromList('Test Body'.codeUnits),
+          final request =
+              verify(mocks.webView.load(captureAny)).captured.single
+                  as URLRequest;
+          verify(request.setHttpMethod('post'));
+          verify(
+            request.setHttpBody(Uint8List.fromList('Test Body'.codeUnits)),
           );
         });
       });
 
       testWidgets('canGoBack', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
-        when(mockWebView.canGoBack()).thenAnswer(
-          (_) => Future<bool>.value(false),
-        );
+        when(
+          mocks.webView.canGoBack(),
+        ).thenAnswer((_) => Future<bool>.value(false));
         expect(testController.canGoBack(), completion(false));
       });
 
       testWidgets('canGoForward', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
-        when(mockWebView.canGoForward()).thenAnswer(
-          (_) => Future<bool>.value(true),
-        );
+        when(
+          mocks.webView.canGoForward(),
+        ).thenAnswer((_) => Future<bool>.value(true));
         expect(testController.canGoForward(), completion(true));
       });
 
       testWidgets('goBack', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
         await testController.goBack();
-        verify(mockWebView.goBack());
+        verify(mocks.webView.goBack());
       });
 
       testWidgets('goForward', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
         await testController.goForward();
-        verify(mockWebView.goForward());
+        verify(mocks.webView.goForward());
       });
 
       testWidgets('reload', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
         await testController.reload();
-        verify(mockWebView.reload());
+        verify(mocks.webView.reload());
       });
 
       testWidgets('evaluateJavascript', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
-        when(mockWebView.evaluateJavaScript('runJavaScript')).thenAnswer(
-          (_) => Future<String>.value('returnString'),
-        );
+        when(
+          mocks.webView.evaluateJavaScript('runJavaScript'),
+        ).thenAnswer((_) => Future<String>.value('returnString'));
         expect(
           testController.evaluateJavascript('runJavaScript'),
           completion('returnString'),
         );
       });
 
-      testWidgets('evaluateJavascript with null return value',
-          (WidgetTester tester) async {
-        await buildWidget(tester);
+      testWidgets('evaluateJavascript with null return value', (
+        WidgetTester tester,
+      ) async {
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
-        when(mockWebView.evaluateJavaScript('runJavaScript')).thenAnswer(
-          (_) => Future<Object?>.value(),
-        );
+        when(
+          mocks.webView.evaluateJavaScript('runJavaScript'),
+        ).thenAnswer((_) => Future<Object?>.value());
         // The legacy implementation of webview_flutter_wkwebview would convert
         // objects to strings before returning them to Dart. This verifies null
         // is represented the way it is in Objective-C.
@@ -628,13 +785,16 @@ void main() {
         );
       });
 
-      testWidgets('evaluateJavascript with bool return value',
-          (WidgetTester tester) async {
-        await buildWidget(tester);
+      testWidgets('evaluateJavascript with bool return value', (
+        WidgetTester tester,
+      ) async {
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
-        when(mockWebView.evaluateJavaScript('runJavaScript')).thenAnswer(
-          (_) => Future<Object?>.value(true),
-        );
+        when(
+          mocks.webView.evaluateJavaScript('runJavaScript'),
+        ).thenAnswer((_) => Future<Object?>.value(true));
         // The legacy implementation of webview_flutter_wkwebview would convert
         // objects to strings before returning them to Dart. This verifies bool
         // is represented the way it is in Objective-C.
@@ -645,13 +805,16 @@ void main() {
         );
       });
 
-      testWidgets('evaluateJavascript with double return value',
-          (WidgetTester tester) async {
-        await buildWidget(tester);
+      testWidgets('evaluateJavascript with double return value', (
+        WidgetTester tester,
+      ) async {
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
-        when(mockWebView.evaluateJavaScript('runJavaScript')).thenAnswer(
-          (_) => Future<Object?>.value(1.0),
-        );
+        when(
+          mocks.webView.evaluateJavaScript('runJavaScript'),
+        ).thenAnswer((_) => Future<Object?>.value(1.0));
         // The legacy implementation of webview_flutter_wkwebview would convert
         // objects to strings before returning them to Dart. This verifies
         // double is represented the way it is in Objective-C. If a double
@@ -664,11 +827,14 @@ void main() {
         );
       });
 
-      testWidgets('evaluateJavascript with list return value',
-          (WidgetTester tester) async {
-        await buildWidget(tester);
+      testWidgets('evaluateJavascript with list return value', (
+        WidgetTester tester,
+      ) async {
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
-        when(mockWebView.evaluateJavaScript('runJavaScript')).thenAnswer(
+        when(mocks.webView.evaluateJavaScript('runJavaScript')).thenAnswer(
           (_) => Future<Object?>.value(<Object?>[1, 'string', null]),
         );
         // The legacy implementation of webview_flutter_wkwebview would convert
@@ -680,11 +846,14 @@ void main() {
         );
       });
 
-      testWidgets('evaluateJavascript with map return value',
-          (WidgetTester tester) async {
-        await buildWidget(tester);
+      testWidgets('evaluateJavascript with map return value', (
+        WidgetTester tester,
+      ) async {
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
-        when(mockWebView.evaluateJavaScript('runJavaScript')).thenAnswer(
+        when(mocks.webView.evaluateJavaScript('runJavaScript')).thenAnswer(
           (_) => Future<Object?>.value(<Object?, Object?>{
             1: 'string',
             null: null,
@@ -699,12 +868,16 @@ void main() {
         );
       });
 
-      testWidgets('evaluateJavascript throws exception',
-          (WidgetTester tester) async {
-        await buildWidget(tester);
+      testWidgets('evaluateJavascript throws exception', (
+        WidgetTester tester,
+      ) async {
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
-        when(mockWebView.evaluateJavaScript('runJavaScript'))
-            .thenThrow(Error());
+        when(
+          mocks.webView.evaluateJavaScript('runJavaScript'),
+        ).thenThrow(Error());
         expect(
           testController.evaluateJavascript('runJavaScript'),
           throwsA(isA<Error>()),
@@ -712,11 +885,13 @@ void main() {
       });
 
       testWidgets('runJavascriptReturningResult', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
-        when(mockWebView.evaluateJavaScript('runJavaScript')).thenAnswer(
-          (_) => Future<String>.value('returnString'),
-        );
+        when(
+          mocks.webView.evaluateJavaScript('runJavaScript'),
+        ).thenAnswer((_) => Future<String>.value('returnString'));
         expect(
           testController.runJavascriptReturningResult('runJavaScript'),
           completion('returnString'),
@@ -724,26 +899,32 @@ void main() {
       });
 
       testWidgets(
-          'runJavascriptReturningResult throws error on null return value',
-          (WidgetTester tester) async {
-        await buildWidget(tester);
+        'runJavascriptReturningResult throws error on null return value',
+        (WidgetTester tester) async {
+          final _WebViewMocks mocks = configureMocks();
+          final WebKitWebViewPlatformController testController =
+              await buildWidget(tester, mocks);
 
-        when(mockWebView.evaluateJavaScript('runJavaScript')).thenAnswer(
-          (_) => Future<String?>.value(),
-        );
-        expect(
-          () => testController.runJavascriptReturningResult('runJavaScript'),
-          throwsArgumentError,
-        );
-      });
+          when(
+            mocks.webView.evaluateJavaScript('runJavaScript'),
+          ).thenAnswer((_) => Future<String?>.value());
+          expect(
+            () => testController.runJavascriptReturningResult('runJavaScript'),
+            throwsArgumentError,
+          );
+        },
+      );
 
-      testWidgets('runJavascriptReturningResult with bool return value',
-          (WidgetTester tester) async {
-        await buildWidget(tester);
+      testWidgets('runJavascriptReturningResult with bool return value', (
+        WidgetTester tester,
+      ) async {
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
-        when(mockWebView.evaluateJavaScript('runJavaScript')).thenAnswer(
-          (_) => Future<Object?>.value(false),
-        );
+        when(
+          mocks.webView.evaluateJavaScript('runJavaScript'),
+        ).thenAnswer((_) => Future<Object?>.value(false));
         // The legacy implementation of webview_flutter_wkwebview would convert
         // objects to strings before returning them to Dart. This verifies bool
         // is represented the way it is in Objective-C.
@@ -755,223 +936,245 @@ void main() {
       });
 
       testWidgets('runJavascript', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
-        when(mockWebView.evaluateJavaScript('runJavaScript')).thenAnswer(
-          (_) => Future<String>.value('returnString'),
-        );
-        expect(
-          testController.runJavascript('runJavaScript'),
-          completes,
-        );
+        when(
+          mocks.webView.evaluateJavaScript('runJavaScript'),
+        ).thenAnswer((_) => Future<String>.value('returnString'));
+        expect(testController.runJavascript('runJavaScript'), completes);
       });
 
       testWidgets(
-          'runJavascript ignores exception with unsupported javascript type',
-          (WidgetTester tester) async {
-        await buildWidget(tester);
+        'runJavascript ignores exception with unsupported javascript type',
+        (WidgetTester tester) async {
+          final _WebViewMocks mocks = configureMocks();
+          final WebKitWebViewPlatformController testController =
+              await buildWidget(tester, mocks);
 
-        when(mockWebView.evaluateJavaScript('runJavaScript'))
-            .thenThrow(PlatformException(
-          code: '',
-          details: const NSError(
-            code: WKErrorCode.javaScriptResultTypeIsUnsupported,
-            domain: '',
-            localizedDescription: '',
-          ),
-        ));
-        expect(
-          testController.runJavascript('runJavaScript'),
-          completes,
-        );
-      });
+          when(mocks.webView.evaluateJavaScript('runJavaScript')).thenThrow(
+            PlatformException(
+              code: '',
+              details: NSError.pigeon_detached(
+                code: WKErrorCode.javaScriptResultTypeIsUnsupported,
+                domain: '',
+                userInfo: const <String, Object?>{},
+              ),
+            ),
+          );
+          expect(testController.runJavascript('runJavaScript'), completes);
+        },
+      );
 
       testWidgets('getTitle', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
-        when(mockWebView.getTitle())
-            .thenAnswer((_) => Future<String>.value('Web Title'));
+        when(
+          mocks.webView.getTitle(),
+        ).thenAnswer((_) => Future<String>.value('Web Title'));
         expect(testController.getTitle(), completion('Web Title'));
       });
 
       testWidgets('currentUrl', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
-        when(mockWebView.getUrl())
-            .thenAnswer((_) => Future<String>.value('myUrl.com'));
+        when(
+          mocks.webView.getUrl(),
+        ).thenAnswer((_) => Future<String>.value('myUrl.com'));
         expect(testController.currentUrl(), completion('myUrl.com'));
       });
 
       testWidgets('scrollTo', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
+
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
 
         await testController.scrollTo(2, 4);
-        verify(mockScrollView.setContentOffset(const Point<double>(2.0, 4.0)));
+        verify(mocks.scrollView.setContentOffset(2.0, 4.0));
+
+        debugDefaultTargetPlatformOverride = null;
       });
 
       testWidgets('scrollBy', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
+
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
 
         await testController.scrollBy(2, 4);
-        verify(mockScrollView.scrollBy(const Point<double>(2.0, 4.0)));
+        verify(mocks.scrollView.scrollBy(2.0, 4.0));
+
+        debugDefaultTargetPlatformOverride = null;
       });
 
       testWidgets('getScrollX', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
-        when(mockScrollView.getContentOffset()).thenAnswer(
-            (_) => Future<Point<double>>.value(const Point<double>(8.0, 16.0)));
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+
+        when(mocks.scrollView.getContentOffset()).thenAnswer(
+          (_) => Future<List<double>>.value(const <double>[8.0, 16.0]),
+        );
         expect(testController.getScrollX(), completion(8.0));
+
+        debugDefaultTargetPlatformOverride = null;
       });
 
       testWidgets('getScrollY', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
-        await buildWidget(tester);
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
 
-        when(mockScrollView.getContentOffset()).thenAnswer(
-            (_) => Future<Point<double>>.value(const Point<double>(8.0, 16.0)));
+        when(mocks.scrollView.getContentOffset()).thenAnswer(
+          (_) => Future<List<double>>.value(const <double>[8.0, 16.0]),
+        );
         expect(testController.getScrollY(), completion(16.0));
+
+        debugDefaultTargetPlatformOverride = null;
       });
 
       testWidgets('clearCache', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
         when(
-          mockWebsiteDataStore.removeDataOfTypes(
-            <WKWebsiteDataType>{
-              WKWebsiteDataType.memoryCache,
-              WKWebsiteDataType.diskCache,
-              WKWebsiteDataType.offlineWebApplicationCache,
-              WKWebsiteDataType.localStorage,
-            },
-            DateTime.fromMillisecondsSinceEpoch(0),
-          ),
+          mocks.websiteDataStore.removeDataOfTypes(<WebsiteDataType>[
+            WebsiteDataType.memoryCache,
+            WebsiteDataType.diskCache,
+            WebsiteDataType.offlineWebApplicationCache,
+            WebsiteDataType.localStorage,
+          ], 0),
         ).thenAnswer((_) => Future<bool>.value(false));
 
         expect(testController.clearCache(), completes);
       });
 
       testWidgets('addJavascriptChannels', (WidgetTester tester) async {
+        final _WebViewMocks mocks = configureMocks();
         when(
-          mockWebViewWidgetProxy.createScriptMessageHandler(
+          mocks.webViewWidgetProxy.createScriptMessageHandler(
             didReceiveScriptMessage: anyNamed('didReceiveScriptMessage'),
           ),
-        ).thenReturn(
-          MockWKScriptMessageHandler(),
-        );
+        ).thenReturn(MockWKScriptMessageHandler());
 
-        await buildWidget(tester);
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
         await testController.addJavascriptChannels(<String>{'c', 'd'});
         final List<dynamic> javaScriptChannels = verify(
-          mockUserContentController.addScriptMessageHandler(
-              captureAny, captureAny),
+          mocks.userContentController.addScriptMessageHandler(
+            captureAny,
+            captureAny,
+          ),
         ).captured;
-        expect(
-          javaScriptChannels[0],
-          isA<WKScriptMessageHandler>(),
-        );
+        expect(javaScriptChannels[0], isA<WKScriptMessageHandler>());
         expect(javaScriptChannels[1], 'c');
-        expect(
-          javaScriptChannels[2],
-          isA<WKScriptMessageHandler>(),
-        );
+        expect(javaScriptChannels[2], isA<WKScriptMessageHandler>());
         expect(javaScriptChannels[3], 'd');
 
-        final List<WKUserScript> userScripts =
-            verify(mockUserContentController.addUserScript(captureAny))
-                .captured
-                .cast<WKUserScript>();
+        final List<WKUserScript> userScripts = verify(
+          mocks.userContentController.addUserScript(captureAny),
+        ).captured.cast<WKUserScript>();
         expect(userScripts[0].source, 'window.c = webkit.messageHandlers.c;');
         expect(
           userScripts[0].injectionTime,
-          WKUserScriptInjectionTime.atDocumentStart,
+          UserScriptInjectionTime.atDocumentStart,
         );
-        expect(userScripts[0].isMainFrameOnly, false);
+        expect(userScripts[0].isForMainFrameOnly, false);
         expect(userScripts[1].source, 'window.d = webkit.messageHandlers.d;');
         expect(
           userScripts[1].injectionTime,
-          WKUserScriptInjectionTime.atDocumentStart,
+          UserScriptInjectionTime.atDocumentStart,
         );
-        expect(userScripts[0].isMainFrameOnly, false);
+        expect(userScripts[0].isForMainFrameOnly, false);
       });
 
       testWidgets('removeJavascriptChannels', (WidgetTester tester) async {
+        final _WebViewMocks mocks = configureMocks();
         when(
-          mockWebViewWidgetProxy.createScriptMessageHandler(
+          mocks.webViewWidgetProxy.createScriptMessageHandler(
             didReceiveScriptMessage: anyNamed('didReceiveScriptMessage'),
           ),
-        ).thenReturn(
-          MockWKScriptMessageHandler(),
-        );
+        ).thenReturn(MockWKScriptMessageHandler());
 
-        await buildWidget(tester);
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
 
         await testController.addJavascriptChannels(<String>{'c', 'd'});
-        reset(mockUserContentController);
+        reset(mocks.userContentController);
 
         await testController.removeJavascriptChannels(<String>{'c'});
 
-        verify(mockUserContentController.removeAllUserScripts());
-        verify(mockUserContentController.removeScriptMessageHandler('c'));
-        verify(mockUserContentController.removeScriptMessageHandler('d'));
+        verify(mocks.userContentController.removeAllUserScripts());
+        verify(mocks.userContentController.removeScriptMessageHandler('c'));
+        verify(mocks.userContentController.removeScriptMessageHandler('d'));
 
         final List<dynamic> javaScriptChannels = verify(
-          mockUserContentController.addScriptMessageHandler(
+          mocks.userContentController.addScriptMessageHandler(
             captureAny,
             captureAny,
           ),
         ).captured;
-        expect(
-          javaScriptChannels[0],
-          isA<WKScriptMessageHandler>(),
-        );
+        expect(javaScriptChannels[0], isA<WKScriptMessageHandler>());
         expect(javaScriptChannels[1], 'd');
 
-        final List<WKUserScript> userScripts =
-            verify(mockUserContentController.addUserScript(captureAny))
-                .captured
-                .cast<WKUserScript>();
+        final List<WKUserScript> userScripts = verify(
+          mocks.userContentController.addUserScript(captureAny),
+        ).captured.cast<WKUserScript>();
         expect(userScripts[0].source, 'window.d = webkit.messageHandlers.d;');
         expect(
           userScripts[0].injectionTime,
-          WKUserScriptInjectionTime.atDocumentStart,
+          UserScriptInjectionTime.atDocumentStart,
         );
-        expect(userScripts[0].isMainFrameOnly, false);
+        expect(userScripts[0].isForMainFrameOnly, false);
       });
 
-      testWidgets('removeJavascriptChannels with zoom disabled',
-          (WidgetTester tester) async {
+      testWidgets('removeJavascriptChannels with zoom disabled', (
+        WidgetTester tester,
+      ) async {
+        final _WebViewMocks mocks = configureMocks();
         when(
-          mockWebViewWidgetProxy.createScriptMessageHandler(
+          mocks.webViewWidgetProxy.createScriptMessageHandler(
             didReceiveScriptMessage: anyNamed('didReceiveScriptMessage'),
           ),
-        ).thenReturn(
-          MockWKScriptMessageHandler(),
-        );
+        ).thenReturn(MockWKScriptMessageHandler());
 
-        await buildWidget(
-          tester,
-          creationParams: CreationParams(
-            webSettings: WebSettings(
-              userAgent: const WebSetting<String?>.absent(),
-              zoomEnabled: false,
-              hasNavigationDelegate: false,
-            ),
-          ),
-        );
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(
+              tester,
+              mocks,
+              creationParams: CreationParams(
+                webSettings: WebSettings(
+                  userAgent: const WebSetting<String?>.absent(),
+                  zoomEnabled: false,
+                  hasNavigationDelegate: false,
+                ),
+              ),
+            );
 
         await testController.addJavascriptChannels(<String>{'c'});
-        clearInteractions(mockUserContentController);
+        clearInteractions(mocks.userContentController);
         await testController.removeJavascriptChannels(<String>{'c'});
 
-        final WKUserScript zoomScript =
-            verify(mockUserContentController.addUserScript(captureAny))
-                .captured
-                .first as WKUserScript;
-        expect(zoomScript.isMainFrameOnly, isTrue);
-        expect(
-            zoomScript.injectionTime, WKUserScriptInjectionTime.atDocumentEnd);
+        final zoomScript =
+            verify(
+                  mocks.userContentController.addUserScript(captureAny),
+                ).captured.first
+                as WKUserScript;
+        expect(zoomScript.isForMainFrameOnly, isTrue);
+        expect(zoomScript.injectionTime, UserScriptInjectionTime.atDocumentEnd);
         expect(
           zoomScript.source,
           "var meta = document.createElement('meta');\n"
@@ -985,115 +1188,189 @@ void main() {
 
     group('WebViewPlatformCallbacksHandler', () {
       testWidgets('onPageStarted', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        await buildWidget(tester, mocks);
 
-        final void Function(WKWebView, String) didStartProvisionalNavigation =
-            verify(mockWebViewWidgetProxy.createNavigationDelegate(
-          didFinishNavigation: anyNamed('didFinishNavigation'),
-          didStartProvisionalNavigation:
-              captureAnyNamed('didStartProvisionalNavigation'),
-          decidePolicyForNavigationAction:
-              anyNamed('decidePolicyForNavigationAction'),
-          didFailNavigation: anyNamed('didFailNavigation'),
-          didFailProvisionalNavigation:
-              anyNamed('didFailProvisionalNavigation'),
-          webViewWebContentProcessDidTerminate:
-              anyNamed('webViewWebContentProcessDidTerminate'),
-        )).captured.single as void Function(WKWebView, String);
-        didStartProvisionalNavigation(mockWebView, 'https://google.com');
+        final didStartProvisionalNavigation =
+            verify(
+                  mocks.webViewWidgetProxy.createNavigationDelegate(
+                    didFinishNavigation: anyNamed('didFinishNavigation'),
+                    didStartProvisionalNavigation: captureAnyNamed(
+                      'didStartProvisionalNavigation',
+                    ),
+                    decidePolicyForNavigationAction: anyNamed(
+                      'decidePolicyForNavigationAction',
+                    ),
+                    didFailNavigation: anyNamed('didFailNavigation'),
+                    didFailProvisionalNavigation: anyNamed(
+                      'didFailProvisionalNavigation',
+                    ),
+                    webViewWebContentProcessDidTerminate: anyNamed(
+                      'webViewWebContentProcessDidTerminate',
+                    ),
+                    decidePolicyForNavigationResponse: anyNamed(
+                      'decidePolicyForNavigationResponse',
+                    ),
+                    didReceiveAuthenticationChallenge: anyNamed(
+                      'didReceiveAuthenticationChallenge',
+                    ),
+                  ),
+                ).captured.single
+                as void Function(WKNavigationDelegate, WKWebView, String);
+        didStartProvisionalNavigation(
+          mocks.navigationDelegate,
+          mocks.webView,
+          'https://google.com',
+        );
 
-        verify(mockCallbacksHandler.onPageStarted('https://google.com'));
+        verify(mocks.callbacksHandler.onPageStarted('https://google.com'));
       });
 
       testWidgets('onPageFinished', (WidgetTester tester) async {
-        await buildWidget(tester);
+        final _WebViewMocks mocks = configureMocks();
+        await buildWidget(tester, mocks);
 
-        final void Function(WKWebView, String) didFinishNavigation =
-            verify(mockWebViewWidgetProxy.createNavigationDelegate(
-          didFinishNavigation: captureAnyNamed('didFinishNavigation'),
-          didStartProvisionalNavigation:
-              anyNamed('didStartProvisionalNavigation'),
-          decidePolicyForNavigationAction:
-              anyNamed('decidePolicyForNavigationAction'),
-          didFailNavigation: anyNamed('didFailNavigation'),
-          didFailProvisionalNavigation:
-              anyNamed('didFailProvisionalNavigation'),
-          webViewWebContentProcessDidTerminate:
-              anyNamed('webViewWebContentProcessDidTerminate'),
-        )).captured.single as void Function(WKWebView, String);
-        didFinishNavigation(mockWebView, 'https://google.com');
+        final didFinishNavigation =
+            verify(
+                  mocks.webViewWidgetProxy.createNavigationDelegate(
+                    didFinishNavigation: captureAnyNamed('didFinishNavigation'),
+                    didStartProvisionalNavigation: anyNamed(
+                      'didStartProvisionalNavigation',
+                    ),
+                    decidePolicyForNavigationAction: anyNamed(
+                      'decidePolicyForNavigationAction',
+                    ),
+                    didFailNavigation: anyNamed('didFailNavigation'),
+                    didFailProvisionalNavigation: anyNamed(
+                      'didFailProvisionalNavigation',
+                    ),
+                    webViewWebContentProcessDidTerminate: anyNamed(
+                      'webViewWebContentProcessDidTerminate',
+                    ),
+                    decidePolicyForNavigationResponse: anyNamed(
+                      'decidePolicyForNavigationResponse',
+                    ),
+                    didReceiveAuthenticationChallenge: anyNamed(
+                      'didReceiveAuthenticationChallenge',
+                    ),
+                  ),
+                ).captured.single
+                as void Function(WKNavigationDelegate, WKWebView, String);
+        didFinishNavigation(
+          mocks.navigationDelegate,
+          mocks.webView,
+          'https://google.com',
+        );
 
-        verify(mockCallbacksHandler.onPageFinished('https://google.com'));
+        verify(mocks.callbacksHandler.onPageFinished('https://google.com'));
       });
 
-      testWidgets('onWebResourceError from didFailNavigation',
-          (WidgetTester tester) async {
-        await buildWidget(tester);
+      testWidgets('onWebResourceError from didFailNavigation', (
+        WidgetTester tester,
+      ) async {
+        final _WebViewMocks mocks = configureMocks();
+        await buildWidget(tester, mocks);
 
-        final void Function(WKWebView, NSError) didFailNavigation =
-            verify(mockWebViewWidgetProxy.createNavigationDelegate(
-          didFinishNavigation: anyNamed('didFinishNavigation'),
-          didStartProvisionalNavigation:
-              anyNamed('didStartProvisionalNavigation'),
-          decidePolicyForNavigationAction:
-              anyNamed('decidePolicyForNavigationAction'),
-          didFailNavigation: captureAnyNamed('didFailNavigation'),
-          didFailProvisionalNavigation:
-              anyNamed('didFailProvisionalNavigation'),
-          webViewWebContentProcessDidTerminate:
-              anyNamed('webViewWebContentProcessDidTerminate'),
-        )).captured.single as void Function(WKWebView, NSError);
+        final didFailNavigation =
+            verify(
+                  mocks.webViewWidgetProxy.createNavigationDelegate(
+                    didFinishNavigation: anyNamed('didFinishNavigation'),
+                    didStartProvisionalNavigation: anyNamed(
+                      'didStartProvisionalNavigation',
+                    ),
+                    decidePolicyForNavigationAction: anyNamed(
+                      'decidePolicyForNavigationAction',
+                    ),
+                    didFailNavigation: captureAnyNamed('didFailNavigation'),
+                    didFailProvisionalNavigation: anyNamed(
+                      'didFailProvisionalNavigation',
+                    ),
+                    webViewWebContentProcessDidTerminate: anyNamed(
+                      'webViewWebContentProcessDidTerminate',
+                    ),
+                    decidePolicyForNavigationResponse: anyNamed(
+                      'decidePolicyForNavigationResponse',
+                    ),
+                    didReceiveAuthenticationChallenge: anyNamed(
+                      'didReceiveAuthenticationChallenge',
+                    ),
+                  ),
+                ).captured.single
+                as void Function(WKNavigationDelegate, WKWebView, NSError);
 
         didFailNavigation(
-          mockWebView,
-          const NSError(
+          mocks.navigationDelegate,
+          mocks.webView,
+          NSError.pigeon_detached(
             code: WKErrorCode.webViewInvalidated,
             domain: 'domain',
-            localizedDescription: 'my desc',
+            userInfo: const <String, Object?>{
+              NSErrorUserInfoKey.NSLocalizedDescription: 'my desc',
+            },
           ),
         );
 
-        final WebResourceError error =
-            verify(mockCallbacksHandler.onWebResourceError(captureAny))
-                .captured
-                .single as WebResourceError;
+        final error =
+            verify(
+                  mocks.callbacksHandler.onWebResourceError(captureAny),
+                ).captured.single
+                as WebResourceError;
         expect(error.description, 'my desc');
         expect(error.errorCode, WKErrorCode.webViewInvalidated);
         expect(error.domain, 'domain');
         expect(error.errorType, WebResourceErrorType.webViewInvalidated);
       });
 
-      testWidgets('onWebResourceError from didFailProvisionalNavigation',
-          (WidgetTester tester) async {
-        await buildWidget(tester);
+      testWidgets('onWebResourceError from didFailProvisionalNavigation', (
+        WidgetTester tester,
+      ) async {
+        final _WebViewMocks mocks = configureMocks();
+        await buildWidget(tester, mocks);
 
-        final void Function(WKWebView, NSError) didFailProvisionalNavigation =
-            verify(mockWebViewWidgetProxy.createNavigationDelegate(
-          didFinishNavigation: anyNamed('didFinishNavigation'),
-          didStartProvisionalNavigation:
-              anyNamed('didStartProvisionalNavigation'),
-          decidePolicyForNavigationAction:
-              anyNamed('decidePolicyForNavigationAction'),
-          didFailNavigation: anyNamed('didFailNavigation'),
-          didFailProvisionalNavigation:
-              captureAnyNamed('didFailProvisionalNavigation'),
-          webViewWebContentProcessDidTerminate:
-              anyNamed('webViewWebContentProcessDidTerminate'),
-        )).captured.single as void Function(WKWebView, NSError);
+        final didFailProvisionalNavigation =
+            verify(
+                  mocks.webViewWidgetProxy.createNavigationDelegate(
+                    didFinishNavigation: anyNamed('didFinishNavigation'),
+                    didStartProvisionalNavigation: anyNamed(
+                      'didStartProvisionalNavigation',
+                    ),
+                    decidePolicyForNavigationAction: anyNamed(
+                      'decidePolicyForNavigationAction',
+                    ),
+                    didFailNavigation: anyNamed('didFailNavigation'),
+                    didFailProvisionalNavigation: captureAnyNamed(
+                      'didFailProvisionalNavigation',
+                    ),
+                    webViewWebContentProcessDidTerminate: anyNamed(
+                      'webViewWebContentProcessDidTerminate',
+                    ),
+                    decidePolicyForNavigationResponse: anyNamed(
+                      'decidePolicyForNavigationResponse',
+                    ),
+                    didReceiveAuthenticationChallenge: anyNamed(
+                      'didReceiveAuthenticationChallenge',
+                    ),
+                  ),
+                ).captured.single
+                as void Function(WKNavigationDelegate, WKWebView, NSError);
 
         didFailProvisionalNavigation(
-          mockWebView,
-          const NSError(
+          mocks.navigationDelegate,
+          mocks.webView,
+          NSError.pigeon_detached(
             code: WKErrorCode.webContentProcessTerminated,
             domain: 'domain',
-            localizedDescription: 'my desc',
+            userInfo: const <String, Object?>{
+              NSErrorUserInfoKey.NSLocalizedDescription: 'my desc',
+            },
           ),
         );
 
-        final WebResourceError error =
-            verify(mockCallbacksHandler.onWebResourceError(captureAny))
-                .captured
-                .single as WebResourceError;
+        final error =
+            verify(
+                  mocks.callbacksHandler.onWebResourceError(captureAny),
+                ).captured.single
+                as WebResourceError;
         expect(error.description, 'my desc');
         expect(error.errorCode, WKErrorCode.webContentProcessTerminated);
         expect(error.domain, 'domain');
@@ -1104,151 +1381,246 @@ void main() {
       });
 
       testWidgets(
-          'onWebResourceError from webViewWebContentProcessDidTerminate',
-          (WidgetTester tester) async {
-        await buildWidget(tester);
+        'onWebResourceError from webViewWebContentProcessDidTerminate',
+        (WidgetTester tester) async {
+          final _WebViewMocks mocks = configureMocks();
+          await buildWidget(tester, mocks);
 
-        final void Function(WKWebView) webViewWebContentProcessDidTerminate =
-            verify(mockWebViewWidgetProxy.createNavigationDelegate(
-          didFinishNavigation: anyNamed('didFinishNavigation'),
-          didStartProvisionalNavigation:
-              anyNamed('didStartProvisionalNavigation'),
-          decidePolicyForNavigationAction:
-              anyNamed('decidePolicyForNavigationAction'),
-          didFailNavigation: anyNamed('didFailNavigation'),
-          didFailProvisionalNavigation:
-              anyNamed('didFailProvisionalNavigation'),
-          webViewWebContentProcessDidTerminate:
-              captureAnyNamed('webViewWebContentProcessDidTerminate'),
-        )).captured.single as void Function(WKWebView);
-        webViewWebContentProcessDidTerminate(mockWebView);
+          final webViewWebContentProcessDidTerminate =
+              verify(
+                    mocks.webViewWidgetProxy.createNavigationDelegate(
+                      didFinishNavigation: anyNamed('didFinishNavigation'),
+                      didStartProvisionalNavigation: anyNamed(
+                        'didStartProvisionalNavigation',
+                      ),
+                      decidePolicyForNavigationAction: anyNamed(
+                        'decidePolicyForNavigationAction',
+                      ),
+                      didFailNavigation: anyNamed('didFailNavigation'),
+                      didFailProvisionalNavigation: anyNamed(
+                        'didFailProvisionalNavigation',
+                      ),
+                      webViewWebContentProcessDidTerminate: captureAnyNamed(
+                        'webViewWebContentProcessDidTerminate',
+                      ),
+                      decidePolicyForNavigationResponse: anyNamed(
+                        'decidePolicyForNavigationResponse',
+                      ),
+                      didReceiveAuthenticationChallenge: anyNamed(
+                        'didReceiveAuthenticationChallenge',
+                      ),
+                    ),
+                  ).captured.single
+                  as void Function(WKNavigationDelegate, WKWebView);
+          webViewWebContentProcessDidTerminate(
+            mocks.navigationDelegate,
+            mocks.webView,
+          );
 
-        final WebResourceError error =
-            verify(mockCallbacksHandler.onWebResourceError(captureAny))
-                .captured
-                .single as WebResourceError;
-        expect(error.description, '');
-        expect(error.errorCode, WKErrorCode.webContentProcessTerminated);
-        expect(error.domain, 'WKErrorDomain');
+          final error =
+              verify(
+                    mocks.callbacksHandler.onWebResourceError(captureAny),
+                  ).captured.single
+                  as WebResourceError;
+          expect(error.description, '');
+          expect(error.errorCode, WKErrorCode.webContentProcessTerminated);
+          expect(error.domain, 'WKErrorDomain');
+          expect(
+            error.errorType,
+            WebResourceErrorType.webContentProcessTerminated,
+          );
+        },
+      );
+
+      testWidgets('onNavigationRequest from decidePolicyForNavigationAction', (
+        WidgetTester tester,
+      ) async {
+        final _WebViewMocks mocks = configureMocks();
+        await buildWidget(tester, mocks, hasNavigationDelegate: true);
+
+        final decidePolicyForNavigationAction =
+            verify(
+                  mocks.webViewWidgetProxy.createNavigationDelegate(
+                    didFinishNavigation: anyNamed('didFinishNavigation'),
+                    didStartProvisionalNavigation: anyNamed(
+                      'didStartProvisionalNavigation',
+                    ),
+                    decidePolicyForNavigationAction: captureAnyNamed(
+                      'decidePolicyForNavigationAction',
+                    ),
+                    didFailNavigation: anyNamed('didFailNavigation'),
+                    didFailProvisionalNavigation: anyNamed(
+                      'didFailProvisionalNavigation',
+                    ),
+                    webViewWebContentProcessDidTerminate: anyNamed(
+                      'webViewWebContentProcessDidTerminate',
+                    ),
+                    decidePolicyForNavigationResponse: anyNamed(
+                      'decidePolicyForNavigationResponse',
+                    ),
+                    didReceiveAuthenticationChallenge: anyNamed(
+                      'didReceiveAuthenticationChallenge',
+                    ),
+                  ),
+                ).captured.single
+                as Future<NavigationActionPolicy> Function(
+                  WKNavigationDelegate,
+                  WKWebView,
+                  WKNavigationAction,
+                );
+
+        when(
+          mocks.callbacksHandler.onNavigationRequest(
+            isForMainFrame: argThat(isFalse, named: 'isForMainFrame'),
+            url: 'https://google.com',
+          ),
+        ).thenReturn(true);
+
+        final mockRequest = MockURLRequest();
+        when(
+          mockRequest.getUrl(),
+        ).thenAnswer((_) => Future<String>.value('https://google.com'));
+
         expect(
-          error.errorType,
-          WebResourceErrorType.webContentProcessTerminated,
-        );
-      });
-
-      testWidgets('onNavigationRequest from decidePolicyForNavigationAction',
-          (WidgetTester tester) async {
-        await buildWidget(tester, hasNavigationDelegate: true);
-
-        final Future<WKNavigationActionPolicy> Function(
-                WKWebView, WKNavigationAction) decidePolicyForNavigationAction =
-            verify(mockWebViewWidgetProxy.createNavigationDelegate(
-          didFinishNavigation: anyNamed('didFinishNavigation'),
-          didStartProvisionalNavigation:
-              anyNamed('didStartProvisionalNavigation'),
-          decidePolicyForNavigationAction:
-              captureAnyNamed('decidePolicyForNavigationAction'),
-          didFailNavigation: anyNamed('didFailNavigation'),
-          didFailProvisionalNavigation:
-              anyNamed('didFailProvisionalNavigation'),
-          webViewWebContentProcessDidTerminate:
-              anyNamed('webViewWebContentProcessDidTerminate'),
-        )).captured.single as Future<WKNavigationActionPolicy> Function(
-                WKWebView, WKNavigationAction);
-
-        when(mockCallbacksHandler.onNavigationRequest(
-          isForMainFrame: argThat(isFalse, named: 'isForMainFrame'),
-          url: 'https://google.com',
-        )).thenReturn(true);
-
-        expect(
-          decidePolicyForNavigationAction(
-            mockWebView,
-            const WKNavigationAction(
-              request: NSUrlRequest(url: 'https://google.com'),
-              targetFrame: WKFrameInfo(isMainFrame: false),
-              navigationType: WKNavigationType.linkActivated,
+          await decidePolicyForNavigationAction(
+            mocks.navigationDelegate,
+            mocks.webView,
+            WKNavigationAction.pigeon_detached(
+              request: mockRequest,
+              targetFrame: WKFrameInfo.pigeon_detached(
+                isMainFrame: false,
+                request: mockRequest,
+              ),
+              navigationType: NavigationType.linkActivated,
             ),
           ),
-          completion(WKNavigationActionPolicy.allow),
+          NavigationActionPolicy.allow,
         );
 
-        verify(mockCallbacksHandler.onNavigationRequest(
-          url: 'https://google.com',
-          isForMainFrame: false,
-        ));
+        verify(
+          mocks.callbacksHandler.onNavigationRequest(
+            url: 'https://google.com',
+            isForMainFrame: false,
+          ),
+        );
       });
 
       testWidgets('onProgress', (WidgetTester tester) async {
-        await buildWidget(tester, hasProgressTracking: true);
+        final _WebViewMocks mocks = configureMocks();
+        await buildWidget(tester, mocks, hasProgressTracking: true);
 
-        verify(mockWebView.addObserver(
-          mockWebView,
-          keyPath: 'estimatedProgress',
-          options: <NSKeyValueObservingOptions>{
-            NSKeyValueObservingOptions.newValue,
-          },
-        ));
+        verify(
+          mocks.webView.addObserver(
+            mocks.webView,
+            'estimatedProgress',
+            <KeyValueObservingOptions>[KeyValueObservingOptions.newValue],
+          ),
+        );
 
-        final void Function(String, NSObject, Map<NSKeyValueChangeKey, Object?>)
-            observeValue = verify(mockWebViewWidgetProxy.createWebView(any,
-                        observeValue: captureAnyNamed('observeValue')))
-                    .captured
-                    .single
+        final observeValue =
+            verify(
+                  mocks.webViewWidgetProxy.createWebView(
+                    any,
+                    observeValue: captureAnyNamed('observeValue'),
+                  ),
+                ).captured.single
                 as void Function(
-                    String, NSObject, Map<NSKeyValueChangeKey, Object?>);
+                  String,
+                  NSObject,
+                  Map<KeyValueChangeKey, Object?>,
+                );
 
         observeValue(
           'estimatedProgress',
-          mockWebView,
-          <NSKeyValueChangeKey, Object?>{NSKeyValueChangeKey.newValue: 0.32},
+          mocks.webView,
+          <KeyValueChangeKey, Object?>{KeyValueChangeKey.newValue: 0.32},
         );
 
-        verify(mockCallbacksHandler.onProgress(32));
+        verify(mocks.callbacksHandler.onProgress(32));
       });
 
-      testWidgets('progress observer is not removed without being set first',
-          (WidgetTester tester) async {
-        await buildWidget(tester);
+      testWidgets('progress observer is not removed without being set first', (
+        WidgetTester tester,
+      ) async {
+        final _WebViewMocks mocks = configureMocks();
+        await buildWidget(tester, mocks);
 
-        verifyNever(mockWebView.removeObserver(
-          mockWebView,
-          keyPath: 'estimatedProgress',
-        ));
+        verifyNever(
+          mocks.webView.removeObserver(mocks.webView, 'estimatedProgress'),
+        );
       });
     });
 
     group('JavascriptChannelRegistry', () {
       testWidgets('onJavascriptChannelMessage', (WidgetTester tester) async {
+        final _WebViewMocks mocks = configureMocks();
         when(
-          mockWebViewWidgetProxy.createScriptMessageHandler(
+          mocks.webViewWidgetProxy.createScriptMessageHandler(
             didReceiveScriptMessage: anyNamed('didReceiveScriptMessage'),
           ),
-        ).thenReturn(
-          MockWKScriptMessageHandler(),
-        );
+        ).thenReturn(MockWKScriptMessageHandler());
 
-        await buildWidget(tester);
+        final WebKitWebViewPlatformController testController =
+            await buildWidget(tester, mocks);
         await testController.addJavascriptChannels(<String>{'hello'});
 
-        final void Function(WKUserContentController, WKScriptMessage)
-            didReceiveScriptMessage = verify(
-                        mockWebViewWidgetProxy.createScriptMessageHandler(
-                            didReceiveScriptMessage:
-                                captureAnyNamed('didReceiveScriptMessage')))
-                    .captured
-                    .single
-                as void Function(WKUserContentController, WKScriptMessage);
+        final didReceiveScriptMessage =
+            verify(
+                  mocks.webViewWidgetProxy.createScriptMessageHandler(
+                    didReceiveScriptMessage: captureAnyNamed(
+                      'didReceiveScriptMessage',
+                    ),
+                  ),
+                ).captured.single
+                as void Function(
+                  WKScriptMessageHandler,
+                  WKUserContentController,
+                  WKScriptMessage,
+                );
 
         didReceiveScriptMessage(
-          mockUserContentController,
-          const WKScriptMessage(name: 'hello', body: 'A message.'),
+          MockWKScriptMessageHandler(),
+          mocks.userContentController,
+          WKScriptMessage.pigeon_detached(name: 'hello', body: 'A message.'),
         );
-        verify(mockJavascriptChannelRegistry.onJavascriptChannelMessage(
-          'hello',
-          'A message.',
-        ));
+        verify(
+          mocks.javascriptChannelRegistry.onJavascriptChannelMessage(
+            'hello',
+            'A message.',
+          ),
+        );
       });
     });
   });
+}
+
+/// A collection of mocks used in constructing a WebViewWidget.
+class _WebViewMocks {
+  _WebViewMocks({
+    required this.webView,
+    required this.webViewWidgetProxy,
+    required this.userContentController,
+    required this.preferences,
+    required this.webViewConfiguration,
+    required this.uiDelegate,
+    required this.scrollView,
+    required this.websiteDataStore,
+    required this.navigationDelegate,
+    required this.callbacksHandler,
+    required this.javascriptChannelRegistry,
+    required this.webpagePreferences,
+  });
+
+  final MockUIViewWKWebView webView;
+  final MockWebViewWidgetProxy webViewWidgetProxy;
+  final MockWKUserContentController userContentController;
+  final MockWKPreferences preferences;
+  final MockWKWebViewConfiguration webViewConfiguration;
+  final MockWKUIDelegate uiDelegate;
+  final MockUIScrollView scrollView;
+  final MockWKWebsiteDataStore websiteDataStore;
+  final MockWKNavigationDelegate navigationDelegate;
+  final MockWebViewPlatformCallbacksHandler callbacksHandler;
+  final MockJavascriptChannelRegistry javascriptChannelRegistry;
+  final MockWKWebpagePreferences webpagePreferences;
 }

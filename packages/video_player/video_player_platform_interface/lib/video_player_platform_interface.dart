@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -44,63 +44,114 @@ abstract class VideoPlayerPlatform extends PlatformInterface {
   }
 
   /// Clears one video.
-  Future<void> dispose(int textureId) {
+  Future<void> dispose(int playerId) {
     throw UnimplementedError('dispose() has not been implemented.');
   }
 
-  /// Creates an instance of a video player and returns its textureId.
+  /// Creates an instance of a video player and returns its playerId.
+  @Deprecated('Use createWithOptions() instead.')
   Future<int?> create(DataSource dataSource) {
     throw UnimplementedError('create() has not been implemented.');
   }
 
+  /// Creates an instance of a video player based on creation options
+  /// and returns its playerId.
+  Future<int?> createWithOptions(VideoCreationOptions options) {
+    return create(options.dataSource);
+  }
+
   /// Returns a Stream of [VideoEventType]s.
-  Stream<VideoEvent> videoEventsFor(int textureId) {
+  Stream<VideoEvent> videoEventsFor(int playerId) {
     throw UnimplementedError('videoEventsFor() has not been implemented.');
   }
 
   /// Sets the looping attribute of the video.
-  Future<void> setLooping(int textureId, bool looping) {
+  Future<void> setLooping(int playerId, bool looping) {
     throw UnimplementedError('setLooping() has not been implemented.');
   }
 
   /// Starts the video playback.
-  Future<void> play(int textureId) {
+  Future<void> play(int playerId) {
     throw UnimplementedError('play() has not been implemented.');
   }
 
   /// Stops the video playback.
-  Future<void> pause(int textureId) {
+  Future<void> pause(int playerId) {
     throw UnimplementedError('pause() has not been implemented.');
   }
 
   /// Sets the volume to a range between 0.0 and 1.0.
-  Future<void> setVolume(int textureId, double volume) {
+  Future<void> setVolume(int playerId, double volume) {
     throw UnimplementedError('setVolume() has not been implemented.');
   }
 
   /// Sets the video position to a [Duration] from the start.
-  Future<void> seekTo(int textureId, Duration position) {
+  Future<void> seekTo(int playerId, Duration position) {
     throw UnimplementedError('seekTo() has not been implemented.');
   }
 
   /// Sets the playback speed to a [speed] value indicating the playback rate.
-  Future<void> setPlaybackSpeed(int textureId, double speed) {
+  Future<void> setPlaybackSpeed(int playerId, double speed) {
     throw UnimplementedError('setPlaybackSpeed() has not been implemented.');
   }
 
   /// Gets the video position as [Duration] from the start.
-  Future<Duration> getPosition(int textureId) {
+  Future<Duration> getPosition(int playerId) {
     throw UnimplementedError('getPosition() has not been implemented.');
   }
 
-  /// Returns a widget displaying the video with a given textureID.
-  Widget buildView(int textureId) {
+  /// Returns a widget displaying the video with a given playerId.
+  @Deprecated('Use buildViewWithOptions() instead.')
+  Widget buildView(int playerId) {
     throw UnimplementedError('buildView() has not been implemented.');
   }
 
-  /// Sets the audio mode to mix with other sources
+  /// Returns a widget displaying the video based on given options.
+  Widget buildViewWithOptions(VideoViewOptions options) {
+    // Default implementation for backwards compatibility.
+    return buildView(options.playerId);
+  }
+
+  /// Sets the audio mode to mix with other sources.
   Future<void> setMixWithOthers(bool mixWithOthers) {
     throw UnimplementedError('setMixWithOthers() has not been implemented.');
+  }
+
+  /// Sets whether the video should continue to play in the background.
+  Future<void> setAllowBackgroundPlayback(bool allowBackgroundPlayback) {
+    throw UnimplementedError(
+      'setAllowBackgroundPlayback() has not been implemented.',
+    );
+  }
+
+  /// Sets additional options on web.
+  Future<void> setWebOptions(int playerId, VideoPlayerWebOptions options) {
+    throw UnimplementedError('setWebOptions() has not been implemented.');
+  }
+
+  /// Gets the available audio tracks for the video.
+  Future<List<VideoAudioTrack>> getAudioTracks(int playerId) {
+    throw UnimplementedError('getAudioTracks() has not been implemented.');
+  }
+
+  /// Selects which audio track is chosen for playback from its [trackId]
+  Future<void> selectAudioTrack(int playerId, String trackId) {
+    throw UnimplementedError('selectAudioTrack() has not been implemented.');
+  }
+
+  /// Returns whether audio track selection is supported on this platform.
+  ///
+  /// This method allows developers to query at runtime whether the current
+  /// platform supports audio track selection functionality. This is useful
+  /// for platforms like web where audio track selection may not be available.
+  ///
+  /// Returns `true` if [getAudioTracks] and [selectAudioTrack] are supported,
+  /// `false` otherwise.
+  ///
+  /// The default implementation returns `false`. Platform implementations
+  /// should override this to return `true` if they support audio track selection.
+  bool isAudioTrackSupportAvailable() {
+    return false;
   }
 }
 
@@ -193,6 +244,15 @@ enum VideoFormat {
   other,
 }
 
+/// The type of video view to be used.
+enum VideoViewType {
+  /// Texture will be used to render video.
+  textureView,
+
+  /// Platform view will be used to render video.
+  platformView,
+}
+
 /// Event emitted from the platform implementation.
 @immutable
 class VideoEvent {
@@ -258,13 +318,13 @@ class VideoEvent {
 
   @override
   int get hashCode => Object.hash(
-        eventType,
-        duration,
-        size,
-        rotationCorrection,
-        buffered,
-        isPlaying,
-      );
+    eventType,
+    duration,
+    size,
+    rotationCorrection,
+    buffered,
+    isPlaying,
+  );
 }
 
 /// Type of the event.
@@ -273,6 +333,8 @@ class VideoEvent {
 /// completed or to communicate buffering events or play state changed.
 enum VideoEventType {
   /// The video has been initialized.
+  ///
+  /// A maximum of one event of this type may be emitted per instance.
   initialized,
 
   /// The playback has ended.
@@ -365,7 +427,7 @@ class DurationRange {
 /// [VideoPlayerOptions] can be optionally used to set additional player settings
 @immutable
 class VideoPlayerOptions {
-  /// set additional optional player settings
+  /// Set additional optional player settings
   // TODO(stuartmorgan): Temporarily suppress warnings about not using const
   // in all of the other video player packages, fix this, and then update
   // the other packages to use const.
@@ -373,6 +435,7 @@ class VideoPlayerOptions {
   VideoPlayerOptions({
     this.mixWithOthers = false,
     this.allowBackgroundPlayback = false,
+    this.webOptions,
   });
 
   /// Set this to true to keep playing video in background, when app goes in background.
@@ -385,4 +448,207 @@ class VideoPlayerOptions {
   /// Note: This option will be silently ignored in the web platform (there is
   /// currently no way to implement this feature in this platform).
   final bool mixWithOthers;
+
+  /// Additional web controls
+  final VideoPlayerWebOptions? webOptions;
+}
+
+/// [VideoPlayerWebOptions] can be optionally used to set additional web settings
+@immutable
+class VideoPlayerWebOptions {
+  /// [VideoPlayerWebOptions] can be optionally used to set additional web settings
+  const VideoPlayerWebOptions({
+    this.controls = const VideoPlayerWebOptionsControls.disabled(),
+    this.allowContextMenu = true,
+    this.allowRemotePlayback = true,
+    this.poster,
+  });
+
+  /// Additional settings for how control options are displayed
+  final VideoPlayerWebOptionsControls controls;
+
+  /// Whether context menu (right click) is allowed
+  final bool allowContextMenu;
+
+  /// Whether remote playback is allowed
+  final bool allowRemotePlayback;
+
+  /// The URL of the poster image to be displayed before the video starts
+  final Uri? poster;
+}
+
+/// [VideoPlayerWebOptions] can be used to set how control options are displayed
+@immutable
+class VideoPlayerWebOptionsControls {
+  /// Enables controls and sets how the options are displayed
+  const VideoPlayerWebOptionsControls.enabled({
+    this.allowDownload = true,
+    this.allowFullscreen = true,
+    this.allowPlaybackRate = true,
+    this.allowPictureInPicture = true,
+  }) : enabled = true;
+
+  /// Disables control options. Default behavior.
+  const VideoPlayerWebOptionsControls.disabled()
+    : enabled = false,
+      allowDownload = false,
+      allowFullscreen = false,
+      allowPlaybackRate = false,
+      allowPictureInPicture = false;
+
+  /// Whether native controls are enabled
+  final bool enabled;
+
+  /// Whether downloaded control is displayed
+  ///
+  /// Only applicable when [controlsEnabled] is true
+  final bool allowDownload;
+
+  /// Whether fullscreen control is enabled
+  ///
+  /// Only applicable when [controlsEnabled] is true
+  final bool allowFullscreen;
+
+  /// Whether playback rate control is displayed
+  ///
+  /// Only applicable when [controlsEnabled] is true
+  final bool allowPlaybackRate;
+
+  /// Whether picture in picture control is displayed
+  ///
+  /// Only applicable when [controlsEnabled] is true
+  final bool allowPictureInPicture;
+
+  /// A string representation of disallowed controls
+  String get controlsList {
+    final controlsList = <String>[];
+    if (!allowDownload) {
+      controlsList.add('nodownload');
+    }
+    if (!allowFullscreen) {
+      controlsList.add('nofullscreen');
+    }
+    if (!allowPlaybackRate) {
+      controlsList.add('noplaybackrate');
+    }
+
+    return controlsList.join(' ');
+  }
+}
+
+/// [VideoViewOptions] contains configuration options for a video view.
+@immutable
+class VideoViewOptions {
+  /// Constructs an instance of [VideoViewOptions].
+  const VideoViewOptions({required this.playerId});
+
+  /// The identifier of the video player.
+  final int playerId;
+}
+
+/// [VideoCreationOptions] contains creation options for a video player.
+@immutable
+class VideoCreationOptions {
+  /// Constructs an instance of [VideoCreationOptions].
+  const VideoCreationOptions({
+    required this.dataSource,
+    required this.viewType,
+  });
+
+  /// The data source used to create the player.
+  final DataSource dataSource;
+
+  /// The type of view to be used for displaying the video player
+  final VideoViewType viewType;
+}
+
+/// Represents an audio track in a video with its metadata.
+@immutable
+class VideoAudioTrack {
+  /// Constructs an instance of [VideoAudioTrack].
+  const VideoAudioTrack({
+    required this.id,
+    required this.label,
+    required this.language,
+    required this.isSelected,
+    this.bitrate,
+    this.sampleRate,
+    this.channelCount,
+    this.codec,
+  });
+
+  /// Unique identifier for the audio track.
+  final String id;
+
+  /// Human-readable label for the track.
+  ///
+  /// May be null if not available from the platform.
+  final String? label;
+
+  /// Language code of the audio track (e.g., 'en', 'es', 'und').
+  ///
+  /// May be null if not available from the platform.
+  final String? language;
+
+  /// Whether this track is currently selected.
+  final bool isSelected;
+
+  /// Bitrate of the audio track in bits per second.
+  ///
+  /// May be null if not available from the platform.
+  final int? bitrate;
+
+  /// Sample rate of the audio track in Hz.
+  ///
+  /// May be null if not available from the platform.
+  final int? sampleRate;
+
+  /// Number of audio channels.
+  ///
+  /// May be null if not available from the platform.
+  final int? channelCount;
+
+  /// Audio codec used (e.g., 'aac', 'mp3', 'ac3').
+  ///
+  /// May be null if not available from the platform.
+  final String? codec;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is VideoAudioTrack &&
+            runtimeType == other.runtimeType &&
+            id == other.id &&
+            label == other.label &&
+            language == other.language &&
+            isSelected == other.isSelected &&
+            bitrate == other.bitrate &&
+            sampleRate == other.sampleRate &&
+            channelCount == other.channelCount &&
+            codec == other.codec;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    label,
+    language,
+    isSelected,
+    bitrate,
+    sampleRate,
+    channelCount,
+    codec,
+  );
+
+  @override
+  String toString() =>
+      'VideoAudioTrack('
+      'id: $id, '
+      'label: $label, '
+      'language: $language, '
+      'isSelected: $isSelected, '
+      'bitrate: $bitrate, '
+      'sampleRate: $sampleRate, '
+      'channelCount: $channelCount, '
+      'codec: $codec)';
 }

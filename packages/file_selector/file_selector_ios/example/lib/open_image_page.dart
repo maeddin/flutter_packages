@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -15,13 +15,14 @@ class OpenImagePage extends StatelessWidget {
   const OpenImagePage({super.key});
 
   Future<void> _openImageFile(BuildContext context) async {
-    const XTypeGroup typeGroup = XTypeGroup(
+    const typeGroup = XTypeGroup(
       label: 'images',
       extensions: <String>['jpg', 'png'],
       uniformTypeIdentifiers: <String>['public.image'],
     );
-    final XFile? file = await FileSelectorPlatform.instance
-        .openFile(acceptedTypeGroups: <XTypeGroup>[typeGroup]);
+    final XFile? file = await FileSelectorPlatform.instance.openFile(
+      acceptedTypeGroups: <XTypeGroup>[typeGroup],
+    );
     if (file == null) {
       // Operation was canceled by the user.
       return;
@@ -40,20 +41,15 @@ class OpenImagePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Open an image'),
-      ),
+      appBar: AppBar(title: const Text('Open an image')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                // TODO(darrenaustin): Migrate to new API once it lands in stable: https://github.com/flutter/flutter/issues/105724
-                // ignore: deprecated_member_use
-                primary: Colors.blue,
-                // ignore: deprecated_member_use
-                onPrimary: Colors.white,
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
               ),
               child: const Text('Press to open an image file(png, jpg)'),
               onPressed: () => _openImageFile(context),

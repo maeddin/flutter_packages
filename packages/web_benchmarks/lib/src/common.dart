@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -14,3 +14,7 @@ const int kMeasuredSampleCount = 100;
 /// A special value returned by the `/next-benchmark` HTTP POST request when
 /// all benchmarks have run and there are no more benchmarks to run.
 const String kEndOfBenchmarks = '__end_of_benchmarks__';
+
+/// The default initial path for the URL that will be loaded upon opening the
+/// benchmark app or reloading it in Chrome.
+const String defaultInitialPath = 'index.html';

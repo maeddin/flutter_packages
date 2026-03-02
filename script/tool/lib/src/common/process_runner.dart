@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -30,17 +30,25 @@ class ProcessRunner {
     String executable,
     List<String> args, {
     Directory? workingDir,
+    Map<String, String>? environment,
     bool exitOnError = false,
   }) async {
     print(
-        'Running command: "$executable ${args.join(' ')}" in ${workingDir?.path ?? io.Directory.current.path}');
-    final io.Process process = await io.Process.start(executable, args,
-        workingDirectory: workingDir?.path);
-    await io.stdout.addStream(process.stdout);
-    await io.stderr.addStream(process.stderr);
+      'Running command: "$executable ${args.join(' ')}" in ${workingDir?.path ?? io.Directory.current.path}',
+    );
+    final io.Process process = await io.Process.start(
+      executable,
+      args,
+      workingDirectory: workingDir?.path,
+      environment: environment,
+      mode: io.ProcessStartMode.inheritStdio,
+    );
     if (exitOnError && await process.exitCode != 0) {
-      final String error =
-          _getErrorString(executable, args, workingDir: workingDir);
+      final String error = _getErrorString(
+        executable,
+        args,
+        workingDir: workingDir,
+      );
       print('$error See above for details.');
       throw ToolExit(await process.exitCode);
     }
@@ -60,20 +68,31 @@ class ProcessRunner {
   /// Defaults to `false`
   ///
   /// Returns the [io.ProcessResult] of the [executable].
-  Future<io.ProcessResult> run(String executable, List<String> args,
-      {Directory? workingDir,
-      bool exitOnError = false,
-      bool logOnError = false,
-      Encoding stdoutEncoding = io.systemEncoding,
-      Encoding stderrEncoding = io.systemEncoding}) async {
-    final io.ProcessResult result = await io.Process.run(executable, args,
-        workingDirectory: workingDir?.path,
-        stdoutEncoding: stdoutEncoding,
-        stderrEncoding: stderrEncoding);
+  Future<io.ProcessResult> run(
+    String executable,
+    List<String> args, {
+    Directory? workingDir,
+    Map<String, String>? environment,
+    bool exitOnError = false,
+    bool logOnError = false,
+    Encoding stdoutEncoding = io.systemEncoding,
+    Encoding stderrEncoding = io.systemEncoding,
+  }) async {
+    final io.ProcessResult result = await io.Process.run(
+      executable,
+      args,
+      workingDirectory: workingDir?.path,
+      environment: environment,
+      stdoutEncoding: stdoutEncoding,
+      stderrEncoding: stderrEncoding,
+    );
     if (result.exitCode != 0) {
       if (logOnError) {
-        final String error =
-            _getErrorString(executable, args, workingDir: workingDir);
+        final String error = _getErrorString(
+          executable,
+          args,
+          workingDir: workingDir,
+        );
         print('$error Stderr:\n${result.stdout}');
       }
       if (exitOnError) {
@@ -89,16 +108,25 @@ class ProcessRunner {
   /// passing [workingDir].
   ///
   /// Returns the started [io.Process].
-  Future<io.Process> start(String executable, List<String> args,
-      {Directory? workingDirectory}) async {
-    final io.Process process = await io.Process.start(executable, args,
-        workingDirectory: workingDirectory?.path);
+  Future<io.Process> start(
+    String executable,
+    List<String> args, {
+    Directory? workingDirectory,
+  }) async {
+    final io.Process process = await io.Process.start(
+      executable,
+      args,
+      workingDirectory: workingDirectory?.path,
+    );
     return process;
   }
 
-  String _getErrorString(String executable, List<String> args,
-      {Directory? workingDir}) {
-    final String workdir = workingDir == null ? '' : ' in ${workingDir.path}';
+  String _getErrorString(
+    String executable,
+    List<String> args, {
+    Directory? workingDir,
+  }) {
+    final workdir = workingDir == null ? '' : ' in ${workingDir.path}';
     return 'ERROR: Unable to execute "$executable ${args.join(' ')}"$workdir.';
   }
 }

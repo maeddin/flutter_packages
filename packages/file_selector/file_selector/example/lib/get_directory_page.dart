@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -14,7 +14,7 @@ class GetDirectoryPage extends StatelessWidget {
   final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   Future<void> _getDirectoryPath(BuildContext context) async {
-    const String confirmButtonText = 'Choose';
+    const confirmButtonText = 'Choose';
     final String? directoryPath = await getDirectoryPath(
       confirmButtonText: confirmButtonText,
     );
@@ -33,25 +33,18 @@ class GetDirectoryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Open a text file'),
-      ),
+      appBar: AppBar(title: const Text('Open a text file')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                // TODO(darrenaustin): Migrate to new API once it lands in stable: https://github.com/flutter/flutter/issues/105724
-                // ignore: deprecated_member_use
-                primary: Colors.blue,
-                // ignore: deprecated_member_use
-                onPrimary: Colors.white,
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
               ),
               onPressed: _isIOS ? null : () => _getDirectoryPath(context),
-              child: const Text(
-                'Press to ask user to choose a directory (not supported on iOS).',
-              ),
+              child: const Text('Press to ask user to choose a directory.'),
             ),
           ],
         ),
@@ -73,9 +66,7 @@ class TextDisplay extends StatelessWidget {
     return AlertDialog(
       title: const Text('Selected Directory'),
       content: Scrollbar(
-        child: SingleChildScrollView(
-          child: Text(directoryPath),
-        ),
+        child: SingleChildScrollView(child: Text(directoryPath)),
       ),
       actions: <Widget>[
         TextButton(

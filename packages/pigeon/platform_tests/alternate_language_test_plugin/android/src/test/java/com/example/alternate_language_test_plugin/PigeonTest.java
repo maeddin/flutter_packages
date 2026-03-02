@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -17,10 +17,10 @@ public class PigeonTest {
   public void clearsHandler() {
     HostSmallApi mockApi = mock(HostSmallApi.class);
     BinaryMessenger binaryMessenger = mock(BinaryMessenger.class);
-    HostSmallApi.setup(binaryMessenger, mockApi);
+    HostSmallApi.setUp(binaryMessenger, mockApi);
     ArgumentCaptor<String> channelName = ArgumentCaptor.forClass(String.class);
     verify(binaryMessenger, atLeast(1)).setMessageHandler(channelName.capture(), isNotNull());
-    HostSmallApi.setup(binaryMessenger, null);
+    HostSmallApi.setUp(binaryMessenger, null);
     verify(binaryMessenger, atLeast(1)).setMessageHandler(eq(channelName.getValue()), isNull());
   }
 }

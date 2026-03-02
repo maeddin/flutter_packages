@@ -1,50 +1,50 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
-import 'configuration.dart';
 import 'logging.dart';
 import 'match.dart';
+import 'misc/constants.dart';
 import 'misc/errors.dart';
 import 'path_utils.dart';
-import 'typedefs.dart';
-export 'route.dart';
-export 'state.dart';
+import 'route.dart';
+import 'router.dart' show GoRouter, OnEnter, RoutingConfig;
+import 'state.dart';
+
+/// The signature of the redirect callback.
+typedef GoRouterRedirect =
+    FutureOr<String?> Function(BuildContext context, GoRouterState state);
+
+typedef _NamedPath = ({String path, bool caseSensitive});
 
 /// The route configuration for GoRouter configured by the app.
 class RouteConfiguration {
   /// Constructs a [RouteConfiguration].
-  RouteConfiguration({
-    required this.routes,
-    required this.redirectLimit,
-    required this.topRedirect,
+  RouteConfiguration(
+    this._routingConfig, {
     required this.navigatorKey,
-  })  : assert(_debugCheckPath(routes, true)),
-        assert(
-            _debugVerifyNoDuplicatePathParameter(routes, <String, GoRoute>{})),
-        assert(_debugCheckParentNavigatorKeys(
-            routes, <GlobalKey<NavigatorState>>[navigatorKey])) {
-    assert(_debugCheckStatefulShellBranchDefaultLocations(routes));
-    _cacheNameToPath('', routes);
-    log.info(debugKnownRoutes());
+    this.extraCodec,
+    this.router,
+  }) {
+    _onRoutingTableChanged();
+    _routingConfig.addListener(_onRoutingTableChanged);
   }
 
   static bool _debugCheckPath(List<RouteBase> routes, bool isTopLevel) {
-    for (final RouteBase route in routes) {
+    for (final route in routes) {
       late bool subRouteIsTopLevel;
       if (route is GoRoute) {
-        if (isTopLevel) {
-          if (!route.path.startsWith('/')) {
-            throw GoError('top-level path must start with "/": $route');
-          }
-        } else {
-          if (route.path.startsWith('/') || route.path.endsWith('/')) {
-            throw GoError('sub-route path may not start or end with /: $route');
-          }
+        if (route.path != '/') {
+          assert(
+            !route.path.endsWith('/'),
+            'route path may not end with "/" except for the top "/" route. Found: $route',
+          );
         }
         subRouteIsTopLevel = false;
       } else if (route is ShellRouteBase) {
@@ -58,18 +58,21 @@ class RouteConfiguration {
   // Check that each parentNavigatorKey refers to either a ShellRoute's
   // navigatorKey or the root navigator key.
   static bool _debugCheckParentNavigatorKeys(
-      List<RouteBase> routes, List<GlobalKey<NavigatorState>> allowedKeys) {
-    for (final RouteBase route in routes) {
+    List<RouteBase> routes,
+    List<GlobalKey<NavigatorState>> allowedKeys,
+  ) {
+    for (final route in routes) {
       if (route is GoRoute) {
         final GlobalKey<NavigatorState>? parentKey = route.parentNavigatorKey;
         if (parentKey != null) {
           // Verify that the root navigator or a ShellRoute ancestor has a
           // matching navigator key.
-          if (!allowedKeys.contains(parentKey)) {
-            throw GoError('parentNavigatorKey $parentKey must refer to'
-                " an ancestor ShellRoute's navigatorKey or GoRouter's"
-                ' navigatorKey');
-          }
+          assert(
+            allowedKeys.contains(parentKey),
+            'parentNavigatorKey $parentKey must refer to'
+            " an ancestor ShellRoute's navigatorKey or GoRouter's"
+            ' navigatorKey',
+          );
 
           _debugCheckParentNavigatorKeys(
             route.routes,
@@ -82,30 +85,25 @@ class RouteConfiguration {
         } else {
           _debugCheckParentNavigatorKeys(
             route.routes,
-            <GlobalKey<NavigatorState>>[
-              ...allowedKeys,
-            ],
+            <GlobalKey<NavigatorState>>[...allowedKeys],
           );
         }
       } else if (route is ShellRoute) {
         _debugCheckParentNavigatorKeys(
           route.routes,
-          <GlobalKey<NavigatorState>>[...allowedKeys..add(route.navigatorKey)],
+          <GlobalKey<NavigatorState>>[...allowedKeys, route.navigatorKey],
         );
       } else if (route is StatefulShellRoute) {
         for (final StatefulShellBranch branch in route.branches) {
-          if (allowedKeys.contains(branch.navigatorKey)) {
-            throw GoError(
-                'StatefulShellBranch must not reuse an ancestor navigatorKey '
-                '(${branch.navigatorKey})');
-          }
+          assert(
+            !allowedKeys.contains(branch.navigatorKey),
+            'StatefulShellBranch must not reuse an ancestor navigatorKey '
+            '(${branch.navigatorKey})',
+          );
 
           _debugCheckParentNavigatorKeys(
             branch.routes,
-            <GlobalKey<NavigatorState>>[
-              ...allowedKeys,
-              branch.navigatorKey,
-            ],
+            <GlobalKey<NavigatorState>>[...allowedKeys, branch.navigatorKey],
           );
         }
       }
@@ -114,16 +112,19 @@ class RouteConfiguration {
   }
 
   static bool _debugVerifyNoDuplicatePathParameter(
-      List<RouteBase> routes, Map<String, GoRoute> usedPathParams) {
-    for (final RouteBase route in routes) {
+    List<RouteBase> routes,
+    Map<String, GoRoute> usedPathParams,
+  ) {
+    for (final route in routes) {
       if (route is! GoRoute) {
         continue;
       }
       for (final String pathParam in route.pathParameters) {
         if (usedPathParams.containsKey(pathParam)) {
-          final bool sameRoute = usedPathParams[pathParam] == route;
+          final sameRoute = usedPathParams[pathParam] == route;
           throw GoError(
-              "duplicate path parameter, '$pathParam' found in ${sameRoute ? '$route' : '${usedPathParams[pathParam]}, and $route'}");
+            "duplicate path parameter, '$pathParam' found in ${sameRoute ? '$route' : '${usedPathParams[pathParam]}, and $route'}",
+          );
         }
         usedPathParams[pathParam] = route;
       }
@@ -136,45 +137,48 @@ class RouteConfiguration {
   // Check to see that the configured initialLocation of StatefulShellBranches
   // points to a descendant route of the route branch.
   bool _debugCheckStatefulShellBranchDefaultLocations(List<RouteBase> routes) {
-    for (final RouteBase route in routes) {
+    for (final route in routes) {
       if (route is StatefulShellRoute) {
         for (final StatefulShellBranch branch in route.branches) {
           if (branch.initialLocation == null) {
             // Recursively search for the first GoRoute descendant. Will
             // throw assertion error if not found.
-            final GoRoute? route = branch.defaultRoute;
-            final String? initialLocation =
-                route != null ? locationForRoute(route) : null;
-            if (initialLocation == null) {
-              throw GoError(
-                  'The default location of a StatefulShellBranch must be '
-                  'derivable from GoRoute descendant');
-            }
-            if (route!.pathParameters.isNotEmpty) {
-              throw GoError(
-                  'The default location of a StatefulShellBranch cannot be '
-                  'a parameterized route');
-            }
+            final GoRoute? defaultGoRoute = branch.defaultRoute;
+            final String? initialLocation = defaultGoRoute != null
+                ? locationForRoute(defaultGoRoute)
+                : null;
+            assert(
+              initialLocation != null,
+              'The default location of a StatefulShellBranch must be '
+              'derivable from GoRoute descendant',
+            );
+            assert(
+              defaultGoRoute!.pathParameters.isEmpty,
+              'The default location of a StatefulShellBranch cannot be '
+              'a parameterized route',
+            );
           } else {
-            final RouteMatchList matchList = findMatch(branch.initialLocation!);
-            if (matchList.isError) {
-              throw GoError(
-                  'initialLocation (${matchList.uri}) of StatefulShellBranch must '
-                  'be a valid location');
-            }
+            final RouteMatchList matchList = findMatch(
+              Uri.parse(branch.initialLocation!),
+            );
+            assert(
+              !matchList.isError,
+              'initialLocation (${matchList.uri}) of StatefulShellBranch must '
+              'be a valid location',
+            );
             final List<RouteBase> matchRoutes = matchList.routes;
             final int shellIndex = matchRoutes.indexOf(route);
-            bool matchFound = false;
+            var matchFound = false;
             if (shellIndex >= 0 && (shellIndex + 1) < matchRoutes.length) {
               final RouteBase branchRoot = matchRoutes[shellIndex + 1];
               matchFound = branch.routes.contains(branchRoot);
             }
-            if (!matchFound) {
-              throw GoError(
-                  'The initialLocation (${branch.initialLocation}) of '
-                  'StatefulShellBranch must match a descendant route of the '
-                  'branch');
-            }
+            assert(
+              matchFound,
+              'The initialLocation (${branch.initialLocation}) of '
+              'StatefulShellBranch must match a descendant route of the '
+              'branch',
+            );
           }
         }
       }
@@ -184,53 +188,139 @@ class RouteConfiguration {
   }
 
   /// The match used when there is an error during parsing.
-  static RouteMatchList _errorRouteMatchList(Uri uri, String errorMessage) {
-    final Exception error = Exception(errorMessage);
+  static RouteMatchList _errorRouteMatchList(
+    Uri uri,
+    GoException exception, {
+    Object? extra,
+  }) {
     return RouteMatchList(
       matches: const <RouteMatch>[],
-      error: error,
+      extra: extra,
+      error: exception,
       uri: uri,
       pathParameters: const <String, String>{},
     );
   }
 
+  void _onRoutingTableChanged() {
+    final RoutingConfig routingTable = _routingConfig.value;
+    assert(_debugCheckPath(routingTable.routes, true));
+    assert(
+      _debugVerifyNoDuplicatePathParameter(
+        routingTable.routes,
+        <String, GoRoute>{},
+      ),
+    );
+    assert(
+      _debugCheckParentNavigatorKeys(
+        routingTable.routes,
+        <GlobalKey<NavigatorState>>[navigatorKey],
+      ),
+    );
+    assert(_debugCheckStatefulShellBranchDefaultLocations(routingTable.routes));
+    _nameToPath.clear();
+    _cacheNameToPath('', routingTable.routes);
+    log(debugKnownRoutes());
+  }
+
+  /// Builds a [GoRouterState] suitable for top level callback such as
+  /// `GoRouter.redirect` or `GoRouter.onException`.
+  GoRouterState buildTopLevelGoRouterState(RouteMatchList matchList) {
+    return GoRouterState(
+      this,
+      uri: matchList.uri,
+      // No name available at the top level trim the query params off the
+      // sub-location to match route.redirect
+      fullPath: matchList.fullPath,
+      pathParameters: matchList.pathParameters,
+      matchedLocation: matchList.uri.path,
+      extra: matchList.extra,
+      pageKey: const ValueKey<String>('topLevel'),
+      topRoute: matchList.lastOrNull?.route,
+      error: matchList.error,
+    );
+  }
+
+  /// The routing table.
+  final ValueListenable<RoutingConfig> _routingConfig;
+
   /// The list of top level routes used by [GoRouterDelegate].
-  final List<RouteBase> routes;
+  List<RouteBase> get routes => _routingConfig.value.routes;
+
+  /// Legacy top level page redirect.
+  ///
+  /// This is handled via [applyTopLegacyRedirect] and runs at most once per navigation.
+  GoRouterRedirect get topRedirect => _routingConfig.value.redirect;
+
+  /// Top level page on enter.
+  OnEnter? get topOnEnter => _routingConfig.value.onEnter;
 
   /// The limit for the number of consecutive redirects.
-  final int redirectLimit;
+  int get redirectLimit => _routingConfig.value.redirectLimit;
+
+  /// Normalizes a URI by ensuring it has a valid path and removing trailing slashes.
+  static Uri normalizeUri(Uri uri) {
+    if (uri.hasEmptyPath) {
+      return uri.replace(path: '/');
+    } else if (uri.path.length > 1 && uri.path.endsWith('/')) {
+      return uri.replace(path: uri.path.substring(0, uri.path.length - 1));
+    }
+    return uri;
+  }
 
   /// The global key for top level navigator.
   final GlobalKey<NavigatorState> navigatorKey;
 
-  /// Top level page redirect.
-  final GoRouterRedirect topRedirect;
+  /// The codec used to encode and decode extra into a serializable format.
+  ///
+  /// When navigating using [GoRouter.go] or [GoRouter.push], one can provide
+  /// an `extra` parameter along with it. If the extra contains complex data,
+  /// consider provide a codec for serializing and deserializing the extra data.
+  ///
+  /// See also:
+  ///  * [Navigation](https://pub.dev/documentation/go_router/latest/topics/Navigation-topic.html)
+  ///    topic.
+  ///  * [extra_codec](https://github.com/flutter/packages/blob/main/packages/go_router/example/lib/extra_codec.dart)
+  ///    example.
+  ///  * [topOnEnter] for navigation interception.
+  ///  * [topRedirect] for legacy redirections.
+  final Codec<Object?, Object?>? extraCodec;
 
-  final Map<String, String> _nameToPath = <String, String>{};
+  /// The GoRouter instance that owns this configuration.
+  ///
+  /// This is used to provide access to the router during redirects.
+  final GoRouter? router;
+
+  final Map<String, _NamedPath> _nameToPath = <String, _NamedPath>{};
 
   /// Looks up the url location by a [GoRoute]'s name.
   String namedLocation(
     String name, {
     Map<String, String> pathParameters = const <String, String>{},
     Map<String, dynamic> queryParameters = const <String, dynamic>{},
+    String? fragment,
   }) {
     assert(() {
-      log.info('getting location for name: '
-          '"$name"'
-          '${pathParameters.isEmpty ? '' : ', pathParameters: $pathParameters'}'
-          '${queryParameters.isEmpty ? '' : ', queryParameters: $queryParameters'}');
+      log(
+        'getting location for name: '
+        '"$name"'
+        '${pathParameters.isEmpty ? '' : ', pathParameters: $pathParameters'}'
+        '${queryParameters.isEmpty ? '' : ', queryParameters: $queryParameters'}'
+        '${fragment != null ? ', fragment: $fragment' : ''}',
+      );
       return true;
     }());
-    final String keyName = name.toLowerCase();
-    assert(_nameToPath.containsKey(keyName), 'unknown route name: $name');
-    final String path = _nameToPath[keyName]!;
+    assert(_nameToPath.containsKey(name), 'unknown route name: $name');
+    final _NamedPath path = _nameToPath[name]!;
     assert(() {
       // Check that all required params are present
-      final List<String> paramNames = <String>[];
-      patternToRegExp(path, paramNames);
-      for (final String paramName in paramNames) {
-        assert(pathParameters.containsKey(paramName),
-            'missing param "$paramName" for $path');
+      final paramNames = <String>[];
+      patternToRegExp(path.path, paramNames, caseSensitive: path.caseSensitive);
+      for (final paramName in paramNames) {
+        assert(
+          pathParameters.containsKey(paramName),
+          'missing param "$paramName" for $path',
+        );
       }
 
       // Check that there are no extra params
@@ -239,197 +329,146 @@ class RouteConfiguration {
       }
       return true;
     }());
-    final Map<String, String> encodedParams = <String, String>{
+    final encodedParams = <String, String>{
       for (final MapEntry<String, String> param in pathParameters.entries)
-        param.key: Uri.encodeComponent(param.value)
+        param.key: Uri.encodeComponent(param.value),
     };
-    final String location = patternToPath(path, encodedParams);
+    final String location = patternToPath(path.path, encodedParams);
     return Uri(
-            path: location,
-            queryParameters: queryParameters.isEmpty ? null : queryParameters)
-        .toString();
+      path: location,
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
+      fragment: fragment,
+    ).toString();
   }
 
   /// Finds the routes that matched the given URL.
-  RouteMatchList findMatch(String location, {Object? extra}) {
-    final Uri uri = Uri.parse(canonicalUri(location));
+  RouteMatchList findMatch(Uri uri, {Object? extra}) {
+    final pathParameters = <String, String>{};
+    final List<RouteMatchBase> matches = _getLocRouteMatches(
+      uri,
+      pathParameters,
+    );
 
-    final Map<String, String> pathParameters = <String, String>{};
-    final List<RouteMatch>? matches = _getLocRouteMatches(uri, pathParameters);
-
-    if (matches == null) {
-      return _errorRouteMatchList(uri, 'no routes for location: $uri');
+    if (matches.isEmpty) {
+      return _errorRouteMatchList(
+        uri,
+        GoException('no routes for location: $uri'),
+        extra: extra,
+      );
     }
     return RouteMatchList(
-        matches: matches,
+      matches: matches,
+      uri: uri,
+      pathParameters: pathParameters,
+      extra: extra,
+    );
+  }
+
+  /// Reparse the input RouteMatchList
+  RouteMatchList reparse(RouteMatchList matchList) {
+    RouteMatchList result = findMatch(matchList.uri, extra: matchList.extra);
+
+    for (final ImperativeRouteMatch imperativeMatch
+        in matchList.matches.whereType<ImperativeRouteMatch>()) {
+      final match = ImperativeRouteMatch(
+        pageKey: imperativeMatch.pageKey,
+        matches: findMatch(
+          imperativeMatch.matches.uri,
+          extra: imperativeMatch.matches.extra,
+        ),
+        completer: imperativeMatch.completer,
+      );
+      result = result.push(match);
+    }
+    return result;
+  }
+
+  List<RouteMatchBase> _getLocRouteMatches(
+    Uri uri,
+    Map<String, String> pathParameters,
+  ) {
+    for (final RouteBase route in _routingConfig.value.routes) {
+      final List<RouteMatchBase> result = RouteMatchBase.match(
+        rootNavigatorKey: navigatorKey,
+        route: route,
         uri: uri,
         pathParameters: pathParameters,
-        extra: extra);
-  }
-
-  List<RouteMatch>? _getLocRouteMatches(
-      Uri uri, Map<String, String> pathParameters) {
-    final List<RouteMatch>? result = _getLocRouteRecursively(
-      location: uri.path,
-      remainingLocation: uri.path,
-      matchedLocation: '',
-      pathParameters: pathParameters,
-      routes: routes,
-    );
-    return result;
-  }
-
-  List<RouteMatch>? _getLocRouteRecursively({
-    required String location,
-    required String remainingLocation,
-    required String matchedLocation,
-    required Map<String, String> pathParameters,
-    required List<RouteBase> routes,
-  }) {
-    List<RouteMatch>? result;
-    late Map<String, String> subPathParameters;
-    // find the set of matches at this level of the tree
-    for (final RouteBase route in routes) {
-      subPathParameters = <String, String>{};
-
-      final RouteMatch? match = RouteMatch.match(
-        route: route,
-        remainingLocation: remainingLocation,
-        matchedLocation: matchedLocation,
-        pathParameters: subPathParameters,
       );
-
-      if (match == null) {
-        continue;
+      if (result.isNotEmpty) {
+        return result;
       }
-
-      if (match.route is GoRoute &&
-          match.matchedLocation.toLowerCase() == location.toLowerCase()) {
-        // If it is a complete match, then return the matched route
-        // NOTE: need a lower case match because matchedLocation is canonicalized to match
-        // the path case whereas the location can be of any case and still match
-        result = <RouteMatch>[match];
-      } else if (route.routes.isEmpty) {
-        // If it is partial match but no sub-routes, bail.
-        continue;
-      } else {
-        // Otherwise, recurse
-        final String childRestLoc;
-        final String newParentSubLoc;
-        if (match.route is ShellRouteBase) {
-          childRestLoc = remainingLocation;
-          newParentSubLoc = matchedLocation;
-        } else {
-          assert(location.startsWith(match.matchedLocation));
-          assert(remainingLocation.isNotEmpty);
-
-          childRestLoc = location.substring(match.matchedLocation.length +
-              (match.matchedLocation == '/' ? 0 : 1));
-          newParentSubLoc = match.matchedLocation;
-        }
-
-        final List<RouteMatch>? subRouteMatch = _getLocRouteRecursively(
-          location: location,
-          remainingLocation: childRestLoc,
-          matchedLocation: newParentSubLoc,
-          pathParameters: subPathParameters,
-          routes: route.routes,
-        );
-
-        // If there's no sub-route matches, there is no match for this location
-        if (subRouteMatch == null) {
-          continue;
-        }
-        result = <RouteMatch>[match, ...subRouteMatch];
-      }
-      // Should only reach here if there is a match.
-      break;
     }
-    if (result != null) {
-      pathParameters.addAll(subPathParameters);
-    }
-    return result;
+    return const <RouteMatchBase>[];
   }
 
-  /// Processes redirects by returning a new [RouteMatchList] representing the new
-  /// location.
+  /// Processes route-level redirects by returning a new [RouteMatchList] representing the new location.
+  ///
+  /// This method now handles ONLY route-level redirects.
+  /// Top-level redirects are handled by applyTopLegacyRedirect.
   FutureOr<RouteMatchList> redirect(
-      BuildContext context, FutureOr<RouteMatchList> prevMatchListFuture,
-      {required List<RouteMatchList> redirectHistory}) {
+    BuildContext context,
+    FutureOr<RouteMatchList> prevMatchListFuture, {
+    required List<RouteMatchList> redirectHistory,
+  }) {
     FutureOr<RouteMatchList> processRedirect(RouteMatchList prevMatchList) {
-      final String prevLocation = prevMatchList.uri.toString();
-      FutureOr<RouteMatchList> processTopLevelRedirect(
-          String? topRedirectLocation) {
-        if (topRedirectLocation != null &&
-            topRedirectLocation != prevLocation) {
+      final prevLocation = prevMatchList.uri.toString();
+
+      FutureOr<RouteMatchList> processRouteLevelRedirect(
+        String? routeRedirectLocation,
+      ) {
+        if (routeRedirectLocation != null &&
+            routeRedirectLocation != prevLocation) {
           final RouteMatchList newMatch = _getNewMatches(
-            topRedirectLocation,
+            routeRedirectLocation,
             prevMatchList.uri,
             redirectHistory,
           );
+
           if (newMatch.isError) {
             return newMatch;
           }
-          return redirect(
-            context,
-            newMatch,
-            redirectHistory: redirectHistory,
-          );
+          return redirect(context, newMatch, redirectHistory: redirectHistory);
         }
+        return prevMatchList;
+      }
 
-        FutureOr<RouteMatchList> processRouteLevelRedirect(
-            String? routeRedirectLocation) {
-          if (routeRedirectLocation != null &&
-              routeRedirectLocation != prevLocation) {
-            final RouteMatchList newMatch = _getNewMatches(
-              routeRedirectLocation,
-              prevMatchList.uri,
-              redirectHistory,
-            );
-
-            if (newMatch.isError) {
-              return newMatch;
-            }
-            return redirect(
-              context,
-              newMatch,
-              redirectHistory: redirectHistory,
-            );
-          }
-          return prevMatchList;
+      final routeMatches = <RouteMatchBase>[];
+      prevMatchList.visitRouteMatches((RouteMatchBase match) {
+        if (match.route.redirect != null) {
+          routeMatches.add(match);
         }
+        return true;
+      });
 
+      try {
         final FutureOr<String?> routeLevelRedirectResult =
-            _getRouteLevelRedirect(context, prevMatchList, 0);
+            _getRouteLevelRedirect(context, prevMatchList, routeMatches, 0);
+
         if (routeLevelRedirectResult is String?) {
           return processRouteLevelRedirect(routeLevelRedirectResult);
         }
         return routeLevelRedirectResult
-            .then<RouteMatchList>(processRouteLevelRedirect);
-      }
-
-      redirectHistory.add(prevMatchList);
-      // Check for top-level redirect
-      final FutureOr<String?> topRedirectResult = topRedirect(
-        context,
-        GoRouterState(
-          this,
-          location: prevLocation,
-          name: null,
-          // No name available at the top level trim the query params off the
-          // sub-location to match route.redirect
-          matchedLocation: prevMatchList.uri.path,
-          queryParameters: prevMatchList.uri.queryParameters,
-          queryParametersAll: prevMatchList.uri.queryParametersAll,
+            .then<RouteMatchList>(processRouteLevelRedirect)
+            .catchError((Object error) {
+              final GoException goException = error is GoException
+                  ? error
+                  : GoException('Exception during route redirect: $error');
+              return _errorRouteMatchList(
+                prevMatchList.uri,
+                goException,
+                extra: prevMatchList.extra,
+              );
+            });
+      } catch (exception) {
+        final GoException goException = exception is GoException
+            ? exception
+            : GoException('Exception during route redirect: $exception');
+        return _errorRouteMatchList(
+          prevMatchList.uri,
+          goException,
           extra: prevMatchList.extra,
-          pageKey: const ValueKey<String>('topLevel'),
-        ),
-      );
-
-      if (topRedirectResult is String?) {
-        return processTopLevelRedirect(topRedirectResult);
+        );
       }
-      return topRedirectResult.then<RouteMatchList>(processTopLevelRedirect);
     }
 
     if (prevMatchListFuture is RouteMatchList) {
@@ -438,42 +477,110 @@ class RouteConfiguration {
     return prevMatchListFuture.then<RouteMatchList>(processRedirect);
   }
 
+  /// Applies the legacy top-level redirect to [prevMatchList] and returns the
+  /// resulting matches.
+  ///
+  /// Returns [prevMatchList] when no redirect happens.
+  ///
+  /// Shares [redirectHistory] with later route-level redirects for proper loop detection.
+  ///
+  /// Note: Legacy top-level redirect is executed at most once per navigation,
+  /// before route-level redirects. It does not re-evaluate if it redirects to
+  /// a location that would itself trigger another top-level redirect.
+  FutureOr<RouteMatchList> applyTopLegacyRedirect(
+    BuildContext context,
+    RouteMatchList prevMatchList, {
+    required List<RouteMatchList> redirectHistory,
+  }) {
+    final prevLocation = prevMatchList.uri.toString();
+    FutureOr<RouteMatchList> done(String? topLocation) {
+      if (topLocation != null && topLocation != prevLocation) {
+        final RouteMatchList newMatch = _getNewMatches(
+          topLocation,
+          prevMatchList.uri,
+          redirectHistory,
+        );
+        return newMatch;
+      }
+      return prevMatchList;
+    }
+
+    try {
+      final FutureOr<String?> res = _runInRouterZone(() {
+        return _routingConfig.value.redirect(
+          context,
+          buildTopLevelGoRouterState(prevMatchList),
+        );
+      });
+      if (res is String?) {
+        return done(res);
+      }
+      return res.then<RouteMatchList>(done).catchError((Object error) {
+        final GoException goException = error is GoException
+            ? error
+            : GoException('Exception during redirect: $error');
+        return _errorRouteMatchList(
+          prevMatchList.uri,
+          goException,
+          extra: prevMatchList.extra,
+        );
+      });
+    } catch (exception) {
+      final GoException goException = exception is GoException
+          ? exception
+          : GoException('Exception during redirect: $exception');
+      return _errorRouteMatchList(
+        prevMatchList.uri,
+        goException,
+        extra: prevMatchList.extra,
+      );
+    }
+  }
+
   FutureOr<String?> _getRouteLevelRedirect(
     BuildContext context,
     RouteMatchList matchList,
+    List<RouteMatchBase> routeMatches,
     int currentCheckIndex,
   ) {
-    if (currentCheckIndex >= matchList.matches.length) {
+    if (currentCheckIndex >= routeMatches.length) {
       return null;
     }
-    final RouteMatch match = matchList.matches[currentCheckIndex];
+    final RouteMatchBase match = routeMatches[currentCheckIndex];
     FutureOr<String?> processRouteRedirect(String? newLocation) =>
         newLocation ??
-        _getRouteLevelRedirect(context, matchList, currentCheckIndex + 1);
+        _getRouteLevelRedirect(
+          context,
+          matchList,
+          routeMatches,
+          currentCheckIndex + 1,
+        );
     final RouteBase route = match.route;
-    FutureOr<String?> routeRedirectResult;
-    if (route is GoRoute && route.redirect != null) {
-      routeRedirectResult = route.redirect!(
-        context,
-        GoRouterState(
-          this,
-          location: matchList.uri.toString(),
-          matchedLocation: match.matchedLocation,
-          name: route.name,
-          path: route.path,
-          fullPath: matchList.fullPath,
-          extra: matchList.extra,
-          pathParameters: matchList.pathParameters,
-          queryParameters: matchList.uri.queryParameters,
-          queryParametersAll: matchList.uri.queryParametersAll,
-          pageKey: match.pageKey,
-        ),
+    try {
+      final FutureOr<String?> routeRedirectResult = _runInRouterZone(() {
+        return route.redirect!.call(context, match.buildState(this, matchList));
+      });
+      if (routeRedirectResult is String?) {
+        return processRouteRedirect(routeRedirectResult);
+      }
+      return routeRedirectResult.then<String?>(processRouteRedirect).catchError(
+        (Object error) {
+          // Convert any exception during async route redirect to a GoException
+          final GoException goException = error is GoException
+              ? error
+              : GoException('Exception during route redirect: $error');
+          // Throw the GoException to be caught by the redirect handling chain
+          throw goException;
+        },
       );
+    } catch (exception) {
+      // Convert any exception during route redirect to a GoException
+      final GoException goException = exception is GoException
+          ? exception
+          : GoException('Exception during route redirect: $exception');
+      // Throw the GoException to be caught by the redirect handling chain
+      throw goException;
     }
-    if (routeRedirectResult is String?) {
-      return processRouteRedirect(routeRedirectResult);
-    }
-    return routeRedirectResult.then<String?>(processRouteRedirect);
   }
 
   RouteMatchList _getNewMatches(
@@ -482,35 +589,83 @@ class RouteConfiguration {
     List<RouteMatchList> redirectHistory,
   ) {
     try {
-      final RouteMatchList newMatch = findMatch(newLocation);
-      _addRedirect(redirectHistory, newMatch, previousLocation);
+      // Normalize the URI to avoid trailing slash inconsistencies
+      final Uri uri = normalizeUri(Uri.parse(newLocation));
+
+      final RouteMatchList newMatch = findMatch(uri);
+      // Only add successful matches to redirect history
+      if (!newMatch.isError) {
+        _addRedirect(redirectHistory, newMatch);
+      }
       return newMatch;
-    } on RedirectionError catch (e) {
-      log.info('Redirection error: ${e.message}');
-      return _errorRouteMatchList(e.location, e.message);
+    } catch (exception) {
+      final GoException goException = exception is GoException
+          ? exception
+          : GoException('Exception during redirect: $exception');
+      log('Redirection exception: ${goException.message}');
+      return _errorRouteMatchList(previousLocation, goException);
     }
   }
 
   /// Adds the redirect to [redirects] if it is valid.
   ///
   /// Throws if a loop is detected or the redirection limit is reached.
-  void _addRedirect(
-    List<RouteMatchList> redirects,
-    RouteMatchList newMatch,
-    Uri prevLocation,
-  ) {
+  void _addRedirect(List<RouteMatchList> redirects, RouteMatchList newMatch) {
     if (redirects.contains(newMatch)) {
-      throw RedirectionError('redirect loop detected',
-          <RouteMatchList>[...redirects, newMatch], prevLocation);
+      throw GoException(
+        'redirect loop detected ${_formatRedirectionHistory(<RouteMatchList>[...redirects, newMatch])}',
+      );
     }
-    if (redirects.length > redirectLimit) {
-      throw RedirectionError('too many redirects',
-          <RouteMatchList>[...redirects, newMatch], prevLocation);
+    // Check limit before adding (redirects should only contain actual redirects, not the initial location)
+    if (redirects.length >= _routingConfig.value.redirectLimit) {
+      throw GoException(
+        'too many redirects ${_formatRedirectionHistory(<RouteMatchList>[...redirects, newMatch])}',
+      );
     }
 
     redirects.add(newMatch);
 
-    log.info('redirecting to $newMatch');
+    log('redirecting to $newMatch');
+  }
+
+  String _formatRedirectionHistory(List<RouteMatchList> redirections) {
+    return redirections
+        .map<String>(
+          (RouteMatchList routeMatches) => routeMatches.uri.toString(),
+        )
+        .join(' => ');
+  }
+
+  /// Runs the given function in a Zone with the router context for redirects.
+  T _runInRouterZone<T>(T Function() callback) {
+    if (router == null) {
+      return callback();
+    }
+
+    T? result;
+    var errorOccurred = false;
+
+    runZonedGuarded<void>(
+      () {
+        result = callback();
+      },
+      (Object error, StackTrace stack) {
+        errorOccurred = true;
+        // Convert any exception during redirect to a GoException and rethrow
+        final GoException goException = error is GoException
+            ? error
+            : GoException('Exception during redirect: $error');
+        throw goException;
+      },
+      zoneValues: <Object?, Object?>{currentRouterKey: router},
+    );
+
+    if (errorOccurred) {
+      // This should not be reached since we rethrow in the error handler
+      throw GoException('Unexpected error in router zone');
+    }
+
+    return result as T;
   }
 
   /// Get the location for the provided route.
@@ -518,11 +673,11 @@ class RouteConfiguration {
   /// Builds the absolute path for the route, by concatenating the paths of the
   /// route and all its ancestors.
   String? locationForRoute(RouteBase route) =>
-      fullPathForRoute(route, '', routes);
+      fullPathForRoute(route, '', _routingConfig.value.routes);
 
   @override
   String toString() {
-    return 'RouterConfiguration: $routes';
+    return 'RouterConfiguration: ${_routingConfig.value.routes}';
   }
 
   /// Returns the full path of [routes].
@@ -531,45 +686,104 @@ class RouteConfiguration {
   /// is also appended if not null
   @visibleForTesting
   String debugKnownRoutes() {
-    final StringBuffer sb = StringBuffer();
+    final sb = StringBuffer();
     sb.writeln('Full paths for routes:');
-    _debugFullPathsFor(routes, '', 0, sb);
+    _debugFullPathsFor(
+      _routingConfig.value.routes,
+      '',
+      const <_DecorationType>[],
+      sb,
+    );
 
     if (_nameToPath.isNotEmpty) {
       sb.writeln('known full paths for route names:');
-      for (final MapEntry<String, String> e in _nameToPath.entries) {
-        sb.writeln('  ${e.key} => ${e.value}');
+      for (final MapEntry<String, _NamedPath> e in _nameToPath.entries) {
+        sb.writeln(
+          '  ${e.key} => ${e.value.path}${e.value.caseSensitive ? '' : ' (case-insensitive)'}',
+        );
       }
     }
 
     return sb.toString();
   }
 
-  void _debugFullPathsFor(List<RouteBase> routes, String parentFullpath,
-      int depth, StringBuffer sb) {
-    for (final RouteBase route in routes) {
+  void _debugFullPathsFor(
+    List<RouteBase> routes,
+    String parentFullpath,
+    List<_DecorationType> parentDecoration,
+    StringBuffer sb,
+  ) {
+    for (final (int index, RouteBase route) in routes.indexed) {
+      final List<_DecorationType> decoration = _getDecoration(
+        parentDecoration,
+        index,
+        routes.length,
+      );
+      final String decorationString = decoration
+          .map((_DecorationType e) => e.toString())
+          .join();
+      var path = parentFullpath;
       if (route is GoRoute) {
-        final String fullPath = concatenatePaths(parentFullpath, route.path);
-        sb.writeln('  => ${''.padLeft(depth * 2)}$fullPath');
-        _debugFullPathsFor(route.routes, fullPath, depth + 1, sb);
-      } else if (route is ShellRoute) {
-        _debugFullPathsFor(route.routes, parentFullpath, depth, sb);
+        path = concatenatePaths(parentFullpath, route.path);
+        final String? screenName = route.builder?.runtimeType
+            .toString()
+            .split('=> ')
+            .last;
+        sb.writeln(
+          '$decorationString$path '
+          '${screenName == null ? '' : '($screenName)'}',
+        );
+      } else if (route is ShellRouteBase) {
+        sb.writeln('$decorationString (ShellRoute)');
       }
+      _debugFullPathsFor(route.routes, path, decoration, sb);
+    }
+  }
+
+  List<_DecorationType> _getDecoration(
+    List<_DecorationType> parentDecoration,
+    int index,
+    int length,
+  ) {
+    final Iterable<_DecorationType> newDecoration = parentDecoration.map((
+      _DecorationType e,
+    ) {
+      switch (e) {
+        // swap
+        case _DecorationType.branch:
+          return _DecorationType.parentBranch;
+        case _DecorationType.leaf:
+          return _DecorationType.none;
+        // no swap
+        case _DecorationType.parentBranch:
+          return _DecorationType.parentBranch;
+        case _DecorationType.none:
+          return _DecorationType.none;
+      }
+    });
+    if (index == length - 1) {
+      return <_DecorationType>[...newDecoration, _DecorationType.leaf];
+    } else {
+      return <_DecorationType>[...newDecoration, _DecorationType.branch];
     }
   }
 
   void _cacheNameToPath(String parentFullPath, List<RouteBase> childRoutes) {
-    for (final RouteBase route in childRoutes) {
+    for (final route in childRoutes) {
       if (route is GoRoute) {
         final String fullPath = concatenatePaths(parentFullPath, route.path);
 
         if (route.name != null) {
-          final String name = route.name!.toLowerCase();
+          final String name = route.name!;
           assert(
-              !_nameToPath.containsKey(name),
-              'duplication fullpaths for name '
-              '"$name":${_nameToPath[name]}, $fullPath');
-          _nameToPath[name] = fullPath;
+            !_nameToPath.containsKey(name),
+            'duplication fullpaths for name '
+            '"$name":${_nameToPath[name]!.path}, $fullPath',
+          );
+          _nameToPath[name] = (
+            path: fullPath,
+            caseSensitive: route.caseSensitive,
+          );
         }
 
         if (route.routes.isNotEmpty) {
@@ -582,4 +796,18 @@ class RouteConfiguration {
       }
     }
   }
+}
+
+enum _DecorationType {
+  parentBranch('│ '),
+  branch('├─'),
+  leaf('└─'),
+  none('  ');
+
+  const _DecorationType(this.value);
+
+  final String value;
+
+  @override
+  String toString() => value;
 }

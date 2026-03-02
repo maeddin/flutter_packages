@@ -1,12 +1,12 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:file/file.dart';
 import 'package:pub_semver/pub_semver.dart';
 import 'package:yaml_edit/yaml_edit.dart';
 
 import 'common/core.dart';
+import 'common/output_utils.dart';
 import 'common/package_looping_command.dart';
 import 'common/repository_package.dart';
 
@@ -15,10 +15,12 @@ const int _exitUnknownVersion = 3;
 /// A command to update the minimum Flutter and Dart SDKs of packages.
 class UpdateMinSdkCommand extends PackageLoopingCommand {
   /// Creates a publish metadata updater command instance.
-  UpdateMinSdkCommand(Directory packagesDir) : super(packagesDir) {
-    argParser.addOption(_flutterMinFlag,
-        mandatory: true,
-        help: 'The minimum version of Flutter to set SDK constraints to.');
+  UpdateMinSdkCommand(super.packagesDir, {super.gitDir}) {
+    argParser.addOption(
+      _flutterMinFlag,
+      mandatory: true,
+      help: 'The minimum version of Flutter to set SDK constraints to.',
+    );
   }
 
   static const String _flutterMinFlag = 'flutter-min';
@@ -30,7 +32,8 @@ class UpdateMinSdkCommand extends PackageLoopingCommand {
   final String name = 'update-min-sdk';
 
   @override
-  final String description = 'Updates the Flutter and Dart SDK minimums '
+  final String description =
+      'Updates the Flutter and Dart SDK minimums '
       'in pubspec.yaml to match the given Flutter version.';
 
   @override
@@ -45,10 +48,12 @@ class UpdateMinSdkCommand extends PackageLoopingCommand {
     _flutterMinVersion = Version.parse(getStringArg(_flutterMinFlag));
     final Version? dartMinVersion = getDartSdkForFlutterSdk(_flutterMinVersion);
     if (dartMinVersion == null) {
-      printError('Dart SDK version for Fluter SDK version '
-          '$_flutterMinVersion is unknown. '
-          'Please update the map for getDartSdkForFlutterSdk with the '
-          'corresponding Dart version.');
+      printError(
+        'Dart SDK version for Flutter SDK version '
+        '$_flutterMinVersion is unknown. '
+        'Please update the map for getDartSdkForFlutterSdk with the '
+        'corresponding Dart version.',
+      );
       throw ToolExit(_exitUnknownVersion);
     }
     _dartMinVersion = dartMinVersion;
@@ -58,33 +63,28 @@ class UpdateMinSdkCommand extends PackageLoopingCommand {
   Future<PackageResult> runForPackage(RepositoryPackage package) async {
     final Pubspec pubspec = package.parsePubspec();
 
-    const String environmentKey = 'environment';
-    const String dartSdkKey = 'sdk';
-    const String flutterSdkKey = 'flutter';
+    const environmentKey = 'environment';
+    const dartSdkKey = 'sdk';
+    const flutterSdkKey = 'flutter';
 
     final VersionRange? dartRange = _sdkRange(pubspec, dartSdkKey);
     final VersionRange? flutterRange = _sdkRange(pubspec, flutterSdkKey);
 
-    final YamlEditor editablePubspec =
-        YamlEditor(package.pubspecFile.readAsStringSync());
+    final editablePubspec = YamlEditor(package.pubspecFile.readAsStringSync());
     if (dartRange != null &&
         (dartRange.min ?? Version.none) < _dartMinVersion) {
-      Version upperBound = _dartMinVersion.nextMajor;
-      // pub special-cases 3.0.0 as an upper bound to be treated as 4.0.0, and
-      // using 3.0.0 is now an error at upload time, so special case it here.
-      if (upperBound.major == 3) {
-        upperBound = upperBound.nextMajor;
-      }
-      editablePubspec.update(
-          <String>[environmentKey, dartSdkKey],
-          VersionRange(min: _dartMinVersion, includeMin: true, max: upperBound)
-              .toString());
+      editablePubspec.update(<String>[
+        environmentKey,
+        dartSdkKey,
+      ], '^$_dartMinVersion');
       print('${indentation}Updating Dart minimum to $_dartMinVersion');
     }
     if (flutterRange != null &&
         (flutterRange.min ?? Version.none) < _flutterMinVersion) {
-      editablePubspec.update(<String>[environmentKey, flutterSdkKey],
-          VersionRange(min: _flutterMinVersion, includeMin: true).toString());
+      editablePubspec.update(<String>[
+        environmentKey,
+        flutterSdkKey,
+      ], VersionRange(min: _flutterMinVersion, includeMin: true).toString());
       print('${indentation}Updating Flutter minimum to $_flutterMinVersion');
     }
     package.pubspecFile.writeAsStringSync(editablePubspec.toString());
@@ -95,7 +95,7 @@ class UpdateMinSdkCommand extends PackageLoopingCommand {
   /// Returns the given "environment" section's [key] constraint as a range,
   /// if the key is present and has a range.
   VersionRange? _sdkRange(Pubspec pubspec, String key) {
-    final VersionConstraint? constraint = pubspec.environment?[key];
+    final VersionConstraint? constraint = pubspec.environment[key];
     if (constraint is VersionRange) {
       return constraint;
     }

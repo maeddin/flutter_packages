@@ -1,5 +1,5 @@
-group 'com.example.alternate_language_test_plugin'
-version '1.0'
+group = 'com.example.alternate_language_test_plugin'
+version = '1.0'
 
 buildscript {
     repositories {
@@ -8,7 +8,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.0.0'
+        classpath 'com.android.tools.build:gradle:8.13.1'
     }
 }
 
@@ -22,19 +22,16 @@ rootProject.allprojects {
 apply plugin: 'com.android.library'
 
 android {
-    // Conditional for compatibility with AGP <4.2.
-    if (project.android.hasProperty("namespace")) {
-        namespace 'com.example.alternate_language_test_plugin'
-    }
-    compileSdkVersion 33
+    namespace = "com.example.alternate_language_test_plugin"
+    compileSdk = flutter.compileSdkVersion
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     defaultConfig {
-        minSdkVersion 16
+        minSdkVersion 24
     }
 
     testOptions {
@@ -50,13 +47,13 @@ android {
     }
 
     lintOptions {
-        checkAllWarnings true
-        warningsAsErrors true
-        disable 'AndroidGradlePluginVersion', 'InvalidPackage', 'GradleDependency'
+        checkAllWarnings = true
+        warningsAsErrors = true
+        disable 'AndroidGradlePluginVersion', 'InvalidPackage', 'GradleDependency', 'NewerVersionAvailable'
     }
 
     dependencies {
-        testImplementation 'junit:junit:4.13.2'
-        testImplementation "org.mockito:mockito-core:5.1.1"
+        testImplementation("junit:junit:4.13.2")
+        testImplementation("org.mockito:mockito-core:5.22.0")
     }
 }

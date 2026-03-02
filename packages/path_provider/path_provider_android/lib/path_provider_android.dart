@@ -1,12 +1,14 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'messages.g.dart' as messages;
 
 messages.StorageDirectory _convertStorageDirectory(
-    StorageDirectory? directory) {
+  StorageDirectory? directory,
+) {
   switch (directory) {
     case null:
       return messages.StorageDirectory.root;
@@ -35,7 +37,11 @@ messages.StorageDirectory _convertStorageDirectory(
 
 /// The Android implementation of [PathProviderPlatform].
 class PathProviderAndroid extends PathProviderPlatform {
-  final messages.PathProviderApi _api = messages.PathProviderApi();
+  /// Creates an instance of [PathProviderAndroid].
+  PathProviderAndroid({@visibleForTesting messages.PathProviderApi? api})
+    : _api = api ?? messages.PathProviderApi();
+
+  final messages.PathProviderApi _api;
 
   /// Registers this class as the default instance of [PathProviderPlatform].
   static void registerWith() {
@@ -63,25 +69,38 @@ class PathProviderAndroid extends PathProviderPlatform {
   }
 
   @override
+  Future<String?> getApplicationCachePath() {
+    return _api.getApplicationCachePath();
+  }
+
+  @override
   Future<String?> getExternalStoragePath() {
     return _api.getExternalStoragePath();
   }
 
   @override
   Future<List<String>?> getExternalCachePaths() async {
-    return (await _api.getExternalCachePaths()).cast<String>();
+    return _api.getExternalCachePaths();
   }
 
   @override
   Future<List<String>?> getExternalStoragePaths({
     StorageDirectory? type,
   }) async {
-    return (await _api.getExternalStoragePaths(_convertStorageDirectory(type)))
-        .cast<String>();
+    return _getExternalStoragePaths(type: type);
   }
 
   @override
-  Future<String?> getDownloadsPath() {
-    throw UnsupportedError('getDownloadsPath is not supported on Android');
+  Future<String?> getDownloadsPath() async {
+    final List<String> paths = await _getExternalStoragePaths(
+      type: StorageDirectory.downloads,
+    );
+    return paths.isEmpty ? null : paths.first;
+  }
+
+  Future<List<String>> _getExternalStoragePaths({
+    StorageDirectory? type,
+  }) async {
+    return _api.getExternalStoragePaths(_convertStorageDirectory(type));
   }
 }

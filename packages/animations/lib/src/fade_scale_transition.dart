@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -79,10 +79,7 @@ class FadeScaleTransitionConfiguration extends ModalConfiguration {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    return FadeScaleTransition(
-      animation: animation,
-      child: child,
-    );
+    return FadeScaleTransition(animation: animation, child: child);
   }
 }
 
@@ -108,11 +105,7 @@ class FadeScaleTransition extends StatelessWidget {
   ///
   /// [animation] is typically an [AnimationController] that drives the transition
   /// animation. [animation] cannot be null.
-  const FadeScaleTransition({
-    super.key,
-    required this.animation,
-    this.child,
-  });
+  const FadeScaleTransition({super.key, required this.animation, this.child});
 
   /// The animation that drives the [child]'s entrance and exit.
   ///
@@ -134,7 +127,7 @@ class FadeScaleTransition extends StatelessWidget {
   static final Animatable<double> _scaleInTransition = Tween<double>(
     begin: 0.80,
     end: 1.00,
-  ).chain(CurveTween(curve: decelerateEasing));
+  ).chain(CurveTween(curve: Easing.legacyDecelerate));
   static final Animatable<double> _fadeOutTransition = Tween<double>(
     begin: 1.0,
     end: 0.0,
@@ -144,29 +137,23 @@ class FadeScaleTransition extends StatelessWidget {
   Widget build(BuildContext context) {
     return DualTransitionBuilder(
       animation: animation,
-      forwardBuilder: (
-        BuildContext context,
-        Animation<double> animation,
-        Widget? child,
-      ) {
-        return FadeTransition(
-          opacity: _fadeInTransition.animate(animation),
-          child: ScaleTransition(
-            scale: _scaleInTransition.animate(animation),
-            child: child,
-          ),
-        );
-      },
-      reverseBuilder: (
-        BuildContext context,
-        Animation<double> animation,
-        Widget? child,
-      ) {
-        return FadeTransition(
-          opacity: _fadeOutTransition.animate(animation),
-          child: child,
-        );
-      },
+      forwardBuilder:
+          (BuildContext context, Animation<double> animation, Widget? child) {
+            return FadeTransition(
+              opacity: _fadeInTransition.animate(animation),
+              child: ScaleTransition(
+                scale: _scaleInTransition.animate(animation),
+                child: child,
+              ),
+            );
+          },
+      reverseBuilder:
+          (BuildContext context, Animation<double> animation, Widget? child) {
+            return FadeTransition(
+              opacity: _fadeOutTransition.animate(animation),
+              child: child,
+            );
+          },
       child: child,
     );
   }

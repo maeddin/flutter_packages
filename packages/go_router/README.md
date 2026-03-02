@@ -35,8 +35,18 @@ See the API documentation for details on the following topics:
 - [Type-safe routes](https://pub.dev/documentation/go_router/latest/topics/Type-safe%20routes-topic.html)
 - [Named routes](https://pub.dev/documentation/go_router/latest/topics/Named%20routes-topic.html)
 - [Error handling](https://pub.dev/documentation/go_router/latest/topics/Error%20handling-topic.html)
+- [State restoration](https://pub.dev/documentation/go_router/latest/topics/State%20restoration-topic.html)
 
-## Migration guides
+## Migration Guides
+- [Migrating to 17.0.0](https://flutter.dev/go/go-router-v17-breaking-changes).
+- [Migrating to 16.0.0](https://flutter.dev/go/go-router-v16-breaking-changes).
+- [Migrating to 15.0.0](https://flutter.dev/go/go-router-v15-breaking-changes).
+- [Migrating to 14.0.0](https://flutter.dev/go/go-router-v14-breaking-changes).
+- [Migrating to 13.0.0](https://flutter.dev/go/go-router-v13-breaking-changes).
+- [Migrating to 12.0.0](https://flutter.dev/go/go-router-v12-breaking-changes).
+- [Migrating to 11.0.0](https://flutter.dev/go/go-router-v11-breaking-changes).
+- [Migrating to 10.0.0](https://flutter.dev/go/go-router-v10-breaking-changes).
+- [Migrating to 9.0.0](https://flutter.dev/go/go-router-v9-breaking-changes).
 - [Migrating to 8.0.0](https://flutter.dev/go/go-router-v8-breaking-changes).
 - [Migrating to 7.0.0](https://flutter.dev/go/go-router-v7-breaking-changes).
 - [Migrating to 6.0.0](https://flutter.dev/go/go-router-v6-breaking-changes)
@@ -52,6 +62,21 @@ See the
 [Changelog](https://github.com/flutter/packages/blob/main/packages/go_router/CHANGELOG.md)
 for a list of new features and breaking changes.
 
+## Triage
+See the [GitHub issues](https://github.com/flutter/flutter/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-asc+label%3A"p%3A%20go_router")
+for all Go Router issues.
+
+The project follows the same priority system as flutter framework.
+[P0](https://github.com/flutter/flutter/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-asc+label%3A"p%3A%20go_router"+label%3AP0)
+[P1](https://github.com/flutter/flutter/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-asc+label%3A"p%3A%20go_router"+label%3AP1)
+[P2](https://github.com/flutter/flutter/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-asc+label%3A"p%3A%20go_router"+label%3AP2)
+[P3](https://github.com/flutter/flutter/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-asc+label%3A"p%3A%20go_router"+label%3AP3)
+
+[Package PRs](https://github.com/flutter/packages/pulls?q=is%3Aopen+is%3Apr+label%3A%22p%3A+go_router%22)
+
 ## Roadmap
-See the [GitHub project](https://github.com/orgs/flutter/projects/17/) for a 
-prioritized list of feature requests and known issues.
+
+This package is considered feature-complete.  The Flutter team's primary focus will be on
+addressing bug fixes and ensuring stability.  While active feature development is not currently
+planned, we still welcome and encourage community contributions to expand the package's
+functionality.

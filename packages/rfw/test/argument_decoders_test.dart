@@ -1,26 +1,25 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 // This file is hand-formatted.
+// ignore_for_file: no_literal_bool_comparisons
 
-import 'dart:io' show Platform;
+import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rfw/formats.dart' show parseLibraryFile;
 import 'package:rfw/rfw.dart';
 
-// See Contributing section of README.md file.
-final bool runGoldens = Platform.isLinux &&
-    (!Platform.environment.containsKey('CHANNEL') ||
-        Platform.environment['CHANNEL'] == 'master');
+import 'utils.dart';
 
 void main() {
   testWidgets('String example', (WidgetTester tester) async {
     Duration? duration;
     Curve? curve;
-    int buildCount = 0;
+    var buildCount = 0;
     final Widget builder = Builder(
       builder: (BuildContext context) {
         buildCount += 1;
@@ -60,8 +59,8 @@ void main() {
   testWidgets('spot checks', (WidgetTester tester) async {
     Duration? duration;
     Curve? curve;
-    int buildCount = 0;
-    final Runtime runtime = Runtime()
+    var buildCount = 0;
+    final runtime = Runtime()
       ..update(const LibraryName(<String>['core']), createCoreWidgets())
       ..update(const LibraryName(<String>['builder']), LocalWidgetLibrary(<String, LocalWidgetBuilder>{
         'Test': (BuildContext context, DataSource source) {
@@ -72,8 +71,9 @@ void main() {
         },
       }))
       ..update(const LibraryName(<String>['test']), parseLibraryFile('import core; widget root = SizedBox();'));
-    final DynamicContent data = DynamicContent();
-    final List<String> eventLog = <String>[];
+    addTearDown(runtime.dispose);
+    final data = DynamicContent();
+    final eventLog = <String>[];
     await tester.pumpWidget(
       RemoteWidget(
         runtime: runtime,
@@ -234,10 +234,12 @@ void main() {
   });
 
   testWidgets('golden checks', (WidgetTester tester) async {
-    final Runtime runtime = Runtime()
+    final runtime = Runtime()
       ..update(const LibraryName(<String>['core']), createCoreWidgets())
       ..update(const LibraryName(<String>['test']), parseLibraryFile('import core; widget root = SizedBox();'));
-    final DynamicContent data = DynamicContent();
+      addTearDown(runtime.dispose);
+    final data = DynamicContent();
+    final eventLog = <String>[];
     await tester.pumpWidget(
       Directionality(
         textDirection: TextDirection.rtl,
@@ -245,6 +247,9 @@ void main() {
           runtime: runtime,
           data: data,
           widget: const FullyQualifiedWidgetName(LibraryName(<String>['test']), 'root'),
+          onEvent: (String eventName, DynamicMap eventArguments) {
+            eventLog.add('$eventName $eventArguments');
+          },
         ),
       ),
     );
@@ -254,6 +259,20 @@ void main() {
       return UnderlineTabIndicator(
         borderSide: ArgumentDecoders.borderSide(source, <Object>[...key, 'side']) ?? const BorderSide(width: 2.0, color: Color(0xFFFFFFFF)),
         insets: ArgumentDecoders.edgeInsets(source, <Object>['insets']) ?? EdgeInsets.zero,
+      );
+    };
+    ArgumentDecoders.gradientDecoders['custom'] = (DataSource source, List<Object> key) {
+      return const RadialGradient(
+        center: Alignment(0.7, -0.6),
+        radius: 0.2,
+        colors: <Color>[ Color(0xFFFFFF00), Color(0xFF0099FF) ],
+        stops: <double>[0.4, 1.0],
+      );
+    };
+    ArgumentDecoders.shapeBorderDecoders['custom'] = (DataSource source, List<Object> key) {
+      return StarBorder(
+        side: ArgumentDecoders.borderSide(source, <Object>[...key, 'side']) ?? const BorderSide(width: 2.0, color: Color(0xFFFFFFFF)),
+        points: source.v<double>(<Object>[...key, 'points']) ?? 5.0,
       );
     };
 
@@ -279,6 +298,7 @@ void main() {
                 1.0, 1.0, 1.0, 1.0, 1.0,
               ],
             },
+            filterQuality: "none",
           },
           gradient: {
             type: 'sweep',
@@ -297,6 +317,8 @@ void main() {
               color: 0xFF8811FF,
               blendMode: "xor",
             },
+            onError: event 'image-error-event' { },
+            filterQuality: "high",
           },
           gradient: {
             type: 'linear',
@@ -338,7 +360,7 @@ void main() {
                 { type: 'continuous', borderRadius: [ { x: 60.0 }, { x: 80.0 }, { x: 0.0 }, { x: 20.0, y: 50.0 } ], side: { width: 10.0, color: 0xFFEEFF33 } },
                 { type: 'rounded', borderRadius: [ { x: 20.0 } ], side: { width: 10.0, color: 0xFF00CCFF } },
                 { type: 'stadium', side: { width: 10.0, color: 0xFF00FFFF } },
-                { type: 'custom', side: { width: 100.0, color: 0xFFFF0000 } }, // should not render
+                { type: 'custom', side: { width: 5.0, color: 0xFFFFFF00 }, points: 6 }, // star
               ],
               gradient: {
                 type: 'radial',
@@ -349,24 +371,44 @@ void main() {
       );
     '''));
     await tester.pump();
+    if (!kIsWeb) {
+      expect(eventLog, hasLength(1));
+      expect(eventLog.first, startsWith('image-error-event {exception: HTTP request failed, statusCode: 400, x-invalid:'));
+      eventLog.clear();
+    }
     await expectLater(
       find.byType(RemoteWidget),
       matchesGoldenFile('goldens/argument_decoders_test.containers.png'),
-      skip: 'https://github.com/flutter/flutter/issues/106205'
+      // TODO(louisehsu): Unskip once golden file is updated. See
+      // https://github.com/flutter/flutter/issues/151995
+      skip: !runGoldens || true,
     );
     expect(find.byType(DecoratedBox), findsNWidgets(6));
+
+    final DecorationImage assetImage = (tester.widgetList<DecoratedBox>(find.byType(DecoratedBox)).toList()[1].decoration as BoxDecoration).image!;
+    expect(assetImage.image, isA<AssetImage>());
+    expect((assetImage.image as AssetImage).assetName, 'asset');
     expect(
-      (tester.widgetList<DecoratedBox>(find.byType(DecoratedBox)).toList()[1].decoration as BoxDecoration).image.toString(),
-      'DecorationImage(AssetImage(bundle: null, name: "asset"), ' // this just seemed like the easiest way to check all this...
-      'ColorFilter.matrix([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]), '
-      'Alignment.center, centerSlice: Rect.fromLTRB(5.0, 8.0, 105.0, 78.0), scale 1.0, opacity 1.0, FilterQuality.low)',
-    );
-    expect(
-      (tester.widgetList<DecoratedBox>(find.byType(DecoratedBox)).toList()[0].decoration as BoxDecoration).image.toString(),
-      'DecorationImage(NetworkImage("x-invalid://", scale: 1.0), '
-      'ColorFilter.mode(Color(0xff8811ff), BlendMode.xor), Alignment.center, scale 1.0, '
-      'opacity 1.0, FilterQuality.low)',
-    );
+        assetImage.colorFilter,
+        const ColorFilter.matrix(<double>[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]));
+    expect(assetImage.centerSlice, const Rect.fromLTRB(5.0, 8.0, 105.0, 78.0));
+    expect(assetImage.filterQuality, FilterQuality.none);
+
+    final DecorationImage networkImage = (tester.widgetList<DecoratedBox>(find.byType(DecoratedBox)).toList()[0].decoration as BoxDecoration).image!;
+    expect(networkImage.image, isA<NetworkImage>());
+    expect((networkImage.image as NetworkImage).url, 'x-invalid://');
+    expect(networkImage.colorFilter, const ColorFilter.mode(Color(0xFF8811FF), BlendMode.xor));
+    expect(networkImage.filterQuality, FilterQuality.high);
+
+    ArgumentDecoders.colorFilterDecoders['custom'] = (DataSource source, List<Object> key) {
+      return const ColorFilter.mode(Color(0x12345678), BlendMode.xor);
+    };
+    ArgumentDecoders.maskFilterDecoders['custom'] = (DataSource source, List<Object> key) {
+      return const MaskFilter.blur(BlurStyle.outer, 0.5);
+    };
+    ArgumentDecoders.shaderDecoders['custom'] = (DataSource source, List<Object> key) {
+      return ui.Gradient.linear(Offset.zero, const Offset(100.0, 100.0), const <Color>[Color(0xFFFFFF00), Color(0xFF00FFFF)]);
+    };
 
     runtime.update(const LibraryName(<String>['test']), parseLibraryFile('''
       import core;
@@ -428,7 +470,7 @@ void main() {
     await expectLater(
       find.byType(RemoteWidget),
       matchesGoldenFile('goldens/argument_decoders_test.text.png'),
-      skip: 'https://github.com/flutter/flutter/issues/106205'
+      skip: !runGoldens,
     );
 
     runtime.update(const LibraryName(<String>['test']), parseLibraryFile('''
@@ -451,7 +493,7 @@ void main() {
     await expectLater(
       find.byType(RemoteWidget),
       matchesGoldenFile('goldens/argument_decoders_test.gridview.fixed.png'),
-      skip: 'https://github.com/flutter/flutter/issues/106205'
+      skip: !runGoldens,
     );
 
     runtime.update(const LibraryName(<String>['test']), parseLibraryFile('''
@@ -474,10 +516,10 @@ void main() {
     await expectLater(
       find.byType(RemoteWidget),
       matchesGoldenFile('goldens/argument_decoders_test.gridview.max.png'),
-      skip: 'https://github.com/flutter/flutter/issues/106205'
+      skip: !runGoldens,
     );
 
-    int sawGridDelegateDecoder = 0;
+    var sawGridDelegateDecoder = 0;
     ArgumentDecoders.gridDelegateDecoders['custom'] = (DataSource source, List<Object> key) {
       sawGridDelegateDecoder += 1;
       return null;
@@ -504,7 +546,9 @@ void main() {
     await expectLater(
       find.byType(RemoteWidget),
       matchesGoldenFile('goldens/argument_decoders_test.gridview.custom.png'),
-      skip: 'https://github.com/flutter/flutter/issues/106205'
+      skip: !runGoldens,
     );
-  }, skip: !runGoldens);
+
+    expect(eventLog, isEmpty);
+  }, skip: kIsWeb || !isMainChannel); // https://github.com/flutter/flutter/pull/129851
 }

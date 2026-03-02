@@ -1,11 +1,11 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'dart:ui' show Offset;
 
 import 'package:flutter/foundation.dart'
-    show immutable, ValueChanged, VoidCallback;
+    show ValueChanged, VoidCallback, immutable;
 
 import 'types.dart';
 
@@ -64,8 +64,9 @@ class InfoWindow {
     );
   }
 
-  Object _toJson() {
-    final Map<String, Object> json = <String, Object>{};
+  /// Converts this object to something serializable in JSON.
+  Object toJson() {
+    final json = <String, Object>{};
 
     void addIfPresent(String fieldName, Object? value) {
       if (value != null) {
@@ -117,6 +118,8 @@ class MarkerId extends MapsObjectId<Marker> {
 /// A marker icon is drawn oriented against the device's screen rather than
 /// the map's surface; that is, it will not necessarily change orientation
 /// due to map rotations, tilting, or zooming.
+///
+/// Deprecated on the web in favor of [AdvancedMarker].
 @immutable
 class Marker implements MapsObject<Marker> {
   /// Creates a set of marker configuration options.
@@ -135,7 +138,7 @@ class Marker implements MapsObject<Marker> {
   /// * is positioned at 0, 0; [position] is `LatLng(0.0, 0.0)`
   /// * has an axis-aligned icon; [rotation] is 0.0
   /// * is visible; [visible] is true
-  /// * is placed at the base of the drawing order; [zIndex] is 0.0
+  /// * is placed at the base of the drawing order; [zIndexInt] is 0
   /// * reports [onTap] events
   /// * reports [onDragEnd] events
   const Marker({
@@ -150,18 +153,32 @@ class Marker implements MapsObject<Marker> {
     this.position = const LatLng(0.0, 0.0),
     this.rotation = 0.0,
     this.visible = true,
-    this.zIndex = 0.0,
+    @Deprecated(
+      'Use zIndexInt instead. '
+      'On some platforms zIndex is truncated to an int, which can lead to incorrect/unstable ordering.',
+    )
+    double zIndex = 0.0,
+    int zIndexInt = 0,
+    this.clusterManagerId,
     this.onTap,
     this.onDrag,
     this.onDragStart,
     this.onDragEnd,
-  }) : assert(0.0 <= alpha && alpha <= 1.0);
+  }) : assert(0.0 <= alpha && alpha <= 1.0),
+       assert(
+         zIndex == 0.0 || zIndexInt == 0,
+         'Only one of zIndex and zIndexInt can be provided',
+       ),
+       _zIndexNum = zIndexInt == 0 ? zIndex : zIndexInt;
 
   /// Uniquely identifies a [Marker].
   final MarkerId markerId;
 
   @override
   MarkerId get mapsId => markerId;
+
+  /// Marker clustering is managed by [ClusterManager] with [clusterManagerId].
+  final ClusterManagerId? clusterManagerId;
 
   /// The opacity of the marker, between 0.0 and 1.0 inclusive.
   ///
@@ -188,6 +205,12 @@ class Marker implements MapsObject<Marker> {
   final bool flat;
 
   /// A description of the bitmap used to draw the marker icon.
+  ///
+  /// To create marker icon from assets, use [AssetMapBitmap],
+  /// [AssetMapBitmap.create] or [BitmapDescriptor.asset].
+  ///
+  /// To create marker icon from raw PNG data use [BytesMapBitmap]
+  /// or [BitmapDescriptor.bytes].
   final BitmapDescriptor icon;
 
   /// A Google Maps InfoWindow.
@@ -204,12 +227,26 @@ class Marker implements MapsObject<Marker> {
   /// True if the marker is visible.
   final bool visible;
 
+  final num _zIndexNum;
+
   /// The z-index of the marker, used to determine relative drawing order of
   /// map overlays.
   ///
   /// Overlays are drawn in order of z-index, so that lower values means drawn
   /// earlier, and thus appearing to be closer to the surface of the Earth.
-  final double zIndex;
+  // TODO(stuartmorgan): Make this an int when removing the deprecated double zIndex parameter.
+  @Deprecated(
+    'Use zIndexInt instead. '
+    'On some platforms zIndex is truncated to an int, which can lead to incorrect/unstable ordering.',
+  )
+  double get zIndex => _zIndexNum.toDouble();
+
+  /// The z-index of the marker, used to determine relative drawing order of
+  /// map overlays.
+  ///
+  /// Overlays are drawn in order of z-index, so that lower values means drawn
+  /// earlier, and thus appearing to be closer to the surface of the Earth.
+  int get zIndexInt => _zIndexNum.round();
 
   /// Callbacks to receive tap events for markers placed on this map.
   final VoidCallback? onTap;
@@ -236,12 +273,22 @@ class Marker implements MapsObject<Marker> {
     LatLng? positionParam,
     double? rotationParam,
     bool? visibleParam,
+    @Deprecated(
+      'Use zIndexIntParam instead. '
+      'On some platforms zIndex is truncated to an int, which can lead to incorrect/unstable ordering.',
+    )
     double? zIndexParam,
+    int? zIndexIntParam,
     VoidCallback? onTapParam,
     ValueChanged<LatLng>? onDragStartParam,
     ValueChanged<LatLng>? onDragParam,
     ValueChanged<LatLng>? onDragEndParam,
+    ClusterManagerId? clusterManagerIdParam,
   }) {
+    assert(
+      zIndexParam == null || zIndexIntParam == null,
+      'Only one of zIndexParam and zIndexIntParam can be provided',
+    );
     return Marker(
       markerId: markerId,
       alpha: alphaParam ?? alpha,
@@ -254,11 +301,12 @@ class Marker implements MapsObject<Marker> {
       position: positionParam ?? position,
       rotation: rotationParam ?? rotation,
       visible: visibleParam ?? visible,
-      zIndex: zIndexParam ?? zIndex,
+      zIndex: zIndexIntParam?.toDouble() ?? zIndexParam ?? zIndex,
       onTap: onTapParam ?? onTap,
       onDragStart: onDragStartParam ?? onDragStart,
       onDrag: onDragParam ?? onDrag,
       onDragEnd: onDragEndParam ?? onDragEnd,
+      clusterManagerId: clusterManagerIdParam ?? clusterManagerId,
     );
   }
 
@@ -269,7 +317,7 @@ class Marker implements MapsObject<Marker> {
   /// Converts this object to something serializable in JSON.
   @override
   Object toJson() {
-    final Map<String, Object> json = <String, Object>{};
+    final json = <String, Object>{};
 
     void addIfPresent(String fieldName, Object? value) {
       if (value != null) {
@@ -284,11 +332,13 @@ class Marker implements MapsObject<Marker> {
     addIfPresent('draggable', draggable);
     addIfPresent('flat', flat);
     addIfPresent('icon', icon.toJson());
-    addIfPresent('infoWindow', infoWindow._toJson());
+    addIfPresent('infoWindow', infoWindow.toJson());
     addIfPresent('position', position.toJson());
     addIfPresent('rotation', rotation);
     addIfPresent('visible', visible);
     addIfPresent('zIndex', zIndex);
+    addIfPresent('zIndexInt', zIndexInt);
+    addIfPresent('clusterManagerId', clusterManagerId?.value);
     return json;
   }
 
@@ -312,7 +362,9 @@ class Marker implements MapsObject<Marker> {
         position == other.position &&
         rotation == other.rotation &&
         visible == other.visible &&
-        zIndex == other.zIndex;
+        zIndex == other.zIndex &&
+        zIndexInt == other.zIndexInt &&
+        clusterManagerId == other.clusterManagerId;
   }
 
   @override
@@ -324,6 +376,6 @@ class Marker implements MapsObject<Marker> {
         'consumeTapEvents: $consumeTapEvents, draggable: $draggable, flat: $flat, '
         'icon: $icon, infoWindow: $infoWindow, position: $position, rotation: $rotation, '
         'visible: $visible, zIndex: $zIndex, onTap: $onTap, onDragStart: $onDragStart, '
-        'onDrag: $onDrag, onDragEnd: $onDragEnd}';
+        'onDrag: $onDrag, onDragEnd: $onDragEnd, clusterManagerId: $clusterManagerId}';
   }
 }

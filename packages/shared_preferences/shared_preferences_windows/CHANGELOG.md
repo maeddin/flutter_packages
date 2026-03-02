@@ -1,5 +1,30 @@
 ## NEXT
 
+* Updates minimum supported SDK version to Flutter 3.35/Dart 3.9.
+
+## 2.4.1
+
+* Fixes `getStringList` returning immutable list.
+* Fixes `getStringList` cast error.
+* Updates minimum supported SDK version to Flutter 3.19/Dart 3.3.
+
+## 2.4.0
+
+* Adds `SharedPreferencesAsyncWindows` API.
+* Updates minimum supported SDK version to Flutter 3.16/Dart 3.2.
+
+## 2.3.2
+
+* Updates `package:file` version constraints.
+
+## 2.3.1
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 2.3.0
+
+* Adds `clearWithParameters` and `getAllWithParameters` methods.
 * Updates minimum supported SDK version to Flutter 3.3/Dart 2.18.
 
 ## 2.2.0

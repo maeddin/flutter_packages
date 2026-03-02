@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -12,9 +12,8 @@ import 'src/messages.g.dart';
 /// An implementation of [UrlLauncherPlatform] for macOS.
 class UrlLauncherMacOS extends UrlLauncherPlatform {
   /// Creates a new plugin implementation instance.
-  UrlLauncherMacOS({
-    @visibleForTesting UrlLauncherApi? api,
-  }) : _hostApi = api ?? UrlLauncherApi();
+  UrlLauncherMacOS({@visibleForTesting UrlLauncherApi? api})
+    : _hostApi = api ?? UrlLauncherApi();
 
   final UrlLauncherApi _hostApi;
 
@@ -57,14 +56,27 @@ class UrlLauncherMacOS extends UrlLauncherPlatform {
     return result.value;
   }
 
+  @override
+  Future<bool> supportsMode(PreferredLaunchMode mode) async {
+    return mode == PreferredLaunchMode.platformDefault ||
+        mode == PreferredLaunchMode.externalApplication;
+  }
+
+  @override
+  Future<bool> supportsCloseForMode(PreferredLaunchMode mode) async {
+    // No supported mode is closeable.
+    return false;
+  }
+
   Exception _getInvalidUrlException(String url) {
     // TODO(stuartmorgan): Make this an actual ArgumentError. This should be
     // coordinated across all platforms as a breaking change to have them all
     // return the same thing; currently it throws a PlatformException to
     // preserve existing behavior.
     return PlatformException(
-        code: 'argument_error',
-        message: 'Unable to parse URL',
-        details: 'Provided URL: $url');
+      code: 'argument_error',
+      message: 'Unable to parse URL',
+      details: 'Provided URL: $url',
+    );
   }
 }

@@ -1,3 +1,26 @@
+## NEXT
+
+* Updates minimum supported SDK version to Flutter 3.35/Dart 3.9.
+
+## 2.7.0
+
+* Adds `canCreateDirectories` parameter to `FileDialogOptions` to control whether directory creation is enabled during path selection.
+* Updates minimum supported SDK version to Flutter 3.29/Dart 3.7.
+
+## 2.6.2
+
+* Updates minimum required plugin_platform_interface version to 2.1.7.
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+
+## 2.6.1
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 2.6.0
+
+* Adds `getSaveLocation` and deprecates `getSavePath`.
+
 ## 2.5.1
 
 * Adds compatibility with `http` 1.0.

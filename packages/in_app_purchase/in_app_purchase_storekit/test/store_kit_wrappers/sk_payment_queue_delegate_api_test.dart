@@ -1,115 +1,107 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:in_app_purchase_storekit/src/channel.dart';
+import 'package:in_app_purchase_storekit/src/in_app_purchase_apis.dart';
 import 'package:in_app_purchase_storekit/store_kit_wrappers.dart';
+
+import '../fakes/fake_storekit_platform.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  final FakeStoreKitPlatform fakeStoreKitPlatform = FakeStoreKitPlatform();
+  final fakeStoreKitPlatform = FakeStoreKitPlatform();
 
   setUpAll(() {
-    _ambiguate(TestDefaultBinaryMessengerBinding.instance)!
-        .defaultBinaryMessenger
-        .setMockMethodCallHandler(
-            SystemChannels.platform, fakeStoreKitPlatform.onMethodCall);
+    setInAppPurchaseHostApis(api: fakeStoreKitPlatform);
   });
 
   test(
-      'handlePaymentQueueDelegateCallbacks should call SKPaymentQueueDelegateWrapper.shouldContinueTransaction',
-      () async {
-    final SKPaymentQueueWrapper queue = SKPaymentQueueWrapper();
-    final TestPaymentQueueDelegate testDelegate = TestPaymentQueueDelegate();
-    await queue.setDelegate(testDelegate);
+    'handlePaymentQueueDelegateCallbacks should call SKPaymentQueueDelegateWrapper.shouldContinueTransaction',
+    () async {
+      final queue = SKPaymentQueueWrapper();
+      final testDelegate = TestPaymentQueueDelegate();
+      await queue.setDelegate(testDelegate);
 
-    final Map<String, dynamic> arguments = <String, dynamic>{
-      'storefront': <String, String>{
-        'countryCode': 'USA',
-        'identifier': 'unique_identifier',
-      },
-      'transaction': <String, dynamic>{
-        'payment': <String, dynamic>{
-          'productIdentifier': 'product_identifier',
-        }
-      },
-    };
+      final arguments = <String, dynamic>{
+        'storefront': <String, String>{
+          'countryCode': 'USA',
+          'identifier': 'unique_identifier',
+        },
+        'transaction': <String, dynamic>{
+          'payment': <String, dynamic>{
+            'productIdentifier': 'product_identifier',
+          },
+        },
+      };
 
-    final Object? result = await queue.handlePaymentQueueDelegateCallbacks(
-      MethodCall('shouldContinueTransaction', arguments),
-    );
+      final Object? result = await queue.handlePaymentQueueDelegateCallbacks(
+        MethodCall('shouldContinueTransaction', arguments),
+      );
 
-    expect(result, false);
-    expect(
-      testDelegate.log,
-      <Matcher>{
-        equals('shouldContinueTransaction'),
-      },
-    );
-  });
+      expect(result, false);
+      expect(testDelegate.log, <Matcher>{equals('shouldContinueTransaction')});
+    },
+  );
 
   test(
-      'handlePaymentQueueDelegateCallbacks should call SKPaymentQueueDelegateWrapper.shouldShowPriceConsent',
-      () async {
-    final SKPaymentQueueWrapper queue = SKPaymentQueueWrapper();
-    final TestPaymentQueueDelegate testDelegate = TestPaymentQueueDelegate();
-    await queue.setDelegate(testDelegate);
+    'handlePaymentQueueDelegateCallbacks should call SKPaymentQueueDelegateWrapper.shouldShowPriceConsent',
+    () async {
+      final queue = SKPaymentQueueWrapper();
+      final testDelegate = TestPaymentQueueDelegate();
+      await queue.setDelegate(testDelegate);
 
-    final bool result = (await queue.handlePaymentQueueDelegateCallbacks(
-      const MethodCall('shouldShowPriceConsent'),
-    ))! as bool;
+      final result =
+          (await queue.handlePaymentQueueDelegateCallbacks(
+                const MethodCall('shouldShowPriceConsent'),
+              ))!
+              as bool;
 
-    expect(result, false);
-    expect(
-      testDelegate.log,
-      <Matcher>{
-        equals('shouldShowPriceConsent'),
-      },
-    );
-  });
+      expect(result, false);
+      expect(testDelegate.log, <Matcher>{equals('shouldShowPriceConsent')});
+    },
+  );
 
   test(
-      'handleObserverCallbacks should call SKTransactionObserverWrapper.restoreCompletedTransactionsFailed',
-      () async {
-    final SKPaymentQueueWrapper queue = SKPaymentQueueWrapper();
-    final TestTransactionObserverWrapper testObserver =
-        TestTransactionObserverWrapper();
-    queue.setTransactionObserver(testObserver);
+    'handleObserverCallbacks should call SKTransactionObserverWrapper.restoreCompletedTransactionsFailed',
+    () async {
+      final queue = SKPaymentQueueWrapper();
+      final testObserver = TestTransactionObserverWrapper();
+      queue.setTransactionObserver(testObserver);
 
-    final Map<dynamic, dynamic> arguments = <dynamic, dynamic>{
-      'code': 100,
-      'domain': 'domain',
-      'userInfo': <String, dynamic>{'error': 'underlying_error'},
-    };
+      final arguments = <dynamic, dynamic>{
+        'code': 100,
+        'domain': 'domain',
+        'userInfo': <String, dynamic>{'error': 'underlying_error'},
+      };
 
-    await queue.handleObserverCallbacks(
-      MethodCall('restoreCompletedTransactionsFailed', arguments),
-    );
+      await queue.handleObserverCallbacks(
+        MethodCall('restoreCompletedTransactionsFailed', arguments),
+      );
 
-    expect(
-      testObserver.log,
-      <Matcher>{
+      expect(testObserver.log, <Matcher>{
         equals('restoreCompletedTransactionsFailed'),
-      },
-    );
-  });
+      });
+    },
+  );
 }
 
 class TestTransactionObserverWrapper extends SKTransactionObserverWrapper {
   final List<String> log = <String>[];
 
   @override
-  void updatedTransactions(
-      {required List<SKPaymentTransactionWrapper> transactions}) {
+  void updatedTransactions({
+    required List<SKPaymentTransactionWrapper> transactions,
+  }) {
     log.add('updatedTransactions');
   }
 
   @override
-  void removedTransactions(
-      {required List<SKPaymentTransactionWrapper> transactions}) {
+  void removedTransactions({
+    required List<SKPaymentTransactionWrapper> transactions,
+  }) {
     log.add('removedTransactions');
   }
 
@@ -124,8 +116,10 @@ class TestTransactionObserverWrapper extends SKTransactionObserverWrapper {
   }
 
   @override
-  bool shouldAddStorePayment(
-      {required SKPaymentWrapper payment, required SKProductWrapper product}) {
+  bool shouldAddStorePayment({
+    required SKPaymentWrapper payment,
+    required SKProductWrapper product,
+  }) {
     log.add('shouldAddStorePayment');
     return false;
   }
@@ -136,7 +130,9 @@ class TestPaymentQueueDelegate extends SKPaymentQueueDelegateWrapper {
 
   @override
   bool shouldContinueTransaction(
-      SKPaymentTransactionWrapper transaction, SKStorefrontWrapper storefront) {
+    SKPaymentTransactionWrapper transaction,
+    SKStorefrontWrapper storefront,
+  ) {
     log.add('shouldContinueTransaction');
     return false;
   }
@@ -147,32 +143,3 @@ class TestPaymentQueueDelegate extends SKPaymentQueueDelegateWrapper {
     return false;
   }
 }
-
-class FakeStoreKitPlatform {
-  FakeStoreKitPlatform() {
-    _ambiguate(TestDefaultBinaryMessengerBinding.instance)!
-        .defaultBinaryMessenger
-        .setMockMethodCallHandler(channel, onMethodCall);
-  }
-
-  // indicate if the payment queue delegate is registered
-  bool isPaymentQueueDelegateRegistered = false;
-
-  Future<dynamic> onMethodCall(MethodCall call) {
-    switch (call.method) {
-      case '-[SKPaymentQueue registerDelegate]':
-        isPaymentQueueDelegateRegistered = true;
-        return Future<void>.sync(() {});
-      case '-[SKPaymentQueue removeDelegate]':
-        isPaymentQueueDelegateRegistered = false;
-        return Future<void>.sync(() {});
-    }
-    return Future<dynamic>.error('method not mocked');
-  }
-}
-
-/// This allows a value of type T or T? to be treated as a value of type T?.
-///
-/// We use this so that APIs that have become non-nullable can still be used
-/// with `!` and `?` on the stable branch.
-T? _ambiguate<T>(T? value) => value;

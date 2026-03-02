@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,12 +6,14 @@ package io.flutter.plugins.googlemaps;
 
 import android.content.Context;
 import android.graphics.Rect;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import com.google.android.gms.maps.GoogleMapOptions;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLngBounds;
 import io.flutter.plugin.common.BinaryMessenger;
+import io.flutter.plugins.googlemaps.Messages.PlatformMarkerType;
 import java.util.List;
-import java.util.Map;
 
 class GoogleMapBuilder implements GoogleMapOptionsSink {
   private final GoogleMapOptions options = new GoogleMapOptions();
@@ -21,20 +23,26 @@ class GoogleMapBuilder implements GoogleMapOptionsSink {
   private boolean indoorEnabled = true;
   private boolean trafficEnabled = false;
   private boolean buildingsEnabled = true;
-  private Object initialMarkers;
-  private Object initialPolygons;
-  private Object initialPolylines;
-  private Object initialCircles;
-  private List<Map<String, ?>> initialTileOverlays;
+  private List<Messages.PlatformMarker> initialMarkers;
+  private List<Messages.PlatformClusterManager> initialClusterManagers;
+  private List<Messages.PlatformPolygon> initialPolygons;
+  private List<Messages.PlatformPolyline> initialPolylines;
+  private List<Messages.PlatformCircle> initialCircles;
+  private List<Messages.PlatformHeatmap> initialHeatmaps;
+  private List<Messages.PlatformTileOverlay> initialTileOverlays;
+  private List<Messages.PlatformGroundOverlay> initialGroundOverlays;
   private Rect padding = new Rect(0, 0, 0, 0);
+  private @Nullable String style;
 
   GoogleMapController build(
       int id,
       Context context,
       BinaryMessenger binaryMessenger,
-      LifecycleProvider lifecycleProvider) {
+      LifecycleProvider lifecycleProvider,
+      @NonNull PlatformMarkerType markerType) {
     final GoogleMapController controller =
-        new GoogleMapController(id, context, binaryMessenger, lifecycleProvider, options);
+        new GoogleMapController(
+            id, context, binaryMessenger, lifecycleProvider, options, markerType);
     controller.init();
     controller.setMyLocationEnabled(myLocationEnabled);
     controller.setMyLocationButtonEnabled(myLocationButtonEnabled);
@@ -42,17 +50,25 @@ class GoogleMapBuilder implements GoogleMapOptionsSink {
     controller.setTrafficEnabled(trafficEnabled);
     controller.setBuildingsEnabled(buildingsEnabled);
     controller.setTrackCameraPosition(trackCameraPosition);
+    controller.setInitialClusterManagers(initialClusterManagers);
     controller.setInitialMarkers(initialMarkers);
     controller.setInitialPolygons(initialPolygons);
     controller.setInitialPolylines(initialPolylines);
     controller.setInitialCircles(initialCircles);
+    controller.setInitialHeatmaps(initialHeatmaps);
     controller.setPadding(padding.top, padding.left, padding.bottom, padding.right);
     controller.setInitialTileOverlays(initialTileOverlays);
+    controller.setInitialGroundOverlays(initialGroundOverlays);
+    controller.setMapStyle(style);
     return controller;
   }
 
   void setInitialCameraPosition(CameraPosition position) {
     options.camera(position);
+  }
+
+  public void setMapId(String mapId) {
+    options.mapId(mapId);
   }
 
   @Override
@@ -151,27 +167,49 @@ class GoogleMapBuilder implements GoogleMapOptionsSink {
   }
 
   @Override
-  public void setInitialMarkers(Object initialMarkers) {
+  public void setInitialMarkers(@NonNull List<Messages.PlatformMarker> initialMarkers) {
     this.initialMarkers = initialMarkers;
   }
 
   @Override
-  public void setInitialPolygons(Object initialPolygons) {
+  public void setInitialClusterManagers(
+      @NonNull List<Messages.PlatformClusterManager> initialClusterManagers) {
+    this.initialClusterManagers = initialClusterManagers;
+  }
+
+  @Override
+  public void setInitialPolygons(@NonNull List<Messages.PlatformPolygon> initialPolygons) {
     this.initialPolygons = initialPolygons;
   }
 
   @Override
-  public void setInitialPolylines(Object initialPolylines) {
+  public void setInitialPolylines(@NonNull List<Messages.PlatformPolyline> initialPolylines) {
     this.initialPolylines = initialPolylines;
   }
 
   @Override
-  public void setInitialCircles(Object initialCircles) {
+  public void setInitialCircles(@NonNull List<Messages.PlatformCircle> initialCircles) {
     this.initialCircles = initialCircles;
   }
 
   @Override
-  public void setInitialTileOverlays(List<Map<String, ?>> initialTileOverlays) {
+  public void setInitialHeatmaps(@NonNull List<Messages.PlatformHeatmap> initialHeatmaps) {
+    this.initialHeatmaps = initialHeatmaps;
+  }
+
+  public void setInitialTileOverlays(
+      @NonNull List<Messages.PlatformTileOverlay> initialTileOverlays) {
     this.initialTileOverlays = initialTileOverlays;
+  }
+
+  @Override
+  public void setInitialGroundOverlays(
+      @NonNull List<Messages.PlatformGroundOverlay> initialGroundOverlays) {
+    this.initialGroundOverlays = initialGroundOverlays;
+  }
+
+  @Override
+  public void setMapStyle(@Nullable String style) {
+    this.style = style;
   }
 }

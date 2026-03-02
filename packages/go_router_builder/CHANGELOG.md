@@ -1,3 +1,196 @@
+## 4.2.0
+
+- Adds supports for `TypedQueryParameter` annotation.
+  Its `name` parameter allows specifying a different name for the query parameter than the field name. The name is escaped to be URL-safe. For example `@TypedQueryParameter(name: 'field with space')` will generate a query parameter named `field+with+space`.
+
+## 4.1.3
+
+* Requires `analyzer` 8.2 or higher, to avoid experimental APIs.
+* Updates minimum supported SDK version to Flutter 3.35/Dart 3.9.
+
+## 4.1.2
+
+* Updates supported analyzer versions to 8.x or 9.x.
+* Updates minimum supported SDK version to Flutter 3.32/Dart 3.8.
+
+## 4.1.1
+
+- Allow `analyzer: '>=7.4.0 <9.0.0'`.
+- Allow `build: '>=3.0.0 <5.0.0'`.
+- Allow `source_gen: '>=3.1.0 <5.0.0'`.
+
+## 4.1.0
+
+- Adds support for classes that support fromJson/toJson. [#117261](https://github.com/flutter/flutter/issues/117261)
+- Adds annotation that enable custom string encoder/decoder [#110781](https://github.com/flutter/flutter/issues/110781)
+
+## 4.0.1
+
+- Fixes unnecessary whitespace in generated `RelativeGoRouteData`.
+
+## 4.0.0
+
+- Make Route mixins public.
+
+## 3.3.1
+
+- Fixes warnings in generated code of iterable parameters.
+
+## 3.3.0
+
+- Adds support for `TypedRelativeGoRoute`.
+
+## 3.2.1
+
+- Changes generated whitespace for better compatibility with new Dart formatter.
+
+## 3.2.0
+
+- Adds support for`extension type`.
+
+## 3.1.0
+
+- Updates dependencies to use the latest `analyzer`, `build`, and `source_gen`.
+- Updates dev dependencies to use the latest `build_test`.
+- Migrates to the `element2` API.
+- Improves test code formatting consistency.
+- Updates minimum supported SDK version to Flutter 3.29/Dart 3.7.
+
+## 3.0.1
+
+- Updates README.md to use the mixin `with _$RouteName`.
+
+## 3.0.0
+
+- Route classes now required to use a mixin `with _$RouteName`.
+
+## 2.9.1
+
+- Fixes an deprecated warning for using withNullability
+
+## 2.9.0
+
+- Adds support for `caseSensitive` for go routes.
+
+## 2.8.2
+
+- Fixes an issue when enum params are not required
+
+## 2.8.1
+
+- Fixes an issue when navigate to router with invalid params
+
+## 2.8.0
+
+- Adds support for passing `preload` parameter to `StatefulShellBranchData`.
+
+## 2.7.5
+
+- Fixes trailing `?` in the location when a go route has an empty default value.
+
+## 2.7.4
+
+- Fixes an issue by removing unnecessary `const` in StatefulShellRouteData generation.
+
+## 2.7.3
+
+- Fixes an issue when using a not null List or Set param.
+
+## 2.7.2
+
+- Supports the latest `package:analyzer` and `package:source_gen`.
+- Updates minimum supported SDK version to Flutter 3.27/Dart 3.6.
+
+## 2.7.1
+
+- Fixes readme typos and uses code excerpts.
+
+## 2.7.0
+
+- Adds an example and a test with `onExit`.
+- Updates minimum supported SDK version to Flutter 3.16/Dart 3.2.
+
+## 2.6.2
+
+* Fixes a bug in the example app when accessing `BuildContext`.
+
+## 2.6.1
+
+* Fixes typo in `durationDecoderHelperName`.
+* Updates development dependency to `dart_style-2.3.6` (compatible with `analyzer-6.5.0`).
+
+## 2.6.0
+
+* Adds support for passing observers to the StatefulShellBranch for the nested Navigator.
+
+## 2.5.1
+
+- Updates examples to use uri.path instead of uri.toString() for accessing the current location.
+
+## 2.5.0
+
+* Updates minimum supported SDK version to Flutter 3.13/Dart 3.1.
+* Updates dependencies to require `analyzer` 5.2.0 or later.
+* Adds `restorationScopeId` to `ShellRouteData`.
+
+## 2.4.1
+
+* Fixes new lint warnings.
+
+## 2.4.0
+
+* Adds support for passing observers to the ShellRoute for the nested Navigator.
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+
+## 2.3.4
+
+* Fixes a bug of typeArguments losing NullabilitySuffix
+
+## 2.3.3
+
+* Adds `initialLocation` for `StatefulShellBranchConfig`
+
+## 2.3.2
+
+* Supports the latest `package:analyzer`.
+
+## 2.3.1
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 2.3.0
+
+* Adds Support for StatefulShellRoute
+
+## 2.2.5
+
+* Fixes a bug where shell routes without const constructor were not generated correctly.
+
+## 2.2.4
+
+* Bumps example go_router version to v10.0.0 and migrate example code.
+
+## 2.2.3
+
+* Removes `path_to_regexp` from the dependencies.
+
+## 2.2.2
+
+* Bumps example go_router version and migrate example code.
+
+## 2.2.1
+
+* Cleans up go_router_builder code.
+
+## 2.2.0
+
+* Adds replace methods to the generated routes.
+
+## 2.1.1
+
+* Fixes a bug that the required/positional parameters are not added to query parameters correctly.
+
 ## 2.1.0
 
 * Supports required/positional parameters that are not in the path.

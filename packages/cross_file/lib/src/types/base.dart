@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -37,6 +37,8 @@ abstract class XFileBase {
   }
 
   /// The name of the file as it was selected by the user in their device.
+  ///
+  /// For non-web implementation, this represents the last part of the filesystem path.
   ///
   /// Use only for cosmetic reasons, do not try to use this as a path.
   String get name {

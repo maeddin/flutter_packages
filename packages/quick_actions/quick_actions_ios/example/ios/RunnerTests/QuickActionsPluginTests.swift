@@ -1,20 +1,34 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import Flutter
-import XCTest
+import Testing
 
 @testable import quick_actions_ios
 
-class QuickActionsPluginTests: XCTestCase {
+class MockFlutterApi: IOSQuickActionsFlutterApiProtocol {
+  /// Method to allow for async testing.
+  var launchActionCallback: ((String) -> Void)? = nil
 
-  func testHandleMethodCall_setShortcutItems() {
-    let rawItem = [
-      "type": "SearchTheThing",
-      "localizedTitle": "Search the thing",
-      "icon": "search_the_thing.png",
-    ]
+  func launchAction(
+    action actionArg: String, completion: @escaping (Result<Void, PigeonError>) -> Void
+  ) {
+    self.launchActionCallback?(actionArg)
+    completion(.success(Void()))
+  }
+}
+
+@MainActor
+struct QuickActionsPluginTests {
+
+  @Test func handleMethodCallSetShortcutItems() {
+    let rawItem = ShortcutItemMessage(
+      type: "SearchTheThing",
+      localizedTitle: "Search the thing",
+      icon: "search_the_thing.png"
+    )
+
     let item = UIApplicationShortcutItem(
       type: "SearchTheThing",
       localizedTitle: "Search the thing",
@@ -22,35 +36,18 @@ class QuickActionsPluginTests: XCTestCase {
       icon: UIApplicationShortcutIcon(templateImageName: "search_the_thing.png"),
       userInfo: nil)
 
-    let call = FlutterMethodCall(methodName: "setShortcutItems", arguments: [rawItem])
-
-    let mockChannel = MockMethodChannel()
+    let flutterApi: MockFlutterApi = MockFlutterApi()
     let mockShortcutItemProvider = MockShortcutItemProvider()
-    let mockShortcutItemParser = MockShortcutItemParser()
 
     let plugin = QuickActionsPlugin(
-      channel: mockChannel,
-      shortcutItemProvider: mockShortcutItemProvider,
-      shortcutItemParser: mockShortcutItemParser)
+      flutterApi: flutterApi,
+      shortcutItemProvider: mockShortcutItemProvider)
 
-    let parseShortcutItemsExpectation = expectation(
-      description: "parseShortcutItems must be called.")
-    mockShortcutItemParser.parseShortcutItemsStub = { items in
-      XCTAssertEqual(items as? [[String: String]], [rawItem])
-      parseShortcutItemsExpectation.fulfill()
-      return [item]
-    }
-
-    let resultExpectation = expectation(description: "result block must be called.")
-    plugin.handle(call) { result in
-      XCTAssertNil(result, "result block must be called with nil.")
-      resultExpectation.fulfill()
-    }
-    XCTAssertEqual(mockShortcutItemProvider.shortcutItems, [item], "Must set shortcut items.")
-    waitForExpectations(timeout: 1)
+    plugin.setShortcutItems(itemsList: [rawItem])
+    #expect(mockShortcutItemProvider.shortcutItems == [item])
   }
 
-  func testHandleMethodCall_clearShortcutItems() {
+  @Test func handleMethodCallClearShortcutItems() {
     let item = UIApplicationShortcutItem(
       type: "SearchTheThing",
       localizedTitle: "Search the thing",
@@ -58,82 +55,28 @@ class QuickActionsPluginTests: XCTestCase {
       icon: UIApplicationShortcutIcon(templateImageName: "search_the_thing.png"),
       userInfo: nil)
 
-    let call = FlutterMethodCall(methodName: "clearShortcutItems", arguments: nil)
-    let mockChannel = MockMethodChannel()
+    let flutterApi: MockFlutterApi = MockFlutterApi()
     let mockShortcutItemProvider = MockShortcutItemProvider()
-    let mockShortcutItemParser = MockShortcutItemParser()
+
+    let plugin = QuickActionsPlugin(
+      flutterApi: flutterApi,
+      shortcutItemProvider: mockShortcutItemProvider)
 
     mockShortcutItemProvider.shortcutItems = [item]
 
-    let plugin = QuickActionsPlugin(
-      channel: mockChannel,
-      shortcutItemProvider: mockShortcutItemProvider,
-      shortcutItemParser: mockShortcutItemParser)
+    plugin.clearShortcutItems()
 
-    let resultExpectation = expectation(description: "result block must be called.")
-    plugin.handle(call) { result in
-      XCTAssertNil(result, "result block must be called with nil.")
-      resultExpectation.fulfill()
-    }
+    #expect(mockShortcutItemProvider.shortcutItems == [])
 
-    XCTAssertEqual(mockShortcutItemProvider.shortcutItems, [], "Must clear shortcut items.")
-    waitForExpectations(timeout: 1)
   }
 
-  func testHandleMethodCall_getLaunchAction() {
-    let call = FlutterMethodCall(methodName: "getLaunchAction", arguments: nil)
-
-    let mockChannel = MockMethodChannel()
+  @Test func applicationPerformActionForShortcutItem() async {
+    let flutterApi: MockFlutterApi = MockFlutterApi()
     let mockShortcutItemProvider = MockShortcutItemProvider()
-    let mockShortcutItemParser = MockShortcutItemParser()
 
     let plugin = QuickActionsPlugin(
-      channel: mockChannel,
-      shortcutItemProvider: mockShortcutItemProvider,
-      shortcutItemParser: mockShortcutItemParser)
-
-    let resultExpectation = expectation(description: "result block must be called.")
-    plugin.handle(call) { result in
-      XCTAssertNil(result, "result block must be called with nil.")
-      resultExpectation.fulfill()
-    }
-
-    waitForExpectations(timeout: 1)
-  }
-
-  func testHandleMethodCall_nonExistMethods() {
-    let call = FlutterMethodCall(methodName: "nonExist", arguments: nil)
-
-    let mockChannel = MockMethodChannel()
-    let mockShortcutItemProvider = MockShortcutItemProvider()
-    let mockShortcutItemParser = MockShortcutItemParser()
-
-    let plugin = QuickActionsPlugin(
-      channel: mockChannel,
-      shortcutItemProvider: mockShortcutItemProvider,
-      shortcutItemParser: mockShortcutItemParser)
-
-    let resultExpectation = expectation(description: "result block must be called.")
-
-    plugin.handle(call) { result in
-      XCTAssertEqual(
-        result as? NSObject, FlutterMethodNotImplemented,
-        "result block must be called with FlutterMethodNotImplemented")
-      resultExpectation.fulfill()
-    }
-
-    waitForExpectations(timeout: 1)
-  }
-
-  func testApplicationPerformActionForShortcutItem() {
-    let mockChannel = MockMethodChannel()
-    let mockShortcutItemProvider = MockShortcutItemProvider()
-    let mockShortcutItemParser = MockShortcutItemParser()
-
-    let plugin = QuickActionsPlugin(
-      channel: mockChannel,
-      shortcutItemProvider: mockShortcutItemProvider,
-      shortcutItemParser: mockShortcutItemParser)
+      flutterApi: flutterApi,
+      shortcutItemProvider: mockShortcutItemProvider)
 
     let item = UIApplicationShortcutItem(
       type: "SearchTheThing",
@@ -142,31 +85,30 @@ class QuickActionsPluginTests: XCTestCase {
       icon: UIApplicationShortcutIcon(templateImageName: "search_the_thing.png"),
       userInfo: nil)
 
-    let invokeMethodExpectation = expectation(description: "invokeMethod must be called.")
-    mockChannel.invokeMethodStub = { method, arguments in
-      XCTAssertEqual(method, "launch")
-      XCTAssertEqual(arguments as? String, item.type)
-      invokeMethodExpectation.fulfill()
+    await confirmation("invokeMethod must be called") { confirmed in
+      flutterApi.launchActionCallback = { aString in
+        #expect(aString == item.type)
+        confirmed()
+      }
+
+      let actionResult = plugin.application(
+        UIApplication.shared,
+        performActionFor: item
+      ) { success in
+        // noop
+      }
+
+      #expect(actionResult, "performActionForShortcutItem must return true.")
     }
-
-    let actionResult = plugin.application(
-      UIApplication.shared,
-      performActionFor: item
-    ) { success in /* no-op */ }
-
-    XCTAssert(actionResult, "performActionForShortcutItem must return true.")
-    waitForExpectations(timeout: 1)
   }
 
-  func testApplicationDidFinishLaunchingWithOptions_launchWithShortcut() {
-    let mockChannel = MockMethodChannel()
+  @Test func applicationDidFinishLaunchingWithOptionsLaunchWithShortcut() {
+    let flutterApi: MockFlutterApi = MockFlutterApi()
     let mockShortcutItemProvider = MockShortcutItemProvider()
-    let mockShortcutItemParser = MockShortcutItemParser()
 
     let plugin = QuickActionsPlugin(
-      channel: mockChannel,
-      shortcutItemProvider: mockShortcutItemProvider,
-      shortcutItemParser: mockShortcutItemParser)
+      flutterApi: flutterApi,
+      shortcutItemProvider: mockShortcutItemProvider)
 
     let item = UIApplicationShortcutItem(
       type: "SearchTheThing",
@@ -178,47 +120,39 @@ class QuickActionsPluginTests: XCTestCase {
     let launchResult = plugin.application(
       UIApplication.shared,
       didFinishLaunchingWithOptions: [UIApplication.LaunchOptionsKey.shortcutItem: item])
-    XCTAssertFalse(
-      launchResult, "didFinishLaunchingWithOptions must return false if launched from shortcut.")
+    #expect(
+      !launchResult, "didFinishLaunchingWithOptions must return false if launched from shortcut.")
   }
 
-  func testApplicationDidFinishLaunchingWithOptions_launchWithoutShortcut() {
-    let mockChannel = MockMethodChannel()
+  @Test func applicationDidFinishLaunchingWithOptionsLaunchWithoutShortcut() {
+    let flutterApi: MockFlutterApi = MockFlutterApi()
     let mockShortcutItemProvider = MockShortcutItemProvider()
-    let mockShortcutItemParser = MockShortcutItemParser()
 
     let plugin = QuickActionsPlugin(
-      channel: mockChannel,
-      shortcutItemProvider: mockShortcutItemProvider,
-      shortcutItemParser: mockShortcutItemParser)
+      flutterApi: flutterApi,
+      shortcutItemProvider: mockShortcutItemProvider)
 
     let launchResult = plugin.application(UIApplication.shared, didFinishLaunchingWithOptions: [:])
-    XCTAssert(
+    #expect(
       launchResult, "didFinishLaunchingWithOptions must return true if not launched from shortcut.")
   }
 
-  func testApplicationDidBecomeActive_launchWithoutShortcut() {
-    let mockChannel = MockMethodChannel()
+  @Test func applicationDidBecomeActiveLaunchWithoutShortcut() {
+    let flutterApi: MockFlutterApi = MockFlutterApi()
     let mockShortcutItemProvider = MockShortcutItemProvider()
-    let mockShortcutItemParser = MockShortcutItemParser()
 
     let plugin = QuickActionsPlugin(
-      channel: mockChannel,
-      shortcutItemProvider: mockShortcutItemProvider,
-      shortcutItemParser: mockShortcutItemParser)
-
-    mockChannel.invokeMethodStub = { _, _ in
-      XCTFail("invokeMethod should not be called if launch without shortcut.")
-    }
+      flutterApi: flutterApi,
+      shortcutItemProvider: mockShortcutItemProvider)
 
     let launchResult = plugin.application(UIApplication.shared, didFinishLaunchingWithOptions: [:])
-    XCTAssert(
+    #expect(
       launchResult, "didFinishLaunchingWithOptions must return true if not launched from shortcut.")
 
     plugin.applicationDidBecomeActive(UIApplication.shared)
   }
 
-  func testApplicationDidBecomeActive_launchWithShortcut() {
+  @Test func applicationDidBecomeActiveLaunchWithShortcut() async {
     let item = UIApplicationShortcutItem(
       type: "SearchTheThing",
       localizedTitle: "Search the thing",
@@ -226,34 +160,31 @@ class QuickActionsPluginTests: XCTestCase {
       icon: UIApplicationShortcutIcon(templateImageName: "search_the_thing.png"),
       userInfo: nil)
 
-    let mockChannel = MockMethodChannel()
+    let flutterApi: MockFlutterApi = MockFlutterApi()
     let mockShortcutItemProvider = MockShortcutItemProvider()
-    let mockShortcutItemParser = MockShortcutItemParser()
 
     let plugin = QuickActionsPlugin(
-      channel: mockChannel,
-      shortcutItemProvider: mockShortcutItemProvider,
-      shortcutItemParser: mockShortcutItemParser)
+      flutterApi: flutterApi,
+      shortcutItemProvider: mockShortcutItemProvider)
 
-    let invokeMethodExpectation = expectation(description: "invokeMethod must be called.")
-    mockChannel.invokeMethodStub = { method, arguments in
-      XCTAssertEqual(method, "launch")
-      XCTAssertEqual(arguments as? String, item.type)
-      invokeMethodExpectation.fulfill()
+    await confirmation("invokeMethod must be called") { confirmed in
+      flutterApi.launchActionCallback = { aString in
+        #expect(aString == item.type)
+        confirmed()
+      }
+
+      let launchResult = plugin.application(
+        UIApplication.shared,
+        didFinishLaunchingWithOptions: [UIApplication.LaunchOptionsKey.shortcutItem: item])
+
+      #expect(
+        !launchResult, "didFinishLaunchingWithOptions must return false if launched from shortcut.")
+
+      plugin.applicationDidBecomeActive(UIApplication.shared)
     }
-
-    let launchResult = plugin.application(
-      UIApplication.shared,
-      didFinishLaunchingWithOptions: [UIApplication.LaunchOptionsKey.shortcutItem: item])
-
-    XCTAssertFalse(
-      launchResult, "didFinishLaunchingWithOptions must return false if launched from shortcut.")
-
-    plugin.applicationDidBecomeActive(UIApplication.shared)
-    waitForExpectations(timeout: 1)
   }
 
-  func testApplicationDidBecomeActive_launchWithShortcut_becomeActiveTwice() {
+  @Test func applicationDidBecomeActiveLaunchWithShortcutBecomeActiveTwice() async {
     let item = UIApplicationShortcutItem(
       type: "SearchTheThing",
       localizedTitle: "Search the thing",
@@ -261,34 +192,35 @@ class QuickActionsPluginTests: XCTestCase {
       icon: UIApplicationShortcutIcon(templateImageName: "search_the_thing.png"),
       userInfo: nil)
 
-    let mockChannel = MockMethodChannel()
+    let flutterApi: MockFlutterApi = MockFlutterApi()
     let mockShortcutItemProvider = MockShortcutItemProvider()
-    let mockShortcutItemParser = MockShortcutItemParser()
 
     let plugin = QuickActionsPlugin(
-      channel: mockChannel,
-      shortcutItemProvider: mockShortcutItemProvider,
-      shortcutItemParser: mockShortcutItemParser)
+      flutterApi: flutterApi,
+      shortcutItemProvider: mockShortcutItemProvider)
 
-    let invokeMethodExpectation = expectation(description: "invokeMethod must be called.")
+    await confirmation("shortcut should be handled when application becomes active") { confirmed in
+      flutterApi.launchActionCallback = { aString in
+        #expect(aString == item.type)
+        confirmed()
+      }
 
-    var invokeMehtodCount = 0
-    mockChannel.invokeMethodStub = { method, arguments in
-      invokeMehtodCount += 1
-      invokeMethodExpectation.fulfill()
+      let launchResult = plugin.application(
+        UIApplication.shared,
+        didFinishLaunchingWithOptions: [UIApplication.LaunchOptionsKey.shortcutItem: item])
+
+      #expect(
+        !launchResult, "didFinishLaunchingWithOptions must return false if launched from shortcut.")
+
+      plugin.applicationDidBecomeActive(UIApplication.shared)
     }
+    await confirmation("shortcut should only be handled once per launch", expectedCount: 0) {
+      confirmed in
+      flutterApi.launchActionCallback = { _ in
+        confirmed()
+      }
 
-    let launchResult = plugin.application(
-      UIApplication.shared,
-      didFinishLaunchingWithOptions: [UIApplication.LaunchOptionsKey.shortcutItem: item])
-
-    XCTAssertFalse(
-      launchResult, "didFinishLaunchingWithOptions must return false if launched from shortcut.")
-
-    plugin.applicationDidBecomeActive(UIApplication.shared)
-    waitForExpectations(timeout: 1)
-
-    XCTAssertEqual(invokeMehtodCount, 1, "shortcut should only be handled once per launch.")
+      plugin.applicationDidBecomeActive(UIApplication.shared)
+    }
   }
-
 }

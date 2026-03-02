@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -9,6 +9,7 @@
 // This file is hand-formatted.
 
 import 'dart:math' as math show pi;
+// ignore: unnecessary_import, see https://github.com/flutter/flutter/pull/138881
 import 'dart:ui' show FontFeature; // TODO(ianh): https://github.com/flutter/flutter/issues/87235
 
 import 'package:flutter/material.dart';
@@ -549,6 +550,7 @@ class ArgumentDecoders {
       centerSlice: rect(source, [...key, 'centerSlice']),
       repeat: enumValue<ImageRepeat>(ImageRepeat.values, source, [...key, 'repeat']) ?? ImageRepeat.noRepeat,
       matchTextDirection: source.v<bool>([...key, 'matchTextDirection']) ?? false,
+      filterQuality: enumValue<FilterQuality>(FilterQuality.values, source, [...key, 'filterQuality']) ?? FilterQuality.medium,
     );
   }
 
@@ -621,7 +623,7 @@ class ArgumentDecoders {
     if (value == null) {
       return null;
     }
-    for (int index = 0; index < values.length; index += 1) {
+    for (var index = 0; index < values.length; index += 1) {
       if (value == values[index].toString().split('.').last) {
         return values[index];
       }
@@ -1026,7 +1028,7 @@ class ArgumentDecoders {
     if (!source.isMap(key)) {
       return null;
     }
-    final Paint result = Paint();
+    final result = Paint();
     final BlendMode? paintBlendMode = enumValue<BlendMode>(BlendMode.values, source, [...key, 'blendMode']);
     if (paintBlendMode != null) {
       result.blendMode = paintBlendMode;

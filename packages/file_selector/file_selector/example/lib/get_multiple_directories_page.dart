@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -12,7 +12,7 @@ class GetMultipleDirectoriesPage extends StatelessWidget {
   const GetMultipleDirectoriesPage({super.key});
 
   Future<void> _getDirectoryPaths(BuildContext context) async {
-    const String confirmButtonText = 'Choose';
+    const confirmButtonText = 'Choose';
     final List<String?> directoryPaths = await getDirectoryPaths(
       confirmButtonText: confirmButtonText,
     );
@@ -20,8 +20,8 @@ class GetMultipleDirectoriesPage extends StatelessWidget {
       // Operation was canceled by the user.
       return;
     }
-    String paths = '';
-    for (final String? path in directoryPaths) {
+    var paths = '';
+    for (final path in directoryPaths) {
       paths += '${path!} \n';
     }
     if (context.mounted) {
@@ -35,23 +35,19 @@ class GetMultipleDirectoriesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Select multiple directories'),
-      ),
+      appBar: AppBar(title: const Text('Select multiple directories')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                // TODO(darrenaustin): Migrate to new API once it lands in stable: https://github.com/flutter/flutter/issues/105724
-                // ignore: deprecated_member_use
-                primary: Colors.blue,
-                // ignore: deprecated_member_use
-                onPrimary: Colors.white,
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
               ),
               child: const Text(
-                  'Press to ask user to choose multiple directories'),
+                'Press to ask user to choose multiple directories',
+              ),
               onPressed: () => _getDirectoryPaths(context),
             ),
           ],
@@ -74,9 +70,7 @@ class TextDisplay extends StatelessWidget {
     return AlertDialog(
       title: const Text('Selected Directories'),
       content: Scrollbar(
-        child: SingleChildScrollView(
-          child: Text(directoriesPaths),
-        ),
+        child: SingleChildScrollView(child: Text(directoriesPaths)),
       ),
       actions: <Widget>[
         TextButton(

@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -10,8 +10,6 @@ import 'package:google_identity_services_web/id.dart';
 import 'package:google_identity_services_web/loader.dart' as gis;
 import 'package:google_identity_services_web/oauth2.dart';
 import 'package:http/http.dart' as http;
-import 'package:js/js.dart' show allowInterop;
-import 'package:js/js_util.dart' show getProperty;
 
 /// People API to return my profile info...
 const String MY_PROFILE =
@@ -37,16 +35,15 @@ void main() async {
 
   id.setLogLevel('debug');
 
-  final TokenClientConfig config = TokenClientConfig(
-    client_id: 'your-client_id.apps.googleusercontent.com',
-    scope: scopes.join(' '),
-    callback: allowInterop(onTokenResponse),
-    error_callback: allowInterop(onError),
+  final config = TokenClientConfig(
+    client_id: 'your-google-client-id-goes-here.apps.googleusercontent.com',
+    scope: scopes,
+    callback: onTokenResponse,
+    error_callback: onError,
   );
 
-  final OverridableTokenClientConfig overridableCfg =
-      OverridableTokenClientConfig(
-    scope: (scopes + myConnectionsScopes).join(' '),
+  final overridableCfg = OverridableTokenClientConfig(
+    scope: scopes + myConnectionsScopes,
   );
 
   final TokenClient client = oauth2.initTokenClient(config);
@@ -59,8 +56,8 @@ void main() async {
 ///
 /// We cannot use the proper type for `error` here yet, because of:
 /// https://github.com/dart-lang/sdk/issues/50899
-Future<void> onError(Object? error) async {
-  print('Error! ${getProperty(error!, "type")}');
+Future<void> onError(GoogleIdentityServicesError? error) async {
+  print('Error! ${error?.type} (${error?.message})');
 }
 
 /// Handles the returned (auth) token response.
@@ -88,12 +85,11 @@ Future<void> onTokenResponse(TokenResponse token) async {
   print(contacts);
 
   print('Revoking token...');
-  oauth2.revoke(token.access_token,
-      allowInterop((TokenRevocationResponse response) {
+  oauth2.revoke(token.access_token!, (TokenRevocationResponse response) {
     print(response.successful);
     print(response.error);
     print(response.error_description);
-  }));
+  });
 }
 
 /// Gets from [url] with an authorization header defined by [token].
@@ -101,9 +97,12 @@ Future<void> onTokenResponse(TokenResponse token) async {
 /// Attempts to [jsonDecode] the result.
 Future<Object?> get(TokenResponse token, String url) async {
   final Uri uri = Uri.parse(url);
-  final http.Response response = await http.get(uri, headers: <String, String>{
-    'Authorization': '${token.token_type} ${token.access_token}',
-  });
+  final http.Response response = await http.get(
+    uri,
+    headers: <String, String>{
+      'Authorization': '${token.token_type} ${token.access_token}',
+    },
+  );
 
   if (response.statusCode != 200) {
     throw http.ClientException(response.body, uri);

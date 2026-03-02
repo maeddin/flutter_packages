@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -12,16 +12,11 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ButtonStyle style = ElevatedButton.styleFrom(
-      // TODO(darrenaustin): Migrate to new API once it lands in stable: https://github.com/flutter/flutter/issues/105724
-      // ignore: deprecated_member_use
-      primary: Colors.blue,
-      // ignore: deprecated_member_use
-      onPrimary: Colors.white,
+      backgroundColor: Colors.blue,
+      foregroundColor: Colors.white,
     );
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('File Selector Demo Home Page'),
-      ),
+      appBar: AppBar(title: const Text('File Selector Demo Home Page')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

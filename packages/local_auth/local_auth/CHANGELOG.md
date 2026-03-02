@@ -1,5 +1,49 @@
-## NEXT
+## 3.0.1
 
+* Replaces platform-specific setup instructions with links to the relevant
+  implementation package READMEs.
+* Updates README to reflect currently supported OS versions for the latest
+  versions of the endorsed platform implementations.
+  * Applications built with older versions of Flutter will continue to
+    use compatible versions of the platform implementations.
+
+## 3.0.0
+
+* **BREAKING CHANGES:**
+  * Throws `LocalAuthException`s rather than `PlatformException`s for most
+    failures cases, allowing structured error handling using the specific
+    `LocalAuthExceptionCode` values.
+  * Replaces `AuthenticationOptions` in `authenticate` with specific parameters.
+    * `AuthenticationOptions.stickyAuth` corresponds to
+      `persistAcrossBackgrounding`.
+    * `AuthenticationOptions.useErrorDialogs` has no replacement, as specific
+      error-handling UI should be up to plugin clients to determine. Callers
+      should use the new structured error codes to detect and handle failure
+      modes that used to have native dialogs.
+* Updates minimum supported SDK version to Flutter 3.29/Dart 3.7.
+* Updates README to reflect that Android older than API 24 and iOS older than
+  13.0 are no longer supported.
+
+## 2.3.0
+
+* Adds endorsed macOS support.
+
+## 2.2.0
+
+* Switches endorsed iOS implementation to `local_auth_darwin`.
+  * Clients directly importing `local_auth_ios` for auth strings should switch
+    dependencies and imports to `local_auth_darwin`. No other change is necessary.
+* Updates support matrix in README to indicate that iOS 11 is no longer supported.
+* Updates minimum supported SDK version to Flutter 3.16.6.
+
+## 2.1.8
+
+* Updates minimum required plugin_platform_interface version to 2.1.7.
+
+## 2.1.7
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
 * Aligns Dart and Flutter SDK constraints.
 * Fixes stale ignore: prefer_const_constructors.
 * Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.

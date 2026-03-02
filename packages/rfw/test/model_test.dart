@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -10,10 +10,10 @@ import 'package:rfw/formats.dart';
 void main() {
   testWidgets('$LibraryName', (WidgetTester tester) async {
     T deconst<T>(T value) => value;
-    final LibraryName a = LibraryName(<String>['core', deconst<String>('widgets')]);
-    final LibraryName b = LibraryName(<String>['core', deconst<String>('widgets')]);
-    final LibraryName c = LibraryName(<String>['core', deconst<String>('material')]);
-    const LibraryName d = LibraryName(<String>['core']);
+    final a = LibraryName(<String>['core', deconst<String>('widgets')]);
+    final b = LibraryName(<String>['core', deconst<String>('widgets')]);
+    final c = LibraryName(<String>['core', deconst<String>('material')]);
+    const d = LibraryName(<String>['core']);
     expect('$a', 'core.widgets');
     expect('$c', 'core.material');
     expect(a, equals(b));
@@ -35,9 +35,9 @@ void main() {
   });
 
   testWidgets('$FullyQualifiedWidgetName', (WidgetTester tester) async {
-    const FullyQualifiedWidgetName aa = FullyQualifiedWidgetName(LibraryName(<String>['a']), 'a');
-    const FullyQualifiedWidgetName ab = FullyQualifiedWidgetName(LibraryName(<String>['a']), 'b');
-    const FullyQualifiedWidgetName bb = FullyQualifiedWidgetName(LibraryName(<String>['b']), 'b');
+    const aa = FullyQualifiedWidgetName(LibraryName(<String>['a']), 'a');
+    const ab = FullyQualifiedWidgetName(LibraryName(<String>['a']), 'b');
+    const bb = FullyQualifiedWidgetName(LibraryName(<String>['b']), 'b');
     expect('$aa', 'a:a');
     expect(aa, isNot(equals(bb)));
     expect(aa.hashCode, isNot(equals(bb.hashCode)));
@@ -73,7 +73,7 @@ void main() {
   });
 
   testWidgets('$BoundArgsReference', (WidgetTester tester) async {
-    final Object target = Object();
+    final target = Object();
     final BoundArgsReference result = const ArgsReference(<Object>[0]).bind(target);
     expect(result.arguments, target);
     expect(result.parts, const <Object>[0]);
@@ -90,7 +90,7 @@ void main() {
   });
 
   testWidgets('$BoundLoopReference', (WidgetTester tester) async {
-    final Object target = Object();
+    final target = Object();
     final BoundLoopReference result = const LoopReference(9, <Object>[0]).bind(target).constructReference(<Object>[1]);
     expect(result.value, target);
     expect(result.parts, const <Object>[0, 1]);
@@ -100,5 +100,72 @@ void main() {
     final BoundStateReference result = const StateReference(<Object>[0]).bind(9).constructReference(<Object>[1]);
     expect(result.depth, 9);
     expect(result.parts, const <Object>[0, 1]);
+  });
+
+  testWidgets('$SourceLocation comparison', (WidgetTester tester) async {
+    const test1 = SourceLocation('test', 123);
+    const test2 = SourceLocation('test', 234);
+    expect(test1.compareTo(test2), lessThan(0));
+    // test1 vs test1
+    expect(test1 == test1, isTrue);
+    expect(test1 < test1, isFalse);
+    expect(test1 <= test1, isTrue);
+    expect(test1 > test1, isFalse);
+    expect(test1 >= test1, isTrue);
+    // test1 vs test2
+    expect(test1 == test2, isFalse);
+    expect(test1 < test2, isTrue);
+    expect(test1 <= test2, isTrue);
+    expect(test1 > test2, isFalse);
+    expect(test1 >= test2, isFalse);
+    // test2 vs test1
+    expect(test2 == test1, isFalse);
+    expect(test2 < test1, isFalse);
+    expect(test2 <= test1, isFalse);
+    expect(test2 > test1, isTrue);
+    expect(test2 >= test1, isTrue);
+    // map
+    final map = <SourceLocation, SourceLocation>{
+      test1: test1,
+      test2: test2,
+    };
+    expect(map[test1], test1);
+    expect(map[test2], test2);
+  });
+
+  testWidgets('$SourceLocation with non-matching sources', (WidgetTester tester) async {
+    const test1 = SourceLocation('test1', 123);
+    const test2 = SourceLocation('test2', 234);
+    expect(() => test1.compareTo(test2), throwsA(anything));
+    expect(() => test1 < test2, throwsA(anything));
+    expect(() => test1 <= test2, throwsA(anything));
+    expect(() => test1 > test2, throwsA(anything));
+    expect(() => test1 >= test2, throwsA(anything));
+  });
+
+  testWidgets('$SourceLocation toString', (WidgetTester tester) async {
+    const test = SourceLocation('test1', 123);
+    expect('$test', 'test1@123');
+  });
+
+  testWidgets('$SourceRange', (WidgetTester tester) async {
+    const a = SourceLocation('test', 123);
+    const b = SourceLocation('test', 124);
+    const c = SourceLocation('test', 125);
+    final range1 = SourceRange(a, b);
+    final range2 = SourceRange(b, c);
+    // toString
+    expect('$range1', 'test@123..124');
+    // equality
+    expect(range1 == range1, isTrue);
+    expect(range1 == range2, isFalse);
+    expect(range2 == range1, isFalse);
+    // map
+    final map = <SourceRange, SourceRange>{
+      range1: range1,
+      range2: range2,
+    };
+    expect(map[range1], range1);
+    expect(map[range2], range2);
   });
 }

@@ -1,5 +1,38 @@
 ## NEXT
 
+* Updates minimum supported SDK version to Flutter 3.35/Dart 3.9.
+
+## 0.9.4+2
+
+* Adds support for `web: ^1.0.0`.
+
+## 0.9.4+1
+
+* Removes a few deprecated API usages.
+
+## 0.9.4
+
+* Updates web code to package `web: ^0.5.0`.
+* Updates SDK version to Dart `^3.3.0`. Flutter `^3.19.0`.
+
+## 0.9.3
+
+* Updates minimum supported SDK version to Dart 3.2.
+
+## 0.9.2+1
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 0.9.2
+
+* Adds and propagates `cancel` event on file selection.
+* Changes `openFile` to return `null` when no files are selected/selection is canceled,
+  as in other platforms.
+
+## 0.9.1
+
+* Adds `getSaveLocation` and deprecates `getSavePath`.
 * Updates minimum supported SDK version to Flutter 3.3/Dart 2.18.
 
 ## 0.9.0+4

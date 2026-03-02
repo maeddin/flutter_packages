@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -18,7 +18,7 @@ final LatLngBounds sydneyBounds = LatLngBounds(
 
 class MapUiPage extends GoogleMapExampleAppPage {
   const MapUiPage({Key? key})
-      : super(const Icon(Icons.map), 'User interface', key: key);
+    : super(const Icon(Icons.map), 'User interface', key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +60,7 @@ class MapUiBodyState extends State<MapUiBody> {
   bool _myLocationButtonEnabled = true;
   late ExampleGoogleMapController _controller;
   bool _nightMode = false;
+  String _mapStyle = '';
 
   @override
   void initState() {
@@ -112,9 +113,9 @@ class MapUiBodyState extends State<MapUiBody> {
 
   Widget _zoomBoundsToggler() {
     return TextButton(
-      child: Text(_minMaxZoomPreference.minZoom == null
-          ? 'bound zoom'
-          : 'release zoom'),
+      child: Text(
+        _minMaxZoomPreference.minZoom == null ? 'bound zoom' : 'release zoom',
+      ),
       onPressed: () {
         setState(() {
           _minMaxZoomPreference = _minMaxZoomPreference.minZoom == null
@@ -184,8 +185,9 @@ class MapUiBodyState extends State<MapUiBody> {
 
   Widget _zoomControlsToggler() {
     return TextButton(
-      child:
-          Text('${_zoomControlsEnabled ? 'disable' : 'enable'} zoom controls'),
+      child: Text(
+        '${_zoomControlsEnabled ? 'disable' : 'enable'} zoom controls',
+      ),
       onPressed: () {
         setState(() {
           _zoomControlsEnabled = !_zoomControlsEnabled;
@@ -208,7 +210,8 @@ class MapUiBodyState extends State<MapUiBody> {
   Widget _myLocationToggler() {
     return TextButton(
       child: Text(
-          '${_myLocationEnabled ? 'disable' : 'enable'} my location marker'),
+        '${_myLocationEnabled ? 'disable' : 'enable'} my location marker',
+      ),
       onPressed: () {
         setState(() {
           _myLocationEnabled = !_myLocationEnabled;
@@ -220,7 +223,8 @@ class MapUiBodyState extends State<MapUiBody> {
   Widget _myLocationButtonToggler() {
     return TextButton(
       child: Text(
-          '${_myLocationButtonEnabled ? 'disable' : 'enable'} my location button'),
+        '${_myLocationButtonEnabled ? 'disable' : 'enable'} my location button',
+      ),
       onPressed: () {
         setState(() {
           _myLocationButtonEnabled = !_myLocationButtonEnabled;
@@ -244,34 +248,24 @@ class MapUiBodyState extends State<MapUiBody> {
     return rootBundle.loadString(path);
   }
 
-  void _setMapStyle(String mapStyle) {
-    setState(() {
-      _nightMode = true;
-      _controller.setMapStyle(mapStyle);
-    });
-  }
-
-  // Should only be called if _isMapCreated is true.
   Widget _nightModeToggler() {
-    assert(_isMapCreated);
     return TextButton(
       child: Text('${_nightMode ? 'disable' : 'enable'} night mode'),
-      onPressed: () {
-        if (_nightMode) {
-          setState(() {
-            _nightMode = false;
-            _controller.setMapStyle(null);
-          });
-        } else {
-          _getFileData('assets/night_mode.json').then(_setMapStyle);
-        }
+      onPressed: () async {
+        _nightMode = !_nightMode;
+        final String style = _nightMode
+            ? await _getFileData('assets/night_mode.json')
+            : '';
+        setState(() {
+          _mapStyle = style;
+        });
       },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final ExampleGoogleMap googleMap = ExampleGoogleMap(
+    final googleMap = ExampleGoogleMap(
       onMapCreated: onMapCreated,
       initialCameraPosition: _kInitialPosition,
       compassEnabled: _compassEnabled,
@@ -279,6 +273,7 @@ class MapUiBodyState extends State<MapUiBody> {
       cameraTargetBounds: _cameraTargetBounds,
       minMaxZoomPreference: _minMaxZoomPreference,
       mapType: _mapType,
+      style: _mapStyle,
       rotateGesturesEnabled: _rotateGesturesEnabled,
       scrollGesturesEnabled: _scrollGesturesEnabled,
       tiltGesturesEnabled: _tiltGesturesEnabled,
@@ -291,15 +286,11 @@ class MapUiBodyState extends State<MapUiBody> {
       onCameraMove: _updateCameraPosition,
     );
 
-    final List<Widget> columnChildren = <Widget>[
+    final columnChildren = <Widget>[
       Padding(
         padding: const EdgeInsets.all(10.0),
         child: Center(
-          child: SizedBox(
-            width: 300.0,
-            height: 200.0,
-            child: googleMap,
-          ),
+          child: SizedBox(width: 300.0, height: 200.0, child: googleMap),
         ),
       ),
     ];
@@ -311,8 +302,9 @@ class MapUiBodyState extends State<MapUiBody> {
             children: <Widget>[
               Text('camera bearing: ${_position.bearing}'),
               Text(
-                  'camera target: ${_position.target.latitude.toStringAsFixed(4)},'
-                  '${_position.target.longitude.toStringAsFixed(4)}'),
+                'camera target: ${_position.target.latitude.toStringAsFixed(4)},'
+                '${_position.target.longitude.toStringAsFixed(4)}',
+              ),
               Text('camera zoom: ${_position.zoom}'),
               Text('camera tilt: ${_position.tilt}'),
               Text(_isMoving ? '(Camera moving)' : '(Camera idle)'),
@@ -352,6 +344,12 @@ class MapUiBodyState extends State<MapUiBody> {
     setState(() {
       _controller = controller;
       _isMapCreated = true;
+    });
+    // Log any style errors to the console for debugging.
+    _controller.getStyleError().then((String? error) {
+      if (error != null) {
+        debugPrint(error);
+      }
     });
   }
 }

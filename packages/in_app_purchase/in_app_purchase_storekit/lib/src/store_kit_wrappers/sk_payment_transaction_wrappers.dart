@@ -1,10 +1,11 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'package:flutter/foundation.dart';
 import 'package:json_annotation/json_annotation.dart';
 
+import '../messages.g.dart';
 import 'enum_converters.dart';
 import 'sk_payment_queue_wrapper.dart';
 import 'sk_product_wrapper.dart';
@@ -20,12 +21,14 @@ part 'sk_payment_transaction_wrappers.g.dart';
 /// This class is a Dart wrapper around [SKTransactionObserver](https://developer.apple.com/documentation/storekit/skpaymenttransactionobserver?language=objc).
 abstract class SKTransactionObserverWrapper {
   /// Triggered when any transactions are updated.
-  void updatedTransactions(
-      {required List<SKPaymentTransactionWrapper> transactions});
+  void updatedTransactions({
+    required List<SKPaymentTransactionWrapper> transactions,
+  });
 
   /// Triggered when any transactions are removed from the payment queue.
-  void removedTransactions(
-      {required List<SKPaymentTransactionWrapper> transactions});
+  void removedTransactions({
+    required List<SKPaymentTransactionWrapper> transactions,
+  });
 
   /// Triggered when there is an error while restoring transactions.
   void restoreCompletedTransactionsFailed({required SKError error});
@@ -42,8 +45,10 @@ abstract class SKTransactionObserverWrapper {
   /// transaction if the user is in the middle of onboarding. You can also
   /// continue the transaction later by calling [addPayment] with the
   /// `payment` param from this method.
-  bool shouldAddStorePayment(
-      {required SKPaymentWrapper payment, required SKProductWrapper product});
+  bool shouldAddStorePayment({
+    required SKPaymentWrapper payment,
+    required SKProductWrapper product,
+  });
 }
 
 /// The state of a transaction.
@@ -90,7 +95,27 @@ enum SKPaymentTransactionStateWrapper {
 
   /// Indicates the transaction is in an unspecified state.
   @JsonValue(-1)
-  unspecified,
+  unspecified;
+
+  /// Converts [SKPaymentTransactionStateMessages] into the dart equivalent
+  static SKPaymentTransactionStateWrapper convertFromPigeon(
+    SKPaymentTransactionStateMessage msg,
+  ) {
+    switch (msg) {
+      case SKPaymentTransactionStateMessage.purchased:
+        return SKPaymentTransactionStateWrapper.purchased;
+      case SKPaymentTransactionStateMessage.purchasing:
+        return SKPaymentTransactionStateWrapper.purchasing;
+      case SKPaymentTransactionStateMessage.failed:
+        return SKPaymentTransactionStateWrapper.failed;
+      case SKPaymentTransactionStateMessage.restored:
+        return SKPaymentTransactionStateWrapper.restored;
+      case SKPaymentTransactionStateMessage.deferred:
+        return SKPaymentTransactionStateWrapper.deferred;
+      case SKPaymentTransactionStateMessage.unspecified:
+        return SKPaymentTransactionStateWrapper.unspecified;
+    }
+  }
 }
 
 /// Created when a payment is added to the [SKPaymentQueueWrapper].
@@ -188,15 +213,39 @@ class SKPaymentTransactionWrapper {
   }
 
   @override
-  int get hashCode => Object.hash(payment, transactionState,
-      originalTransaction, transactionTimeStamp, transactionIdentifier, error);
+  int get hashCode => Object.hash(
+    payment,
+    transactionState,
+    originalTransaction,
+    transactionTimeStamp,
+    transactionIdentifier,
+    error,
+  );
 
   @override
   String toString() => _$SKPaymentTransactionWrapperToJson(this).toString();
 
   /// The payload that is used to finish this transaction.
   Map<String, String?> toFinishMap() => <String, String?>{
-        'transactionIdentifier': transactionIdentifier,
-        'productIdentifier': payment.productIdentifier,
-      };
+    'transactionIdentifier': transactionIdentifier,
+    'productIdentifier': payment.productIdentifier,
+  };
+
+  /// Converts [SKPaymentTransactionMessages] into the dart equivalent
+  static SKPaymentTransactionWrapper convertFromPigeon(
+    SKPaymentTransactionMessage msg,
+  ) {
+    return SKPaymentTransactionWrapper(
+      payment: SKPaymentWrapper.convertFromPigeon(msg.payment),
+      transactionState: SKPaymentTransactionStateWrapper.convertFromPigeon(
+        msg.transactionState,
+      ),
+      originalTransaction: msg.originalTransaction == null
+          ? null
+          : convertFromPigeon(msg.originalTransaction!),
+      transactionTimeStamp: msg.transactionTimeStamp,
+      transactionIdentifier: msg.transactionIdentifier,
+      error: msg.error == null ? null : SKError.convertFromPigeon(msg.error!),
+    );
+  }
 }

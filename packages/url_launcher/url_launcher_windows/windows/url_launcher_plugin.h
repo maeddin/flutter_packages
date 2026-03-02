@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include <flutter/method_channel.h>
@@ -34,7 +34,7 @@ class UrlLauncherPlugin : public flutter::Plugin, public UrlLauncherApi {
 
   // UrlLauncherApi:
   ErrorOr<bool> CanLaunchUrl(const std::string& url) override;
-  std::optional<FlutterError> LaunchUrl(const std::string& url) override;
+  ErrorOr<bool> LaunchUrl(const std::string& url) override;
 
  private:
   std::unique_ptr<SystemApis> system_apis_;

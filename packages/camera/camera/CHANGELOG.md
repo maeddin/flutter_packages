@@ -1,3 +1,99 @@
+## 0.12.0
+
+* Adds support for video stabilization.
+
+## 0.11.4
+
+* Updates minimum supported SDK version to Flutter 3.35/Dart 3.9.
+* Fixes a bug where exceptions thrown during return within try blocks in an async function were not correctly caught, aligning behavior with expected Dart semantics (see [dart-lang/sdk#44395](https://github.com/dart-lang/sdk/issues/44395)).
+* Updates example to demonstrate correct exception handling for async return within try blocks, ensuring exceptions thrown during return are properly caught as per [dart-lang/sdk#44395](https://github.com/dart-lang/sdk/issues/44395).
+
+## 0.11.3+1
+
+* Fixes delivering errors from onCameraError.
+* Updates README to reflect currently supported OS versions for the latest
+  versions of the endorsed platform implementations.
+  * Applications built with older versions of Flutter will continue to
+    use compatible versions of the platform implementations.
+
+## 0.11.3
+
+* Adds support to configure persistent recording on Android. See `CameraController.startVideoRecording(enablePersistentRecording)`.
+* Updates minimum supported SDK version to Flutter 3.35.0/Dart 3.9.
+
+## 0.11.2+1
+
+* Updates examples to use the new RadioGroup API instead of deprecated Radio parameters.
+* Updates minimum supported SDK version to Flutter 3.29/Dart 3.7.
+* Updates README to reflect that only Android API 24+ is supported.
+
+## 0.11.2
+
+* Fixes overflowed toggles in the camera example.
+* Fixes `CameraLensType` export.
+
+## 0.11.1
+
+* Adds API support query for image streaming.
+* Updates minimum supported SDK version to Flutter 3.27/Dart 3.6.
+* Updates example to dispose animation controllers and curved animations.
+
+## 0.11.0+2
+
+* Updates minimum supported SDK version to Flutter 3.19/Dart 3.3.
+
+## 0.11.0+1
+
+* Updates minimum supported SDK version to Flutter 3.16/Dart 3.2.
+* Adds note to `README.md` about allowing image streaming in the background on Android.
+
+## 0.11.0
+
+* **Breaking Change** Changes the Android implementation of the camera plugin from `camera_android`
+  to `camera_android_camerax`, which has better support for a wider range of devices. The CameraX
+  implementation full feature parity with `camera_android` except for the limitations listed in
+  `README.md`. To continue using `camera_android`, follow [these instructions](https://pub.dev/packages/camera_android#usage).
+
+## 0.10.6
+
+* Adds support to control video fps and bitrate. See `CameraController` constructor.
+* Updates minimum supported SDK version to Flutter 3.13/Dart 3.1.
+* Updates support matrix in README to indicate that iOS 11 is no longer supported.
+* Clients on versions of Flutter that still support iOS 11 can continue to use this
+  package with iOS 11, but will not receive any further updates to the iOS implementation.
+
+## 0.10.5+9
+
+* Updates minimum required plugin_platform_interface version to 2.1.7.
+
+## 0.10.5+8
+
+* Fixes new lint warnings.
+
+## 0.10.5+7
+
+* Updates example app to use non-deprecated video_player method.
+
+## 0.10.5+6
+
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+* Drop unused dependency on `package:quiver`.
+
+## 0.10.5+5
+
+* Fixes bug where old camera resources were not disposed when switching between camera descriptions.
+* Fixes bug where _deviceOrientationSubscription was recreated every time the camera description was
+  changed.
+
+## 0.10.5+4
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 0.10.5+3
+
+* Migrates `styleFrom` usage in examples off of deprecated `primary` and `onPrimary` parameters.
+
 ## 0.10.5+2
 
 * Fixes unawaited_futures violations.

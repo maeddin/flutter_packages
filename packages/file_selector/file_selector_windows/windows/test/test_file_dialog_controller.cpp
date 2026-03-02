@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include "test/test_file_dialog_controller.h"
@@ -57,6 +57,13 @@ HRESULT TestFileDialogController::Show(HWND parent) {
 HRESULT TestFileDialogController::GetResult(IShellItem** out_item) const {
   *out_item = std::get<IShellItemPtr>(mock_result_);
   (*out_item)->AddRef();
+  return S_OK;
+}
+
+HRESULT TestFileDialogController::GetFileTypeIndex(UINT* out_index) const {
+  // Arbitrarily always return the last group. (No -1 because the return value
+  // from GetFileTypeIndex is defined to be one-indexed.)
+  *out_index = static_cast<UINT>(filter_groups_.size());
   return S_OK;
 }
 

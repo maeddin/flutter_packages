@@ -6,7 +6,7 @@ Powered by [a14n](https://github.com/a14n)'s [google_maps](https://pub.dev/packa
 
 ## Usage
 
-This package is [endorsed](https://flutter.dev/docs/development/packages-and-plugins/developing-packages#endorsed-federated-plugin),
+This package is [endorsed](https://flutter.dev/to/endorsed-federated-plugin),
 which means you can simply use `google_maps_flutter` normally. This package will
 be automatically included in your app when you do, so you do not need to add it
 to your `pubspec.yaml`.
@@ -32,7 +32,7 @@ Modify the `<head>` tag of your `web/index.html` to load the Google Maps JavaScr
 The Google Maps Web SDK splits some of its functionality in [separate libraries](https://developers.google.com/maps/documentation/javascript/libraries#libraries-for-dynamic-library-import).
 
 If your app needs the `drawing` library (to draw polygons, rectangles, polylines,
-circles or markers on a map), include it like this:
+circles or legacy markers on a map), include it like this:
 
 ```html
 <script
@@ -44,11 +44,42 @@ To request multiple libraries, separate them with commas:
 
 ```html
 <script
-  src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=drawing,visualization,places">
+  src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=drawing,marker,visualization,places">
 </script>
 ```
 
 Now you should be able to use the Google Maps plugin normally.
+
+## Advanced Markers
+
+The Google Maps SDK provides Advanced Markers, which replace the older legacy markers. Advanced Markers offer improved performance, richer customization (including scalable pins, custom HTML-like content, and styling options), and better behavior on vector maps such as collision management and altitude control. Legacy Marker APIs are deprecated, and new features will only be available through the Advanced Marker system. 
+
+If your app uses Advanced Markers, include `marker` library like this:
+```html
+<script
+  src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=marker">
+</script>
+```
+
+For full details, see Google's official documentation:
+https://developers.google.com/maps/documentation/javascript/advanced-markers/overview
+
+## Marker clustering
+
+If you need marker clustering support, modify the <head> tag to load the [js-markerclusterer](https://github.com/googlemaps/js-markerclusterer#install) library. Ensure you are using the currently supported version `2.5.3`, like so:
+
+```html
+<head>
+
+  <!-- // Other stuff -->
+
+  <script src="https://cdn.jsdelivr.net/npm/@googlemaps/markerclusterer@2.5.3/dist/index.umd.min.js"></script>
+</head>
+```
+
+## Heatmaps
+
+To use heatmaps, add `&libraries=visualization` to the end of the URL. See [the documentation](https://developers.google.com/maps/documentation/javascript/libraries) for more information.
 
 ## Limitations of the web version
 
@@ -72,3 +103,13 @@ Indoor and building layers are still not available on the web. Traffic is.
 Only Android supports "[Lite Mode](https://developers.google.com/maps/documentation/android-sdk/lite)", so the `liteModeEnabled` constructor argument can't be set to `true` on web apps.
 
 Google Maps for web uses `HtmlElementView` to render maps. When a `GoogleMap` is stacked below other widgets, [`package:pointer_interceptor`](https://www.pub.dev/packages/pointer_interceptor) must be used to capture mouse events on the Flutter overlays. See issue [#73830](https://github.com/flutter/flutter/issues/73830).
+
+## Supported Heatmap Options
+
+| Field                        | Supported |
+| ---------------------------- | :-------: |
+| Heatmap.dissipating          |     ✓     |
+| Heatmap.maxIntensity         |     ✓     |
+| Heatmap.minimumZoomIntensity |     x     |
+| Heatmap.maximumZoomIntensity |     x     |
+| HeatmapGradient.colorMapSize |     x     |

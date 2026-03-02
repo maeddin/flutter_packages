@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -17,18 +17,18 @@
 @implementation ListTest
 
 - (void)testListInList {
-  TestMessage *top = [[TestMessage alloc] init];
-  TestMessage *inside = [[TestMessage alloc] init];
+  FLTTestMessage *top = [[FLTTestMessage alloc] init];
+  FLTTestMessage *inside = [[FLTTestMessage alloc] init];
   inside.testList = @[ @1, @2, @3 ];
   top.testList = @[ inside ];
   EchoBinaryMessenger *binaryMessenger =
-      [[EchoBinaryMessenger alloc] initWithCodec:FlutterSmallApiGetCodec()];
-  FlutterSmallApi *api = [[FlutterSmallApi alloc] initWithBinaryMessenger:binaryMessenger];
+      [[EchoBinaryMessenger alloc] initWithCodec:FLTGetCoreTestsCodec()];
+  FLTFlutterSmallApi *api = [[FLTFlutterSmallApi alloc] initWithBinaryMessenger:binaryMessenger];
   XCTestExpectation *expectation = [self expectationWithDescription:@"callback"];
   [api echoWrappedList:top
-            completion:^(TestMessage *_Nonnull result, FlutterError *_Nullable err) {
+            completion:^(FLTTestMessage *_Nonnull result, FlutterError *_Nullable err) {
               XCTAssertEqual(1u, result.testList.count);
-              XCTAssertTrue([result.testList[0] isKindOfClass:[TestMessage class]]);
+              XCTAssertTrue([result.testList[0] isKindOfClass:[FLTTestMessage class]]);
               XCTAssertEqualObjects(inside.testList, [result.testList[0] testList]);
               [expectation fulfill];
             }];

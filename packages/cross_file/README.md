@@ -10,9 +10,8 @@ access the file and its metadata.
 
 Example:
 
+<?code-excerpt "example/lib/readme_excerpts.dart (Instantiate)"?>
 ```dart
-import 'package:cross_file/cross_file.dart';
-
 final file = XFile('assets/hello.txt');
 
 print('File information:');
@@ -20,8 +19,8 @@ print('- Path: ${file.path}');
 print('- Name: ${file.name}');
 print('- MIME type: ${file.mimeType}');
 
-final fileContent = await file.readAsString();
-print('Content of the file: ${fileContent}');  // e.g. "Moto G (4)"
+final String fileContent = await file.readAsString();
+print('Content of the file: $fileContent');
 ```
 
 You will find links to the API docs on the [pub page](https://pub.dev/packages/cross_file).
@@ -47,7 +46,7 @@ programmatically.
 ## Testing
 
 This package supports both web and native platforms. Unit tests need to be split
-in two separate suites (because native code cannot use `dart:html`, and web code
+in two separate suites (because native code cannot use `package:web`, and web code
 cannot use `dart:io`).
 
 When adding new features, it is likely that tests need to be added for both the

@@ -1,3 +1,179 @@
+## 7.2.9
+
+* Simplifies internal code for Kotlin/Java interoperability.
+
+## 7.2.8
+
+* Bumps kotlin_version to 2.3.0.
+
+## 7.2.7
+
+* Bumps kotlin_version to 2.2.21.
+
+## 7.2.6
+
+* Bumps com.android.tools.build:gradle from 8.12.1 to 8.13.1.
+
+## 7.2.5
+
+* Updates to Pigeon 26.
+
+## 7.2.4
+
+* Improves README and fixes minor typos.
+
+## 7.2.3
+
+* Removed mockito-inline and updated to mockito-core 5.17.0.
+
+## 7.2.2
+
+* Updates Java compatibility version to 17 and minimum supported SDK version to Flutter 3.35/Dart 3.9.
+
+## 7.2.1
+
+* Resolves Gradle 9 deprecations.
+
+## 7.2.0
+
+* Adds support for `disconnect`.
+
+## 7.1.0
+
+* Adds support for the `clearAuthorizationToken` method.
+
+## 7.0.5
+
+* Adds support for `hostedDomain` when authenticating.
+
+## 7.0.4
+
+* Bumps com.android.tools.build:gradle to 8.12.1 and kotlin_version to 2.2.10.
+* Updates minimum supported SDK version to Flutter 3.29/Dart 3.7.
+
+## 7.0.3
+
+* Updates kotlin version to 2.2.0 to enable gradle 8.11 support.
+* Adds more details and troubleshooting for `serverClientId` configuration
+  via Firebase.
+
+## 7.0.2
+
+* Adds a README note about potentially confusing error returns from
+  `CredentialManager`.
+
+## 7.0.1
+
+* Passes an activity context when requesting credentials, fixing an issue that
+  prevented signing in on some devices.
+
+## 7.0.0
+
+* **BREAKING CHANGE**: Switches to implementing version 3.0 of the platform
+  interface package, rather than 2.x, significantly changing the API surface.
+* Switches to Sign in with Google (`CredentialManager`) as the underlying
+  SDK, removing usage of the deprecated Google Sign In for Android SDK.
+* Updates minimum supported SDK version to Flutter 3.27/Dart 3.6.
+
+## 6.2.1
+
+* Removes obsolete code related to supporting SDK <21.
+
+## 6.2.0
+
+* Adds a sign-in field to allow clients to explicitly specify an account name.
+
+## 6.1.36
+
+* Updates compileSdk 34 to flutter.compileSdkVersion.
+
+## 6.1.35
+
+* Removes the dependency on the Guava library.
+
+## 6.1.34
+
+* Removes unnecessary native code.
+
+## 6.1.33
+
+* Updates Pigeon for non-nullable collection type support.
+
+## 6.1.32
+
+* Updates Java compatibility version to 11.
+* Updates minimum supported SDK version to Flutter 3.24/Dart 3.5.
+
+## 6.1.31
+
+* Bumps `com.google.guava:guava` from `32.0.1` to `33.3.1`.
+
+## 6.1.30
+
+* Temporarily downgrades Guava from version 33.3.0 to 32.0.1 to fix an R8 related error.
+
+## 6.1.29
+
+* Updates Guava to version 33.3.0.
+
+## 6.1.28
+
+* Updates lint checks to ignore NewerVersionAvailable.
+
+## 6.1.27
+
+* Updates AGP version to 8.5.0.
+
+## 6.1.26
+
+* Removes additional references to the v1 Android embedding.
+
+## 6.1.25
+
+* Updates Guava to version 33.2.1.
+
+## 6.1.24
+
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+* Removes support for apps using the v1 Android embedding.
+
+## 6.1.23
+
+* Updates minSdkVersion to 19.
+* Updates minimum supported SDK version to Flutter 3.16/Dart 3.2.
+
+## 6.1.22
+
+* Updates minimum supported SDK version to Flutter 3.13/Dart 3.1.
+* Updates compileSdk version to 34.
+* Updates play-services-auth version to 21.0.0.
+
+## 6.1.21
+
+* Updates `clearAuthCache` override to match base class declaration.
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+
+## 6.1.20
+
+* Updates play-services-auth version to 20.7.0.
+
+## 6.1.19
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 6.1.18
+
+* Updates play-services-auth version to 20.6.0.
+
+## 6.1.17
+
+* Converts method channels to Pigeon.
+
+## 6.1.16
+
+* Updates Guava to version 32.0.1.
+
 ## 6.1.15
 
 * Updates minimum supported SDK version to Flutter 3.3/Dart 2.18.

@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -16,6 +16,10 @@ void main() {
   runApp(const Example());
 }
 
+// The "#docregion" comment helps us keep this code in sync with the
+// excerpt in the rfw package's README.md file.
+//
+// #docregion Example
 class Example extends StatefulWidget {
   const Example({super.key});
 
@@ -54,8 +58,11 @@ class _ExampleState extends State<Example> {
   @override
   void initState() {
     super.initState();
+    // Local widget library:
     _runtime.update(coreName, createCoreWidgets());
+    // Remote widget library:
     _runtime.update(mainName, _remoteWidgets);
+    // Configuration data:
     _data.update('greet', <String, Object>{'name': 'World'});
   }
 
@@ -73,3 +80,5 @@ class _ExampleState extends State<Example> {
     );
   }
 }
+
+// #enddocregion Example

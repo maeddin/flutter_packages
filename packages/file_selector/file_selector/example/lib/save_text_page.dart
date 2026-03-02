@@ -1,11 +1,11 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:path_provider/path_provider.dart' as path_provider;
 
 /// Page for showing an example of saving with file_selector
 class SaveTextPage extends StatelessWidget {
@@ -21,33 +21,36 @@ class SaveTextPage extends StatelessWidget {
     final String fileName = _nameController.text;
     // This demonstrates using an initial directory for the prompt, which should
     // only be done in cases where the application can likely predict where the
-    // file will be saved. In most cases, this parameter should not be provided.
-    final String initialDirectory =
-        (await getApplicationDocumentsDirectory()).path;
-    final String? path = await getSavePath(
+    // file will be saved. In most cases, this parameter should not be provided,
+    // and in the web, path_provider shouldn't even be called.
+    final String? initialDirectory = kIsWeb
+        ? null
+        : (await path_provider.getApplicationDocumentsDirectory()).path;
+    final FileSaveLocation? result = await getSaveLocation(
       initialDirectory: initialDirectory,
       suggestedName: fileName,
     );
-    if (path == null) {
+    if (result == null) {
       // Operation was canceled by the user.
       return;
     }
 
     final String text = _contentController.text;
-    final Uint8List fileData = Uint8List.fromList(text.codeUnits);
-    const String fileMimeType = 'text/plain';
-    final XFile textFile =
-        XFile.fromData(fileData, mimeType: fileMimeType, name: fileName);
+    final fileData = Uint8List.fromList(text.codeUnits);
+    const fileMimeType = 'text/plain';
+    final textFile = XFile.fromData(
+      fileData,
+      mimeType: fileMimeType,
+      name: fileName,
+    );
 
-    await textFile.saveTo(path);
+    await textFile.saveTo(result.path);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Save text into a file'),
-      ),
+      appBar: AppBar(title: const Text('Save text into a file')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -77,16 +80,11 @@ class SaveTextPage extends StatelessWidget {
             const SizedBox(height: 10),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                // TODO(darrenaustin): Migrate to new API once it lands in stable: https://github.com/flutter/flutter/issues/105724
-                // ignore: deprecated_member_use
-                primary: Colors.blue,
-                // ignore: deprecated_member_use
-                onPrimary: Colors.white,
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
               ),
               onPressed: _isIOS ? null : () => _saveFile(),
-              child: const Text(
-                'Press to save a text file (not supported on iOS).',
-              ),
+              child: const Text('Press to save a text file.'),
             ),
           ],
         ),

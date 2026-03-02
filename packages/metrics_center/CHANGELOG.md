@@ -1,3 +1,32 @@
+## NEXT
+
+* Updates minimum supported SDK version to Flutter 3.35/Dart 3.9.
+
+## 1.0.14
+
+* Updates minimum supported SDK version to Flutter 3.27/Dart 3.6.
+* Updates dependency on `package:googleapis` to `^14.0.0`.
+* Updates dependency on `package:googleapis_auth` to `^2.0.0`.
+* Update dependency `http: ^1.0.0`
+
+## 1.0.13
+
+* Updates minimum supported SDK version to Flutter 3.13/Dart 3.1.
+* Updates dependency on `package:googleapis` to `^12.0.0`.
+
+## 1.0.12
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 1.0.11
+
+* Removes the dependency on `package:equatable`.
+
+## 1.0.10
+
+* Adds retry logic when removing a `GcsLock` file lock in case of failure.
+
 ## 1.0.9
 
 * Adds compatibility with `http` 1.0.

@@ -1,14 +1,8 @@
-# The list of external dependencies that are allowed as pinned dependencies.
-# See https://github.com/flutter/flutter/wiki/Contributing-to-Plugins-and-Packages#Dependencies
+# The list of external dependencies that are allowed as unpinned dependencies.
+# See https://github.com/flutter/flutter/blob/master/docs/ecosystem/contributing/README.md#Dependencies
 #
 # All entries here should have an explanation for why they are here, either
 # via being part of one of the default-allowed groups, or a specific reason.
-
-## Legacy allowances, for dependencies that predate the tooling.
-# TODO(stuartmorgan): Audit these. See
-# https://github.com/flutter/flutter/issues/122713
-- equatable
-- xml
 
 ## Explicit allowances
 
@@ -19,9 +13,6 @@
 # cautious about adding to this list.
 - build_verify
 - google_maps
-- path_to_regexp
-- source_gen_test
-- win32
 
 ## Allowed by default
 
@@ -32,23 +23,41 @@
 - build
 - build_config
 - build_runner
+- build_test
+- code_builder
 - collection
 - convert
 - crypto
+- dart_style
+- devtools_app_shared
+- devtools_extensions
 - fake_async
 - ffi
+- ffigen
+- file
+- file_testing
 - gcloud
+- graphs
 - html
 - http
 - intl
 - io
 - js
 - json_serializable
+- leak_tracker
+- leak_tracker_flutter_testing
 - lints
 - logging
 - markdown
 - meta
+- mime
+- mockito
+- objective_c
 - path
+- package_config
+- platform
+- process
+- pub_semver
 - shelf
 - shelf_static
 - source_gen
@@ -57,15 +66,15 @@
 - test_api
 - vm_service
 - wasm
+- web
 - yaml
 # Google-owned packages
+- _discoveryapis_commons
 - adaptive_navigation
-- file
 - googleapis
 - googleapis_auth
 - json_annotation
-- platform
-- process
+- protobuf
 - quiver
 - sanitize_html
 - source_helper

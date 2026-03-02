@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -14,10 +14,8 @@ typedef FollowLink = Future<void> Function();
 
 /// Signature for a builder function passed to the [Link] widget to construct
 /// the widget tree under it.
-typedef LinkWidgetBuilder = Widget Function(
-  BuildContext context,
-  FollowLink? followLink,
-);
+typedef LinkWidgetBuilder =
+    Widget Function(BuildContext context, FollowLink? followLink);
 
 /// Signature for a delegate function to build the [Link] widget.
 typedef LinkDelegate = Widget Function(LinkInfo linkWidget);
@@ -28,6 +26,7 @@ const MethodCodec _codec = JSONMethodCodec();
 ///
 /// This is a class instead of an enum to allow future customizability e.g.
 /// opening a link in a specific iframe.
+// ignore: use_enums
 class LinkTarget {
   /// Const private constructor with a [debugLabel] to allow the creation of
   /// multiple distinct const instances.
@@ -42,8 +41,9 @@ class LinkTarget {
   ///
   /// iOS, on the other hand, defaults to [self] for web URLs, and [blank] for
   /// non-web URLs.
-  static const LinkTarget defaultTarget =
-      LinkTarget._(debugLabel: 'defaultTarget');
+  static const LinkTarget defaultTarget = LinkTarget._(
+    debugLabel: 'defaultTarget',
+  );
 
   /// On the web, this opens the link in the same tab where the flutter app is
   /// running.
@@ -74,8 +74,6 @@ abstract class LinkInfo {
   bool get isDisabled;
 }
 
-typedef _SendMessage = Function(String, ByteData?, void Function(ByteData?));
-
 /// Pushes the [routeName] into Flutter's navigation system via a platform
 /// message.
 ///
@@ -86,16 +84,9 @@ typedef _SendMessage = Function(String, ByteData?, void Function(ByteData?));
 /// Returns the raw data returned by the framework.
 // TODO(ianh): Remove the first argument.
 Future<ByteData> pushRouteNameToFramework(Object? _, String routeName) {
-  final Completer<ByteData> completer = Completer<ByteData>();
-  // TODO(chunhtai): remove this ignore and migrate the code
-  // https://github.com/flutter/flutter/issues/124045.
-  // ignore: deprecated_member_use
-  SystemNavigator.routeInformationUpdated(location: routeName);
-  final _SendMessage sendMessage = _ambiguate(WidgetsBinding.instance)
-          ?.platformDispatcher
-          .onPlatformMessage ??
-      ui.channelBuffers.push;
-  sendMessage(
+  final completer = Completer<ByteData>();
+  SystemNavigator.routeInformationUpdated(uri: Uri.parse(routeName));
+  ui.channelBuffers.push(
     'flutter/navigation',
     _codec.encodeMethodCall(
       MethodCall('pushRouteInformation', <dynamic, dynamic>{
@@ -107,9 +98,3 @@ Future<ByteData> pushRouteNameToFramework(Object? _, String routeName) {
   );
   return completer.future;
 }
-
-/// This allows a value of type T or T? to be treated as a value of type T?.
-///
-/// We use this so that APIs that have become non-nullable can still be used
-/// with `!` and `?` on the stable branch.
-T? _ambiguate<T>(T? value) => value;

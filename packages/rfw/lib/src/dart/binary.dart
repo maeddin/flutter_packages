@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -39,7 +39,7 @@ const List<int> libraryBlobSignature = <int>[0xFE, 0x52, 0x46, 0x57];
 ///  * [encodeLibraryBlob], which uses a superset of this format to encode
 ///    Remote Flutter Widgets binary library blobs.
 Uint8List encodeDataBlob(Object value) {
-  final _BlobEncoder encoder = _BlobEncoder();
+  final encoder = _BlobEncoder();
   encoder.writeSignature(dataBlobSignature);
   encoder.writeValue(value);
   return encoder.bytes.toBytes();
@@ -65,7 +65,7 @@ Uint8List encodeDataBlob(Object value) {
 ///    Remote Flutter Widgets binary library blobs.
 ///  * [parseDataFile], which parses the text variant of this format.
 Object decodeDataBlob(Uint8List bytes) {
-  final _BlobDecoder decoder = _BlobDecoder(bytes.buffer.asByteData(bytes.offsetInBytes, bytes.lengthInBytes));
+  final decoder = _BlobDecoder(bytes.buffer.asByteData(bytes.offsetInBytes, bytes.lengthInBytes));
   decoder.expectSignature(dataBlobSignature);
   final Object result = decoder.readValue();
   if (!decoder.finished) {
@@ -83,7 +83,7 @@ Object decodeDataBlob(Uint8List bytes) {
 ///    Remote Flutter Widgets binary data blobs.
 ///  * [parseLibraryFile], which parses the text variant of this format.
 Uint8List encodeLibraryBlob(RemoteWidgetLibrary value) {
-  final _BlobEncoder encoder = _BlobEncoder();
+  final encoder = _BlobEncoder();
   encoder.writeSignature(libraryBlobSignature);
   encoder.writeLibrary(value);
   return encoder.bytes.toBytes();
@@ -115,7 +115,9 @@ Uint8List encodeLibraryBlob(RemoteWidgetLibrary value) {
 ///
 ///   For example, the string "Hello" would be encoded as:
 ///
-///       05 00 00 00 00 00 00 00  48 65 6C 6C 6F
+///   ```none
+///   05 00 00 00 00 00 00 00  48 65 6C 6C 6F
+///   ```
 ///
 /// * Lists are encoded as an integer length, followed by that many values
 ///   back to back. When lists are of specific types (e.g. lists of imports),
@@ -124,15 +126,19 @@ Uint8List encodeLibraryBlob(RemoteWidgetLibrary value) {
 ///   followed by the value (tagged lists). For example, a list of integers with
 ///   the values 1 and 2 in that order would be encoded as:
 ///
-///       02 00 00 00 00 00 00 00  01 00 00 00 00 00 00 00
-///       02 00 00 00 00 00 00 00
+///   ```none
+///   02 00 00 00 00 00 00 00  01 00 00 00 00 00 00 00
+///   02 00 00 00 00 00 00 00
+///   ```
 ///
 ///   A list of arbitrary values that happens to contain one string "Hello"
 ///   would be encoded as follows; 0x04 is the tag for "String" (the full list
 ///   of tags is described below):
 ///
-///       01 00 00 00 00 00 00 00  04 05 00 00 00 00 00 00
-///       00 48 65 6C 6C 6F
+///   ```none
+///   01 00 00 00 00 00 00 00  04 05 00 00 00 00 00 00
+///   00 48 65 6C 6C 6F
+///   ```
 ///
 ///   A list of length zero is eight zero bytes with no additional payload.
 ///
@@ -147,8 +153,10 @@ Uint8List encodeLibraryBlob(RemoteWidgetLibrary value) {
 ///   strings, so they are untagged) is encoded as follows (0x02 is the tag for
 ///   integers):
 ///
-///       01 00 00 00 00 00 00 00  01 00 00 00 00 00 00 00
-///       61 02 0F 00 00 00 00 00  00 00
+///   ```none
+///   01 00 00 00 00 00 00 00  01 00 00 00 00 00 00 00
+///   61 02 0F 00 00 00 00 00  00 00
+///   ```
 ///
 /// Objects are encoded as follows:
 ///
@@ -159,8 +167,10 @@ Uint8List encodeLibraryBlob(RemoteWidgetLibrary value) {
 ///   one of the subparts of the imported library name. For example, `import
 ///   a.b` is encoded as:
 ///
-///       02 00 00 00 00 00 00 00  01 00 00 00 00 00 00 00
-///       61 01 00 00 00 00 00 00  00 62
+///   ```none
+///   02 00 00 00 00 00 00 00  01 00 00 00 00 00 00 00
+///   61 01 00 00 00 00 00 00  00 62
+///   ```
 ///
 /// * Widget declarations are encoded as a string giving the declaration name,
 ///   an untagged map for the initial state, and finally the value that
@@ -220,7 +230,7 @@ Uint8List encodeLibraryBlob(RemoteWidgetLibrary value) {
 ///
 ///   For example, this switch:
 ///
-///   ```
+///   ```none
 ///   switch (args.a) {
 ///    0: 'z',
 ///    1: 'o',
@@ -230,11 +240,13 @@ Uint8List encodeLibraryBlob(RemoteWidgetLibrary value) {
 ///
 ///   ...is encoded as follows (including the tag for the switch itself):
 ///
-///       0F 0A 01 00 00 00 00 00  00 00 61 03 00 00 00 00
-///       00 00 00 02 00 00 00 00  00 00 00 00 04 01 00 00
-///       00 00 00 00 00 7A 02 01  00 00 00 00 00 00 00 04
-///       01 00 00 00 00 00 00 00  6F 10 04 01 00 00 00 00
-///       00 00 00 64
+///   ```none
+///   0F 0A 01 00 00 00 00 00  00 00 61 03 00 00 00 00
+///   00 00 00 02 00 00 00 00  00 00 00 00 04 01 00 00
+///   00 00 00 00 00 7A 02 01  00 00 00 00 00 00 00 04
+///   01 00 00 00 00 00 00 00  6F 10 04 01 00 00 00 00
+///   00 00 00 64
+///   ```
 ///
 /// * Event handlers have the tag 0x0E, and are encoded as a string
 ///   ([EventHandler.eventName]) and an untagged map
@@ -245,6 +257,18 @@ Uint8List encodeLibraryBlob(RemoteWidgetLibrary value) {
 ///   ([SetStateHandler.stateReference]), followed by the tagged value to which
 ///   to set that state entry ([SetStateHandler.value]).
 ///
+/// ## Limitations
+///
+/// JavaScript does not have a native integer type; all numbers are stored as
+/// [double]s. Data loss may therefore occur when handling integers that cannot
+/// be completely represented as a [binary64] floating point number.
+///
+/// Integers are used for two purposes in this format; as a length, for which it
+/// is extremely unlikely that numbers above 2^53 would be practical anyway, and
+/// for representing integer literals. Thus, when using RFW with JavaScript
+/// environments, it is recommended to use [double]s instead of [int]s whenever
+/// possible, to avoid accidental data loss.
+///
 /// See also:
 ///
 ///  * [encodeLibraryBlob], which encodes this format.
@@ -252,7 +276,7 @@ Uint8List encodeLibraryBlob(RemoteWidgetLibrary value) {
 ///    Remote Flutter Widgets binary data blobs.
 ///  * [parseDataFile], which parses the text variant of this format.
 RemoteWidgetLibrary decodeLibraryBlob(Uint8List bytes) {
-  final _BlobDecoder decoder = _BlobDecoder(bytes.buffer.asByteData(bytes.offsetInBytes, bytes.lengthInBytes));
+  final decoder = _BlobDecoder(bytes.buffer.asByteData(bytes.offsetInBytes, bytes.lengthInBytes));
   decoder.expectSignature(libraryBlobSignature);
   final RemoteWidgetLibrary result = decoder.readLibrary();
   if (!decoder.finished) {
@@ -263,6 +287,10 @@ RemoteWidgetLibrary decodeLibraryBlob(Uint8List bytes) {
 
 // endianess used by this format
 const Endian _blobEndian = Endian.little;
+
+// whether we can use 64 bit APIs on this platform
+// (on JS, we can only use 32 bit APIs and integers only go up to ~2^53)
+const bool _has64Bits = 0x1000000000000000 + 1 != 0x1000000000000000; // 2^60
 
 // magic signatures
 const int _msFalse = 0x00;
@@ -282,6 +310,8 @@ const int _msEvent = 0x0E;
 const int _msSwitch = 0x0F;
 const int _msDefault = 0x10;
 const int _msSetState = 0x11;
+const int _msWidgetBuilder = 0x12;
+const int _msWidgetBuilderArgReference = 0x13;
 
 /// API for decoding Remote Flutter Widgets binary blobs.
 ///
@@ -316,7 +346,14 @@ class _BlobDecoder {
   int _readInt64() {
     final int byteOffset = _cursor;
     _advance('int64', 8);
-    return bytes.getInt64(byteOffset, _blobEndian);
+    if (_has64Bits) {
+      return bytes.getInt64(byteOffset, _blobEndian);
+    }
+    // We use multiplication rather than bit shifts because << truncates to 32 bits when compiled to JS:
+    // https://dart.dev/guides/language/numbers#bitwise-operations
+    final int a = bytes.getUint32(byteOffset, _blobEndian); // dead code on VM target
+    final int b = bytes.getInt32(byteOffset + 4, _blobEndian); // dead code on VM target
+    return a + (b * 0x100000000); // dead code on VM target
   }
 
   double _readBinary64() {
@@ -373,7 +410,7 @@ class _BlobDecoder {
   Switch _readSwitch() {
     final Object value = _readArgument();
     final int count = _readInt64();
-    final Map<Object?, Object> cases = Map<Object?, Object>.fromEntries(
+    final cases = Map<Object?, Object>.fromEntries(
       Iterable<MapEntry<Object?, Object>>.generate(
         count,
         (int index) => MapEntry<Object?, Object>(
@@ -430,6 +467,10 @@ class _BlobDecoder {
         return _readSwitch();
       case _msSetState:
         return SetStateHandler(StateReference(_readPartList()), _readArgument());
+      case _msWidgetBuilder:
+        return _readWidgetBuilder();
+      case _msWidgetBuilderArgReference:
+        return WidgetBuilderArgReference(_readString(), _readPartList());
       default:
         return _parseValue(type, _readArgument);
     }
@@ -445,6 +486,16 @@ class _BlobDecoder {
     return ConstructorCall(name, _readMap(_readArgument)!);
   }
 
+  WidgetBuilderDeclaration _readWidgetBuilder() {
+    final String argumentName = _readString();
+    final int type = _readByte();
+    if (type != _msWidget && type != _msSwitch) {
+      throw FormatException('Unrecognized data type 0x${type.toRadixString(16).toUpperCase().padLeft(2, "0")} while decoding widget builder blob.');
+    }
+    final BlobNode widget = type == _msWidget ? _readWidget() : _readSwitch();
+    return WidgetBuilderDeclaration(argumentName, widget);
+  }
+
   WidgetDeclaration _readDeclaration() {
     final String name = _readString();
     final DynamicMap? initialState = _readMap(readValue, nullIfEmpty: true);
@@ -453,10 +504,8 @@ class _BlobDecoder {
     switch (type) {
       case _msSwitch:
         root = _readSwitch();
-        break;
       case _msWidget:
         root = _readWidget();
-        break;
       default:
         throw FormatException('Unrecognized data type 0x${type.toRadixString(16).toUpperCase().padLeft(2, "0")} while decoding widget declaration root.');
     }
@@ -481,9 +530,9 @@ class _BlobDecoder {
 
   void expectSignature(List<int> signature) {
     assert(signature.length == 4);
-    final List<int> bytes = <int>[];
-    bool match = true;
-    for (final int byte in signature) {
+    final bytes = <int>[];
+    var match = true;
+    for (final byte in signature) {
       final int read = _readByte();
       bytes.add(read);
       if (read != byte) {
@@ -516,12 +565,24 @@ class _BlobEncoder {
   final BytesBuilder bytes = BytesBuilder(); // copying builder -- we repeatedly add _scratchOut after changing it
 
   void _writeInt64(int value) {
-    _scratchIn.setInt64(0, value, _blobEndian);
+    if (_has64Bits) {
+      _scratchIn.setInt64(0, value, _blobEndian);
+    } else {
+      // We use division rather than bit shifts because >> truncates to 32 bits when compiled to JS:
+      // https://dart.dev/guides/language/numbers#bitwise-operations
+      if (value >= 0) { // dead code on VM target
+        _scratchIn.setInt32(0, value, _blobEndian); // dead code on VM target
+        _scratchIn.setInt32(4, value ~/ 0x100000000, _blobEndian); // dead code on VM target
+      } else {
+        _scratchIn.setInt32(0, value, _blobEndian); // dead code on VM target
+        _scratchIn.setInt32(4, -((-value) ~/ 0x100000000 + 1), _blobEndian); // dead code on VM target
+      }
+    }
     bytes.add(_scratchOut);
   }
 
   void _writeString(String value) {
-    final Uint8List buffer = utf8.encode(value) as Uint8List;
+    final Uint8List buffer = const Utf8Encoder().convert(value);
     _writeInt64(buffer.length);
     bytes.add(buffer);
   }
@@ -551,7 +612,7 @@ class _BlobEncoder {
       bytes.addByte(_msFalse);
     } else if (value == true) {
       bytes.addByte(_msTrue);
-    } else if (value is double) {
+    } else if (value is double && value is! int) { // When compiled to JS, a Number can be both.
       bytes.addByte(_msBinary64);
       _scratchIn.setFloat64(0, value, _blobEndian);
       bytes.add(_scratchOut);
@@ -580,12 +641,21 @@ class _BlobEncoder {
       bytes.addByte(_msWidget);
       _writeString(value.name);
       _writeMap(value.arguments, _writeArgument);
+    } else if (value is WidgetBuilderDeclaration) {
+      bytes.addByte(_msWidgetBuilder);
+      _writeString(value.argumentName);
+      _writeArgument(value.widget);
     } else if (value is ArgsReference) {
       bytes.addByte(_msArgsReference);
       _writeInt64(value.parts.length);
       value.parts.forEach(_writePart);
     } else if (value is DataReference) {
       bytes.addByte(_msDataReference);
+      _writeInt64(value.parts.length);
+      value.parts.forEach(_writePart);
+    } else if (value is WidgetBuilderArgReference) {
+      bytes.addByte(_msWidgetBuilderArgReference);
+      _writeString(value.argumentName);
       _writeInt64(value.parts.length);
       value.parts.forEach(_writePart);
     } else if (value is LoopReference) {
@@ -615,7 +685,7 @@ class _BlobEncoder {
       });
     } else if (value is SetStateHandler) {
       bytes.addByte(_msSetState);
-      final StateReference reference = value.stateReference as StateReference;
+      final reference = value.stateReference as StateReference;
       _writeInt64(reference.parts.length);
       reference.parts.forEach(_writePart);
       _writeArgument(value.value);
@@ -627,7 +697,7 @@ class _BlobEncoder {
 
   void _writeDeclarationList(List<WidgetDeclaration> value) {
     _writeInt64(value.length);
-    for (final WidgetDeclaration declaration in value) {
+    for (final declaration in value) {
       _writeString(declaration.name);
       if (declaration.initialState != null) {
         _writeMap(declaration.initialState!, _writeArgument);
@@ -640,7 +710,7 @@ class _BlobEncoder {
 
   void _writeImportList(List<Import> value) {
     _writeInt64(value.length);
-    for (final Import import in value) {
+    for (final import in value) {
       _writeInt64(import.name.parts.length);
       import.name.parts.forEach(_writeString);
     }

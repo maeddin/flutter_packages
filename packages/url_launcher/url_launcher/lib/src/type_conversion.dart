@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,12 +8,22 @@ import 'types.dart';
 
 /// Converts an (app-facing) [WebViewConfiguration] to a (platform interface)
 /// [InAppWebViewConfiguration].
-InAppWebViewConfiguration convertConfiguration(WebViewConfiguration config) {
+InAppWebViewConfiguration convertWebViewConfiguration(
+  WebViewConfiguration config,
+) {
   return InAppWebViewConfiguration(
     enableJavaScript: config.enableJavaScript,
     enableDomStorage: config.enableDomStorage,
     headers: config.headers,
   );
+}
+
+/// Converts an (app-facing) [BrowserConfiguration] to a (platform interface)
+/// [InAppBrowserConfiguration].
+InAppBrowserConfiguration convertBrowserConfiguration(
+  BrowserConfiguration config,
+) {
+  return InAppBrowserConfiguration(showTitle: config.showTitle);
 }
 
 /// Converts an (app-facing) [LaunchMode] to a (platform interface)
@@ -22,6 +32,8 @@ PreferredLaunchMode convertLaunchMode(LaunchMode mode) {
   switch (mode) {
     case LaunchMode.platformDefault:
       return PreferredLaunchMode.platformDefault;
+    case LaunchMode.inAppBrowserView:
+      return PreferredLaunchMode.inAppBrowserView;
     case LaunchMode.inAppWebView:
       return PreferredLaunchMode.inAppWebView;
     case LaunchMode.externalApplication:

@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -40,7 +40,7 @@ class TestViewProvider: NSObject, ViewProvider {
   var window: NSWindow? = NSWindow()
 }
 
-class exampleTests: XCTestCase {
+class ExampleTests: XCTestCase {
 
   func testOpenSimple() throws {
     let panelController = TestPanelController()
@@ -67,7 +67,7 @@ class exampleTests: XCTestCase {
       called.fulfill()
     }
 
-    wait(for: [called], timeout: 0.5)
+    wait(for: [called])
     XCTAssertNotNil(panelController.openPanel)
     if let panel = panelController.openPanel {
       XCTAssertTrue(panel.canChooseFiles)
@@ -104,11 +104,12 @@ class exampleTests: XCTestCase {
       called.fulfill()
     }
 
-    wait(for: [called], timeout: 0.5)
+    wait(for: [called])
     XCTAssertNotNil(panelController.openPanel)
     if let panel = panelController.openPanel {
       XCTAssertEqual(panel.directoryURL?.path, "/some/dir")
-      XCTAssertEqual(panel.nameFieldStringValue, "a name")
+      // nameFieldStringValue is not set for NSOpenPanel, only for NSSavePanel
+      XCTAssertNotEqual(panel.nameFieldStringValue, "a name")
       XCTAssertEqual(panel.prompt, "Open it!")
     }
   }
@@ -140,7 +141,7 @@ class exampleTests: XCTestCase {
       called.fulfill()
     }
 
-    wait(for: [called], timeout: 0.5)
+    wait(for: [called])
     XCTAssertNotNil(panelController.openPanel)
   }
 
@@ -173,7 +174,7 @@ class exampleTests: XCTestCase {
       called.fulfill()
     }
 
-    wait(for: [called], timeout: 0.5)
+    wait(for: [called])
     XCTAssertNotNil(panelController.openPanel)
     if let panel = panelController.openPanel {
       if #available(macOS 11.0, *) {
@@ -184,6 +185,51 @@ class exampleTests: XCTestCase {
       } else {
         // MIME type is not supported for the legacy codepath, but the rest should be set.
         XCTAssertEqual(panel.allowedFileTypes, ["txt", "json", "public.text", "public.image"])
+      }
+    }
+  }
+
+  func testFilterUnknownFileExtension() throws {
+    let panelController = TestPanelController()
+    let plugin = FileSelectorPlugin(
+      viewProvider: TestViewProvider(),
+      panelController: panelController)
+
+    let unknownExtension = "somenewextension"
+    let returnPath = "/foo/bar"
+    panelController.openURLs = [URL(fileURLWithPath: returnPath)]
+
+    let called = XCTestExpectation()
+    let options = OpenPanelOptions(
+      allowsMultipleSelection: true,
+      canChooseDirectories: false,
+      canChooseFiles: true,
+      baseOptions: SavePanelOptions(
+        allowedFileTypes: AllowedTypes(
+          extensions: [unknownExtension],
+          mimeTypes: [],
+          utis: [])))
+    plugin.displayOpenPanel(options: options) { result in
+      switch result {
+      case .success(let paths):
+        XCTAssertEqual(paths[0], returnPath)
+      case .failure(let error):
+        XCTFail("\(error)")
+      }
+      called.fulfill()
+    }
+
+    wait(for: [called])
+    XCTAssertNotNil(panelController.openPanel)
+    if let panel = panelController.openPanel {
+      if #available(macOS 11.0, *) {
+        XCTAssertEqual(panel.allowedContentTypes.count, 1)
+        XCTAssertEqual(panel.allowedContentTypes[0].preferredFilenameExtension, unknownExtension)
+        // If this isn't true, the dynamic type created for the extension won't work as a file
+        // extension filter.
+        XCTAssertTrue(panel.allowedContentTypes[0].conforms(to: UTType.data))
+      } else {
+        XCTAssertEqual(panel.allowedFileTypes, [unknownExtension])
       }
     }
   }
@@ -218,7 +264,7 @@ class exampleTests: XCTestCase {
       called.fulfill()
     }
 
-    wait(for: [called], timeout: 0.5)
+    wait(for: [called])
     XCTAssertNotNil(panelController.openPanel)
     if let panel = panelController.openPanel {
       // On the legacy path, the allowedFileTypes should be set directly.
@@ -257,7 +303,7 @@ class exampleTests: XCTestCase {
       called.fulfill()
     }
 
-    wait(for: [called], timeout: 0.5)
+    wait(for: [called])
     XCTAssertNotNil(panelController.openPanel)
   }
 
@@ -282,8 +328,12 @@ class exampleTests: XCTestCase {
       called.fulfill()
     }
 
-    wait(for: [called], timeout: 0.5)
+    wait(for: [called])
     XCTAssertNotNil(panelController.savePanel)
+    if let panel = panelController.savePanel {
+      // By default, "New Folder" button is visible for Save dialogs
+      XCTAssertTrue(panel.canCreateDirectories)
+    }
   }
 
   func testSaveWithArguments() throws {
@@ -298,6 +348,7 @@ class exampleTests: XCTestCase {
     let called = XCTestExpectation()
     let options = SavePanelOptions(
       directoryPath: "/some/dir",
+      nameFieldStringValue: "a name",
       prompt: "Save it!")
     plugin.displaySavePanel(options: options) { result in
       switch result {
@@ -309,11 +360,41 @@ class exampleTests: XCTestCase {
       called.fulfill()
     }
 
-    wait(for: [called], timeout: 0.5)
+    wait(for: [called])
     XCTAssertNotNil(panelController.savePanel)
     if let panel = panelController.savePanel {
       XCTAssertEqual(panel.directoryURL?.path, "/some/dir")
+      XCTAssertEqual(panel.nameFieldStringValue, "a name")
       XCTAssertEqual(panel.prompt, "Save it!")
+    }
+  }
+
+  func testSaveNewFolderHidden() throws {
+    let panelController = TestPanelController()
+    let plugin = FileSelectorPlugin(
+      viewProvider: TestViewProvider(),
+      panelController: panelController)
+
+    let returnPath = "/foo/bar"
+    panelController.saveURL = URL(fileURLWithPath: returnPath)
+
+    let called = XCTestExpectation()
+    let options = SavePanelOptions(canCreateDirectories: false)
+
+    plugin.displaySavePanel(options: options) { result in
+      switch result {
+      case .success(let path):
+        XCTAssertEqual(path, returnPath)
+      case .failure(let error):
+        XCTFail("\(error)")
+      }
+      called.fulfill()
+    }
+
+    wait(for: [called])
+    XCTAssertNotNil(panelController.savePanel)
+    if let panel = panelController.savePanel {
+      XCTAssertFalse(panel.canCreateDirectories)
     }
   }
 
@@ -335,7 +416,7 @@ class exampleTests: XCTestCase {
       called.fulfill()
     }
 
-    wait(for: [called], timeout: 0.5)
+    wait(for: [called])
     XCTAssertNotNil(panelController.savePanel)
   }
 
@@ -364,7 +445,7 @@ class exampleTests: XCTestCase {
       called.fulfill()
     }
 
-    wait(for: [called], timeout: 0.5)
+    wait(for: [called])
     XCTAssertNotNil(panelController.openPanel)
     if let panel = panelController.openPanel {
       XCTAssertTrue(panel.canChooseDirectories)
@@ -373,6 +454,8 @@ class exampleTests: XCTestCase {
       // The Dart API only allows a single directory to be returned, so users shouldn't be allowed
       // to select multiple.
       XCTAssertFalse(panel.allowsMultipleSelection)
+      // By default, "New Folder" button is hidden for Choose Directory dialogs.
+      XCTAssertFalse(panel.canCreateDirectories)
     }
   }
 
@@ -398,7 +481,7 @@ class exampleTests: XCTestCase {
       called.fulfill()
     }
 
-    wait(for: [called], timeout: 0.5)
+    wait(for: [called])
     XCTAssertNotNil(panelController.openPanel)
   }
 
@@ -408,7 +491,7 @@ class exampleTests: XCTestCase {
       viewProvider: TestViewProvider(),
       panelController: panelController)
 
-    let returnPaths = ["/foo/bar", "/foo/test"];
+    let returnPaths = ["/foo/bar", "/foo/test"]
     panelController.openURLs = returnPaths.map({ path in URL(fileURLWithPath: path) })
 
     let called = XCTestExpectation()
@@ -427,13 +510,15 @@ class exampleTests: XCTestCase {
       called.fulfill()
     }
 
-    wait(for: [called], timeout: 0.5)
+    wait(for: [called])
     XCTAssertNotNil(panelController.openPanel)
     if let panel = panelController.openPanel {
       XCTAssertTrue(panel.canChooseDirectories)
       // For consistency across platforms, file selection is disabled.
       XCTAssertFalse(panel.canChooseFiles)
       XCTAssertTrue(panel.allowsMultipleSelection)
+      // By default, "New Folder" button is hidden for Choose Directory dialogs.
+      XCTAssertFalse(panel.canCreateDirectories)
     }
   }
 
@@ -459,7 +544,40 @@ class exampleTests: XCTestCase {
       called.fulfill()
     }
 
-    wait(for: [called], timeout: 0.5)
+    wait(for: [called])
     XCTAssertNotNil(panelController.openPanel)
+  }
+
+  func testGetDirectoryNewFolderVisible() throws {
+    let panelController = TestPanelController()
+    let plugin = FileSelectorPlugin(
+      viewProvider: TestViewProvider(),
+      panelController: panelController)
+
+    let returnPath = "/foo/bar"
+    panelController.openURLs = [URL(fileURLWithPath: returnPath)]
+
+    let called = XCTestExpectation()
+    let options = OpenPanelOptions(
+      allowsMultipleSelection: false,
+      canChooseDirectories: true,
+      canChooseFiles: false,
+      baseOptions: SavePanelOptions(canCreateDirectories: true))
+
+    plugin.displayOpenPanel(options: options) { result in
+      switch result {
+      case .success(let paths):
+        XCTAssertEqual(paths[0], returnPath)
+      case .failure(let error):
+        XCTFail("\(error)")
+      }
+      called.fulfill()
+    }
+
+    wait(for: [called])
+    XCTAssertNotNil(panelController.openPanel)
+    if let panel = panelController.openPanel {
+      XCTAssertTrue(panel.canCreateDirectories)
+    }
   }
 }

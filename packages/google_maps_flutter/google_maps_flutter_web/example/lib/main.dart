@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -20,6 +20,9 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
-    return const Text('Testing... Look at the console output for results!');
+    return const Directionality(
+      textDirection: TextDirection.ltr,
+      child: Text('Testing... Look at the console output for results!'),
+    );
   }
 }

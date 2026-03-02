@@ -1,4 +1,4 @@
-<?code-excerpt path-base="excerpts/packages/standard_message_codec_examples"?>
+<?code-excerpt path-base="example/lib"?>
 
 An efficient and schemaless binary format used by the Flutter SDK.
 
@@ -45,11 +45,10 @@ or pure Dart applications.
 <?code-excerpt "readme_excerpts.dart (Encoding)"?>
 ```dart
 void main() {
-  final ByteData? data =
-      const StandardMessageCodec().encodeMessage(<Object, Object>{
-    'foo': true,
-    3: 'fizz',
-  });
+  final ByteData? data = const StandardMessageCodec().encodeMessage(
+    <Object, Object>{'foo': true, 3: 'fizz'},
+  );
   print('The encoded message is $data');
 }
+
 ```

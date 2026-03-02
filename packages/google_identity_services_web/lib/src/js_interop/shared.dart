@@ -1,13 +1,20 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 /// Attempts to retrieve an enum value from [haystack] if [needle] is not null.
+///
+/// Returns `null` if no enum value in [haystack] matches [needle].
 T? maybeEnum<T extends Enum>(String? needle, List<T> haystack) {
   if (needle == null) {
     return null;
   }
-  return haystack.byName(needle);
+  for (final value in haystack) {
+    if (value.name == needle) {
+      return value;
+    }
+  }
+  return null;
 }
 
 /// The type of several functions from the library, that don't receive
@@ -118,7 +125,10 @@ enum MomentSkippedReason {
   tap_outside('tap_outside'),
 
   /// issuing_failed
-  issuing_failed('issuing_failed');
+  issuing_failed('issuing_failed'),
+
+  /// Unknown reason
+  unknown_reason('unknown_reason');
 
   ///
   const MomentSkippedReason(String reason) : _reason = reason;
@@ -137,7 +147,10 @@ enum MomentDismissedReason {
   cancel_called('cancel_called'),
 
   /// flow_restarted
-  flow_restarted('flow_restarted');
+  flow_restarted('flow_restarted'),
+
+  /// Unknown reason
+  unknown_reason('unknown_reason');
 
   ///
   const MomentDismissedReason(String reason) : _reason = reason;
@@ -204,7 +217,13 @@ enum CredentialSelectBy {
   /// A user without an existing session first pressed the Sign In With Google
   /// button to select a Google Account and then pressed the Confirm button to
   /// consent and share credentials.
-  btn_confirm_add_session('btn_confirm_add_session');
+  btn_confirm_add_session('btn_confirm_add_session'),
+
+  /// A user with an existing session used the browser's "FedCM" flow.
+  fedcm('fedcm'),
+
+  /// A fedcm authentication without user intervention.
+  fedcm_auto('fedcm_auto');
 
   ///
   const CredentialSelectBy(String selectBy) : _selectBy = selectBy;

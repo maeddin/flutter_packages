@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -17,12 +17,25 @@ void main() {
 
   testWidgets('getApplicationDocumentsDirectory', (WidgetTester tester) async {
     final Directory result = await getApplicationDocumentsDirectory();
-    _verifySampleFile(result, 'applicationDocuments');
+    if (Platform.isMacOS) {
+      // _verifySampleFile causes hangs in driver when sandboxing is disabled
+      // because the path changes from an app specific directory to
+      // ~/Documents, which requires additional permissions to access on macOS.
+      // Instead, validate that a non-empty path was returned.
+      expect(result.path, isNotEmpty);
+    } else {
+      _verifySampleFile(result, 'applicationDocuments');
+    }
   });
 
   testWidgets('getApplicationSupportDirectory', (WidgetTester tester) async {
     final Directory result = await getApplicationSupportDirectory();
     _verifySampleFile(result, 'applicationSupport');
+  });
+
+  testWidgets('getApplicationCacheDirectory', (WidgetTester tester) async {
+    final Directory result = await getApplicationCacheDirectory();
+    _verifySampleFile(result, 'applicationCache');
   });
 
   testWidgets('getLibraryDirectory', (WidgetTester tester) async {
@@ -31,14 +44,14 @@ void main() {
       _verifySampleFile(result, 'library');
     } else if (Platform.isAndroid) {
       final Future<Directory?> result = getLibraryDirectory();
-      expect(result, throwsA(isInstanceOf<UnsupportedError>()));
+      await expectLater(result, throwsA(isInstanceOf<UnsupportedError>()));
     }
   });
 
   testWidgets('getExternalStorageDirectory', (WidgetTester tester) async {
     if (Platform.isIOS) {
       final Future<Directory?> result = getExternalStorageDirectory();
-      expect(result, throwsA(isInstanceOf<UnsupportedError>()));
+      await expectLater(result, throwsA(isInstanceOf<UnsupportedError>()));
     } else if (Platform.isAndroid) {
       final Directory? result = await getExternalStorageDirectory();
       _verifySampleFile(result, 'externalStorage');
@@ -48,7 +61,7 @@ void main() {
   testWidgets('getExternalCacheDirectories', (WidgetTester tester) async {
     if (Platform.isIOS) {
       final Future<List<Directory>?> result = getExternalCacheDirectories();
-      expect(result, throwsA(isInstanceOf<UnsupportedError>()));
+      await expectLater(result, throwsA(isInstanceOf<UnsupportedError>()));
     } else if (Platform.isAndroid) {
       final List<Directory>? directories = await getExternalCacheDirectories();
       expect(directories, isNotNull);
@@ -58,7 +71,7 @@ void main() {
     }
   });
 
-  final List<StorageDirectory?> allDirs = <StorageDirectory?>[
+  final allDirs = <StorageDirectory?>[
     null,
     StorageDirectory.music,
     StorageDirectory.podcasts,
@@ -69,12 +82,13 @@ void main() {
     StorageDirectory.movies,
   ];
 
-  for (final StorageDirectory? type in allDirs) {
-    testWidgets('getExternalStorageDirectories (type: $type)',
-        (WidgetTester tester) async {
+  for (final type in allDirs) {
+    testWidgets('getExternalStorageDirectories (type: $type)', (
+      WidgetTester tester,
+    ) async {
       if (Platform.isIOS) {
         final Future<List<Directory>?> result = getExternalStorageDirectories();
-        expect(result, throwsA(isInstanceOf<UnsupportedError>()));
+        await expectLater(result, throwsA(isInstanceOf<UnsupportedError>()));
       } else if (Platform.isAndroid) {
         final List<Directory>? directories =
             await getExternalStorageDirectories(type: type);
@@ -87,17 +101,12 @@ void main() {
   }
 
   testWidgets('getDownloadsDirectory', (WidgetTester tester) async {
-    if (Platform.isAndroid) {
-      final Future<Directory?> result = getDownloadsDirectory();
-      expect(result, throwsA(isInstanceOf<UnsupportedError>()));
-    } else {
-      final Directory? result = await getDownloadsDirectory();
-      // On recent versions of macOS, actually using the downloads directory
-      // requires a user prompt (so will fail on CI), and on some platforms the
-      // directory may not exist. Instead of verifying that it exists, just
-      // check that it returned a path.
-      expect(result?.path, isNotEmpty);
-    }
+    final Directory? result = await getDownloadsDirectory();
+    // On recent versions of macOS, actually using the downloads directory
+    // requires a user prompt (so will fail on CI), and on some platforms the
+    // directory may not exist. Instead of verifying that it exists, just
+    // check that it returned a path.
+    expect(result?.path, isNotEmpty);
   });
 }
 
@@ -108,7 +117,7 @@ void _verifySampleFile(Directory? directory, String name) {
   if (directory == null) {
     return;
   }
-  final File file = File('${directory.path}/$name');
+  final file = File('${directory.path}/$name');
 
   if (file.existsSync()) {
     file.deleteSync();
@@ -117,6 +126,15 @@ void _verifySampleFile(Directory? directory, String name) {
 
   file.writeAsStringSync('Hello world!');
   expect(file.readAsStringSync(), 'Hello world!');
-  expect(directory.listSync(), isNotEmpty);
+  // This check intentionally avoids using Directory.listSync on Android due to
+  // https://github.com/dart-lang/sdk/issues/54287.
+  if (Platform.isAndroid) {
+    expect(
+      Process.runSync('ls', <String>[directory.path]).stdout,
+      contains(name),
+    );
+  } else {
+    expect(directory.listSync(), isNotEmpty);
+  }
   file.deleteSync();
 }

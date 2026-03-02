@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -14,9 +14,13 @@ extension GoRouterHelper on BuildContext {
     String name, {
     Map<String, String> pathParameters = const <String, String>{},
     Map<String, dynamic> queryParameters = const <String, dynamic>{},
-  }) =>
-      GoRouter.of(this).namedLocation(name,
-          pathParameters: pathParameters, queryParameters: queryParameters);
+    String? fragment,
+  }) => GoRouter.of(this).namedLocation(
+    name,
+    pathParameters: pathParameters,
+    queryParameters: queryParameters,
+    fragment: fragment,
+  );
 
   /// Navigate to a location.
   void go(String location, {Object? extra}) =>
@@ -28,13 +32,14 @@ extension GoRouterHelper on BuildContext {
     Map<String, String> pathParameters = const <String, String>{},
     Map<String, dynamic> queryParameters = const <String, dynamic>{},
     Object? extra,
-  }) =>
-      GoRouter.of(this).goNamed(
-        name,
-        pathParameters: pathParameters,
-        queryParameters: queryParameters,
-        extra: extra,
-      );
+    String? fragment,
+  }) => GoRouter.of(this).goNamed(
+    name,
+    pathParameters: pathParameters,
+    queryParameters: queryParameters,
+    extra: extra,
+    fragment: fragment,
+  );
 
   /// Push a location onto the page stack.
   ///
@@ -53,13 +58,12 @@ extension GoRouterHelper on BuildContext {
     Map<String, String> pathParameters = const <String, String>{},
     Map<String, dynamic> queryParameters = const <String, dynamic>{},
     Object? extra,
-  }) =>
-      GoRouter.of(this).pushNamed<T>(
-        name,
-        pathParameters: pathParameters,
-        queryParameters: queryParameters,
-        extra: extra,
-      );
+  }) => GoRouter.of(this).pushNamed<T>(
+    name,
+    pathParameters: pathParameters,
+    queryParameters: queryParameters,
+    extra: extra,
+  );
 
   /// Returns `true` if there is more than 1 page on the stack.
   bool canPop() => GoRouter.of(this).canPop();
@@ -92,13 +96,12 @@ extension GoRouterHelper on BuildContext {
     Map<String, String> pathParameters = const <String, String>{},
     Map<String, dynamic> queryParameters = const <String, dynamic>{},
     Object? extra,
-  }) =>
-      GoRouter.of(this).pushReplacementNamed(
-        name,
-        pathParameters: pathParameters,
-        queryParameters: queryParameters,
-        extra: extra,
-      );
+  }) => GoRouter.of(this).pushReplacementNamed(
+    name,
+    pathParameters: pathParameters,
+    queryParameters: queryParameters,
+    extra: extra,
+  );
 
   /// Replaces the top-most page of the page stack with the given one but treats
   /// it as the same page.
@@ -111,7 +114,7 @@ extension GoRouterHelper on BuildContext {
   /// * [pushReplacement] which replaces the top-most page of the page stack but
   ///   always uses a new page key.
   void replace(String location, {Object? extra}) =>
-      GoRouter.of(this).replace(location, extra: extra);
+      GoRouter.of(this).replace<Object?>(location, extra: extra);
 
   /// Replaces the top-most page with the named route and optional parameters,
   /// preserving the page key.
@@ -129,9 +132,10 @@ extension GoRouterHelper on BuildContext {
     Map<String, String> pathParameters = const <String, String>{},
     Map<String, dynamic> queryParameters = const <String, dynamic>{},
     Object? extra,
-  }) =>
-      GoRouter.of(this).replaceNamed(name,
-          pathParameters: pathParameters,
-          queryParameters: queryParameters,
-          extra: extra);
+  }) => GoRouter.of(this).replaceNamed<Object?>(
+    name,
+    pathParameters: pathParameters,
+    queryParameters: queryParameters,
+    extra: extra,
+  );
 }

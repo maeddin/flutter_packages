@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -72,7 +72,8 @@ abstract class InAppPurchasePlatform extends PlatformInterface {
   /// Console](https://play.google.com/) for Android.
   Future<ProductDetailsResponse> queryProductDetails(Set<String> identifiers) =>
       throw UnimplementedError(
-          'queryProductDetails() had not been implemented.');
+        'queryProductDetails() had not been implemented.',
+      );
 
   /// Buy a non consumable product or subscription.
   ///
@@ -149,8 +150,7 @@ abstract class InAppPurchasePlatform extends PlatformInterface {
   Future<bool> buyConsumable({
     required PurchaseParam purchaseParam,
     bool autoConsume = true,
-  }) =>
-      throw UnimplementedError('buyConsumable() has not been implemented.');
+  }) => throw UnimplementedError('buyConsumable() has not been implemented.');
 
   /// Mark that purchased content has been delivered to the user.
   ///
@@ -182,7 +182,7 @@ abstract class InAppPurchasePlatform extends PlatformInterface {
   /// Restored purchases are delivered through the [purchaseStream] with a
   /// status of [PurchaseStatus.restored]. You should listen for these purchases,
   /// validate their receipts, deliver the content and mark the purchase complete
-  /// by calling the [finishPurchase] method for each purchase.
+  /// by calling the [completePurchase] method for each purchase.
   ///
   /// This does not return consumed products. If you want to restore unused
   /// consumable products, you need to persist consumable product information
@@ -194,4 +194,21 @@ abstract class InAppPurchasePlatform extends PlatformInterface {
   ///    [PurchaseDetails.verificationData].
   Future<void> restorePurchases({String? applicationUserName}) =>
       throw UnimplementedError('restorePurchases() has not been implemented.');
+
+  /// Returns the user's country.
+  ///
+  /// Android:
+  /// Returns Play billing country code based on ISO-3166-1 alpha2 format.
+  ///
+  /// See: https://developer.android.com/reference/com/android/billingclient/api/BillingConfig
+  /// See: https://unicode.org/cldr/charts/latest/supplemental/territory_containment_un_m_49.html
+  ///
+  /// iOS:
+  /// Returns the country code from SKStoreFrontWrapper.
+  ///
+  /// See: https://developer.apple.com/documentation/storekit/skstorefront?language=objc
+  ///
+  ///
+  Future<String> countryCode() =>
+      throw UnimplementedError('countryCode() has not been implemented.');
 }

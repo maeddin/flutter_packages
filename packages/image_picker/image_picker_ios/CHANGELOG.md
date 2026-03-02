@@ -1,4 +1,106 @@
+## 0.8.13+6
+
+* Replaces deprecated `kUTTypeGIF` with `UTTypeGIF` to fix iOS 15+ deprecation warnings.
+
+## 0.8.13+5
+
+* Fixes camera confirmation buttons (e.g., Retake/Use Photo) taps passing through to the underlying Flutter UI while the picker is dismissing on some iOS versions (e.g., iOS 26).
+
+## 0.8.13+4
+
+* Improves compatibility with `UIScene`.
+* Updates minimum supported SDK version to Flutter 3.38/Dart 3.10.
+
+## 0.8.13+3
+
+* Fixes a performance regression on iOS where picking videos could cause a long delay due to transcoding. The picker is now configured to request the original asset to avoid conversion.
+
+## 0.8.13+2
+
+* Updates to Pigeon 26.
+
+## 0.8.13+1
+
+* Updates minimum supported version to iOS 13.
+* Updates minimum supported SDK version to Flutter 3.35/Dart 3.9.
+
+## 0.8.13
+
+* Adds support for `getMultiVideoWithOptions`.
+* Updates minimum supported SDK version to Flutter 3.27/Dart 3.6.
+* Adds photo to Photos library during test to support iOS 26.
+
+## 0.8.12+2
+
+* Removes the need for user permissions to pick an image on iOS 14+.
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+
+## 0.8.12+1
+
+* Updates Pigeon for non-nullable collection type support.
+* Updates UI test photo element query for iOS 18.
+
+## 0.8.12
+
+* Re-adds Swift Package Manager compatibility.
+
+## 0.8.11+2
+
+* Temporarily remove Swift Package Manager compatibility to resolve issues with Cocoapods builds.
+
+## 0.8.11+1
+
+* Makes all headers public with Swift Package Manager integration to keep inline with CocoaPods.
+
+## 0.8.11
+
+* Adds Swift Package Manager compatibility.
+
+## 0.8.10+1
+
+* Fixes a possible crash when calling a picker method UIGraphicsImageRenderer if imageToScale is nil.
+
+## 0.8.10
+
+* Adds limit parameter to `MediaOptions` and `MultiImagePickerOptions` that sets a limit to how many media or image items can be selected.
+
+## 0.8.9+2
+
+* Updates minimum iOS version to 12.0 and minimum Flutter version to 3.16.6.
+* Replaces deprecated UIGraphicsBeginImageContextWithOptions with UIGraphicsImageRenderer.
+
+## 0.8.9+1
+
+* Adds privacy manifest.
+
+## 0.8.9
+
+* Fixes resizing bug and updates rounding to be more accurate.
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+
+## 0.8.8+4
+
+* Updates to Pigeon 13.
+
+## 0.8.8+3
+
+* Fixes a possible crash when calling a picker method while another is waiting on permissions.
+
+## 0.8.8+2
+
+* Adds pub topics to package metadata.
+
+## 0.8.8+1
+
+* Fixes exception when canceling pickMultipleMedia.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 0.8.8
+
+* Adds `getMedia` and `getMultipleMedia` methods.
+
 ## 0.8.7+4
+
 * Fixes `BuildContext` handling in example.
 * Updates metadata unit test to work on iOS 16.2.
 

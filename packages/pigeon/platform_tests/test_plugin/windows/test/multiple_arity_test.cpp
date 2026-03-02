@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -35,14 +35,16 @@ TEST(MultipleArity, HostSimple) {
   MultipleArityHostApi::SetUp(&messenger, &api);
 
   int64_t result = 0;
-  messenger.SendHostMessage("dev.flutter.pigeon.MultipleArityHostApi.subtract",
-                            EncodableValue(EncodableList({
-                                EncodableValue(30),
-                                EncodableValue(10),
-                            })),
-                            [&result](const EncodableValue& reply) {
-                              result = GetResult(reply).LongValue();
-                            });
+  messenger.SendHostMessage(
+      "dev.flutter.pigeon.pigeon_integration_tests.MultipleArityHostApi."
+      "subtract",
+      EncodableValue(EncodableList({
+          EncodableValue(30),
+          EncodableValue(10),
+      })),
+      [&result](const EncodableValue& reply) {
+        result = GetResult(reply).LongValue();
+      });
 
   EXPECT_EQ(result, 20);
 }

@@ -1,8 +1,6 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
-library plugin_platform_interface;
 
 import 'package:meta/meta.dart';
 
@@ -88,14 +86,15 @@ abstract class PlatformInterface {
     required bool preventConstObject,
   }) {
     if (instance is MockPlatformInterfaceMixin) {
-      bool assertionsEnabled = false;
+      var assertionsEnabled = false;
       assert(() {
         assertionsEnabled = true;
         return true;
       }());
       if (!assertionsEnabled) {
         throw AssertionError(
-            '`MockPlatformInterfaceMixin` is not intended for use in release builds.');
+          '`MockPlatformInterfaceMixin` is not intended for use in release builds.',
+        );
       }
       return;
     }
@@ -105,7 +104,8 @@ abstract class PlatformInterface {
     }
     if (!identical(token, _instanceTokens[instance])) {
       throw AssertionError(
-          'Platform interfaces must not be implemented with `implements`');
+        'Platform interfaces must not be implemented with `implements`',
+      );
     }
   }
 }
@@ -126,4 +126,4 @@ abstract class PlatformInterface {
 ///    implements UrlLauncherPlatform {}
 /// ```
 @visibleForTesting
-abstract class MockPlatformInterfaceMixin implements PlatformInterface {}
+abstract mixin class MockPlatformInterfaceMixin implements PlatformInterface {}

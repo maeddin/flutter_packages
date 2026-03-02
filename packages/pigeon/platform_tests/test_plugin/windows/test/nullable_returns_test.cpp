@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -52,11 +52,12 @@ TEST(NullableReturns, HostNullableArgNull) {
   NullableArgHostApi::SetUp(&messenger, &api);
 
   int64_t result = 0;
-  messenger.SendHostMessage("dev.flutter.pigeon.NullableArgHostApi.doit",
-                            EncodableValue(EncodableList({EncodableValue()})),
-                            [&result](const EncodableValue& reply) {
-                              result = GetResult(reply).LongValue();
-                            });
+  messenger.SendHostMessage(
+      "dev.flutter.pigeon.pigeon_integration_tests.NullableArgHostApi.doit",
+      EncodableValue(EncodableList({EncodableValue()})),
+      [&result](const EncodableValue& reply) {
+        result = GetResult(reply).LongValue();
+      });
 
   EXPECT_EQ(result, 42);
 }
@@ -67,11 +68,13 @@ TEST(NullableReturns, HostNullableArgNonNull) {
   NullableArgHostApi::SetUp(&messenger, &api);
 
   int64_t result = 0;
-  messenger.SendHostMessage("dev.flutter.pigeon.NullableArgHostApi.doit",
-                            EncodableValue(EncodableList({EncodableValue(7)})),
-                            [&result](const EncodableValue& reply) {
-                              result = GetResult(reply).LongValue();
-                            });
+  int64_t seven = 7;
+  messenger.SendHostMessage(
+      "dev.flutter.pigeon.pigeon_integration_tests.NullableArgHostApi.doit",
+      EncodableValue(EncodableList({EncodableValue(seven)})),
+      [&result](const EncodableValue& reply) {
+        result = GetResult(reply).LongValue();
+      });
 
   EXPECT_EQ(result, 7);
 }
@@ -85,7 +88,7 @@ TEST(NullableReturns, HostNullableReturnNull) {
   // rather than just never set.
   EncodableValue result(true);
   messenger.SendHostMessage(
-      "dev.flutter.pigeon.NullableReturnHostApi.doit",
+      "dev.flutter.pigeon.pigeon_integration_tests.NullableReturnHostApi.doit",
       EncodableValue(EncodableList({})),
       [&result](const EncodableValue& reply) { result = GetResult(reply); });
 
@@ -99,7 +102,7 @@ TEST(NullableReturns, HostNullableReturnNonNull) {
 
   EncodableValue result;
   messenger.SendHostMessage(
-      "dev.flutter.pigeon.NullableReturnHostApi.doit",
+      "dev.flutter.pigeon.pigeon_integration_tests.NullableReturnHostApi.doit",
       EncodableValue(EncodableList({})),
       [&result](const EncodableValue& reply) { result = GetResult(reply); });
 

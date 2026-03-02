@@ -1,7 +1,138 @@
-## NEXT
+## 2.0.5
+
+* Adds platform-specific setup instructions to README.
+
+## 2.0.4
+
+* Bumps androidx.core:core from 1.13.1 to 1.17.0.
+
+## 2.0.3
+
+* Bumps com.android.tools.build:gradle from 8.12.1 to 8.13.1.
+
+## 2.0.2
+
+* Updates to Pigeon 26.
+
+## 2.0.1
+
+* Removed mockito-inline and updated to mockito-core 5.17.0.
+
+## 2.0.0
+
+* **BREAKING CHANGES:**
+  * Switches to `LocalAuthException` for error reporting.
+  * Removes support for `useErrorDialogs`.
+  * Renames `biometricHint` to `signInHint` to reflect its usage.
+
+## 1.0.56
+
+* Updates Java compatibility version to 17 and minimum supported SDK version to Flutter 3.35/Dart 3.9.
+
+## 1.0.55
+
+* Resolves Gradle 9 deprecations.
+
+## 1.0.54
+
+* Bumps `androidx.fragment:fragment` from `1.8.8` to `1.8.9`.
+
+## 1.0.53
+
+* Removes obsolete code related to supporting SDK <24.
+* Updates minimum supported SDK version to Flutter 3.35.
+
+## 1.0.52
+
+* Bumps com.android.tools.build:gradle to 8.12.1.
+* Updates minimum supported SDK version to Flutter 3.29/Dart 3.7.
+
+## 1.0.51
+
+* Updates kotlin version to 2.2.0 to enable gradle 8.11 support.
+
+## 1.0.50
+
+* Updates `androidx.fragment:fragment` to 1.8.8.
+
+## 1.0.49
+
+* Removes obsolete code related to supporting SDK <21.
+
+## 1.0.48
+
+* Updates compileSdk 34 to flutter.compileSdkVersion.
+
+## 1.0.47
+
+* Adds compatibility with `intl` 0.20.0.
+
+## 1.0.46
+
+* Updates Java compatibility version to 11.
+
+## 1.0.45
+
+* Updates to the latest version of Pigeon.
+
+## 1.0.44
+
+* Removes dependency on org.jetbrains.kotlin:kotlin-bom.
+* Updates minimum supported SDK version to Flutter 3.24/Dart 3.5.
+
+## 1.0.43
+
+* Updates lint checks to ignore NewerVersionAvailable.
+
+## 1.0.42
+
+* Updates AGP version to 8.5.0.
+
+## 1.0.41
+
+* Updates espresso to 3.6.1.
+
+## 1.0.40
+
+* Updates androidx.core version to 1.13.1.
+
+## 1.0.39
+
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+* Removes support for apps using the v1 Android embedding.
+
+## 1.0.38
+
+* Updates minSdkVersion to 19.
+* Updates minimum supported SDK version to Flutter 3.16/Dart 3.2.
+
+## 1.0.37
+
+* Adds compatibility with `intl` 0.19.0.
+* Updates compileSdk version to 34.
+
+## 1.0.36
+
+* Updates androidx.fragment version to 1.6.2.
+
+## 1.0.35
+
+* Updates androidx.fragment version to 1.6.1.
+
+## 1.0.34
+
+* Updates pigeon to 11.0.0 and removes enum wrappers.
+
+## 1.0.33
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 1.0.32
 
 * Fixes stale ignore: prefer_const_constructors.
 * Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+* Updates androidx.fragment version to 1.6.0.
 
 ## 1.0.31
 

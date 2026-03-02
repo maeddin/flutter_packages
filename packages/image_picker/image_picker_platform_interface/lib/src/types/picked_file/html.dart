@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -18,8 +18,8 @@ class PickedFile extends PickedFileBase {
   /// Optionally, this can be initialized with `bytes`
   /// so no http requests are performed to retrieve files later.
   const PickedFile(this.path, {Uint8List? bytes})
-      : _initBytes = bytes,
-        super(path);
+    : _initBytes = bytes,
+      super(path);
 
   @override
   final String path;
@@ -27,7 +27,7 @@ class PickedFile extends PickedFileBase {
 
   Future<Uint8List> get _bytes async {
     if (_initBytes != null) {
-      return Future<Uint8List>.value(UnmodifiableUint8ListView(_initBytes!));
+      return _initBytes.asUnmodifiableView();
     }
     return http.readBytes(Uri.parse(path));
   }

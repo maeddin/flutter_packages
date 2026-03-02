@@ -1,3 +1,208 @@
+## 0.4.0+8
+
+* Bumps com.android.tools.build:gradle from 8.12.1 to 8.13.1.
+
+## 0.4.0+7
+
+* Updates to Pigeon 26.
+
+## 0.4.0+6
+
+* Updates Java compatibility version to 17 and minimum supported SDK version to Flutter 3.35/Dart 3.9.
+
+## 0.4.0+5
+
+* Resolves Gradle 9 deprecations.
+
+## 0.4.0+4
+
+* Bumps com.android.tools.build:gradle to 8.12.1.
+* Updates minimum supported SDK version to Flutter 3.29/Dart 3.7.
+
+## 0.4.0+3
+
+* Updates kotlin version to 2.2.0 to enable gradle 8.11 support.
+
+## 0.4.0+2
+
+* Adds support for setting the `offerToken` on `GooglePlayPurchaseParam`.
+
+## 0.4.0+1
+
+* Updates compileSdk 34 to flutter.compileSdkVersion.
+
+## 0.4.0
+
+* Updates Google Play Billing Library from 6.2.0 to 7.1.1.
+* **BREAKING CHANGES**:
+  * Removes the deprecated `ProrationMode` enum. `ReplacementMode` should be used instead.
+  * Removes the deprecated `BillingClientWrapper.enablePendingPurchases` method.
+  * Removes JSON serialization from Dart wrapper classes.
+  * Removes `subscriptionsOnVR` and `inAppItemsOnVR` from `BillingClientFeature`.
+* Adds `installmentPlanDetails` to `SubscriptionOfferDetailsWrapper`.
+* Adds APIs to support pending transactions for subscription prepaid plans (`PendingPurchasesParams`).
+
+## 0.3.6+13
+
+* Updates androidx.annotation:annotation to 1.9.1.
+
+## 0.3.6+12
+
+* Updates README to remove contributor-focused documentation.
+
+## 0.3.6+11
+
+* Bumps androidx.annotation:annotation from 1.8.2 to 1.9.0.
+
+## 0.3.6+10
+
+* Updates Pigeon for non-nullable collection type support.
+
+## 0.3.6+9
+
+* Updates Java compatibility version to 11.
+
+## 0.3.6+8
+
+* Removes dependency on org.jetbrains.kotlin:kotlin-bom.
+* Updates minimum supported SDK version to Flutter 3.24/Dart 3.5.
+
+## 0.3.6+7
+
+* Sets `android.buildFeatures.buildConfig` to true for compatibility with AGP 8.0+.
+
+## 0.3.6+6
+
+* Bumps androidx.annotation:annotation from 1.8.1 to 1.8.2.
+
+## 0.3.6+5
+
+* Bumps com.android.billingclient:billing from 6.1.0 to 6.2.0.
+
+## 0.3.6+4
+
+* Bumps androidx.annotation:annotation from 1.8.0 to 1.8.1.
+
+## 0.3.6+3
+
+* Updates lint checks to ignore NewerVersionAvailable.
+
+## 0.3.6+2
+
+* Updates Android Gradle Plugin to 8.5.1.
+
+## 0.3.6+1
+
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+* Removes support for apps using the v1 Android embedding.
+
+## 0.3.6
+
+* Introduces new `ReplacementMode` for Android's billing client as `ProrationMode` is being deprecated.
+
+## 0.3.5+2
+
+* Bumps androidx.annotation:annotation from 1.7.1 to 1.8.0.
+* Updates minimum supported SDK version to Flutter 3.16/Dart 3.2.
+
+## 0.3.5+1
+
+* Updates example to use `countryCode` instead of deprecated `getCountryCode`.
+
+## 0.3.5
+
+* Replaces `getCountryCode` with `countryCode`.
+
+## 0.3.4+1
+
+* Adds documentation for UserChoice and Alternative Billing.
+
+## 0.3.4
+
+* Adds `countryCode` API.
+
+## 0.3.3+1
+
+* Moves alternative billing listener creation to BillingClientFactoryImpl.
+
+## 0.3.3
+
+* Converts data objects in internal platform communication to Pigeon.
+* Deprecates JSON serialization and deserialization for Billing Client wrapper
+  objects.
+
+## 0.3.2+1
+
+* Converts internal platform communication to Pigeon.
+
+## 0.3.2
+
+* Adds UserChoiceBilling APIs to platform addition.
+* Updates minimum supported SDK version to Flutter 3.13/Dart 3.1.
+
+## 0.3.1
+
+* Adds alternative-billing-only APIs to InAppPurchaseAndroidPlatformAddition.
+
+## 0.3.0+18
+
+* Adds new getCountryCode() method to InAppPurchaseAndroidPlatformAddition to get a customer's country code.
+* Updates compileSdk version to 34.
+
+## 0.3.0+17
+
+* Bumps androidx.annotation:annotation from 1.7.0 to 1.7.1.
+
+## 0.3.0+16
+
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+* Fixes new lint warnings.
+
+## 0.3.0+15
+
+* Adds missing network error response code to BillingResponse enum.
+
+## 0.3.0+14
+
+* Updates annotations lib to 1.7.0.
+
+## 0.3.0+13
+
+* Updates example code for current versions of Flutter.
+
+## 0.3.0+12
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 0.3.0+11
+
+* Migrates `styleFrom` usage in examples off of deprecated `primary` and `onPrimary` parameters.
+
+## 0.3.0+10
+
+* Bumps com.android.billingclient:billing from 6.0.0 to 6.0.1.
+
+## 0.3.0+9
+
+* Bumps com.android.billingclient:billing from 5.2.0 to 6.0.0.
+
+## 0.3.0+8
+
+* Adds a [guide for migrating](migration_guide.md) to [0.3.0](#0.3.0).
+
+## 0.3.0+7
+
+* Bumps org.mockito:mockito-core from 4.7.0 to 5.3.1.
+
+## 0.3.0+6
+
+* Bumps org.jetbrains.kotlin:kotlin-bom from 1.8.21 to 1.8.22.
+
+## 0.3.0+5
+
+* Bumps org.jetbrains.kotlin:kotlin-bom from 1.8.0 to 1.8.21.
+
 ## 0.3.0+4
 
 * Fixes unawaited_futures violations.

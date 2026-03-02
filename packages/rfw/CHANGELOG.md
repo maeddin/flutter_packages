@@ -1,7 +1,124 @@
-## NEXT
+## 1.1.2
 
-* Fixes stale ignore: prefer_const_constructors.
+* Removes outdated call for feedback from the README.
+
+## 1.1.1
+
+* Removes obsolete scripting language integration section in README.md.
+
+## 1.1.0
+
+* Adds support for the `Flexible` core widget.
+* Updates minimum supported SDK version to Flutter 3.35/Dart 3.9.
+
+## 1.0.32
+
+* Updates broken links in README.md.
+* Updates minimum supported SDK version to Flutter 3.32/Dart 3.8.
+* Removes the wasm example.
+
+## 1.0.31
+
+* Updates minimum supported SDK version to Flutter 3.22/Dart 3.4.
+* Fixes an issue where Widget Builders didn't work properly with Loops.
+
+## 1.0.30
+
+* Adds `missing_code_block_language_in_doc_comment` lint.
+* Updates minimum supported SDK version to Flutter 3.19/Dart 3.3.
+
+## 1.0.29
+
+* Adds support for the `Slider` Material widget.
+
+## 1.0.28
+
+* Updates documentation to WidgetStateProperty and ButtonBar.
+
+## 1.0.27
+* Adds support for `DecorationImage.filterQuality`.
+
+## 1.0.26
+* Supports overriding the error widget builder.
+
+## 1.0.25
+* Adds support for wildget builders.
+
+## 1.0.24
+
+* Adds `InkResponse` material widget.
+* Adds `Material` material widget.
+* Adds the `child` to `Opacity` core widget.
+* Implements more `InkWell` parameters.
+
+## 1.0.23
+
+* Replaces usage of deprecated Flutter APIs.
+
+## 1.0.22
+
+* Adds more testing to restore coverage to 100%.
+* Format documentation.
+
+## 1.0.21
+
+* Adds support for subscribing to the root of a `DynamicContent` object.
+
+## 1.0.20
+
+* Adds `OverflowBox` material widget.
+* Updates `ButtonBar` material widget implementation.
+
+## 1.0.19
+
+* Add `DropdownButton` and `ClipRRect` widgets to rfw widget library.
+
+## 1.0.18
+
+* Exposes `WidgetLibrary`s registered in `Runtime`.
+* Exposes widgets map in `LocalWidgetLibrary`.
+
+## 1.0.17
+
+* Adds support for tracking source locations of `BlobNode`s and
+  finding `BlobNode`s from the widget tree (`BlobNode.source` and
+  `Runtime.blobNodeFor` respectively).
+
+## 1.0.16
+
 * Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+* Fixes lint warnings.
+
+## 1.0.15
+
+* Updates README.md to point to the CONTRIBUTING.md file.
+* Introduces CONTRIBUTING.md, and adds more information about golden testing.
+
+## 1.0.14
+
+* Adds pub topics to package metadata.
+
+## 1.0.13
+
+* Block comments in RFW's text format. (`/*...*/`)
+
+## 1.0.12
+
+* Improves web compatibility.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+* Adds more testing to restore coverage to 100%.
+* Removes some dead code.
+
+## 1.0.11
+
+* Adds more documentation in the README.md file!
+* Adds automated verification of the sample code in the README.
+
+## 1.0.10
+
+* Fixes stale ignore: `prefer_const_constructors`.
+* Updates minimum supported SDK version to Flutter 3.10/Dart 3.0.
+* Changes package internals to avoid explicit `as Uint8List` downcast.
 
 ## 1.0.9
 

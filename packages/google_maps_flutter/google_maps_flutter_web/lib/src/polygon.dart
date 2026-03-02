@@ -1,8 +1,8 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-part of google_maps_flutter_web;
+part of '../google_maps_flutter_web.dart';
 
 /// The `PolygonController` class wraps a [gmaps.Polygon] and its `onTap` behavior.
 class PolygonController {
@@ -10,9 +10,9 @@ class PolygonController {
   PolygonController({
     required gmaps.Polygon polygon,
     bool consumeTapEvents = false,
-    ui.VoidCallback? onTap,
-  })  : _polygon = polygon,
-        _consumeTapEvents = consumeTapEvents {
+    VoidCallback? onTap,
+  }) : _polygon = polygon,
+       _consumeTapEvents = consumeTapEvents {
     if (onTap != null) {
       polygon.onClick.listen((gmaps.PolyMouseEvent event) {
         onTap.call();

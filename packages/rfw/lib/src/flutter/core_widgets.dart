@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,6 +8,7 @@
 
 // This file is hand-formatted.
 
+// ignore: unnecessary_import, see https://github.com/flutter/flutter/pull/138881
 import 'dart:ui' show FontFeature;
 
 import 'package:flutter/gestures.dart' show DragStartBehavior;
@@ -26,12 +27,14 @@ import 'runtime.dart';
 ///  * [Align]
 ///  * [AspectRatio]
 ///  * [Center]
+///  * [ClipRRect]
 ///  * [ColoredBox]
 ///  * [Column]
 ///  * [Container] (actually uses [AnimatedContainer])
 ///  * [DefaultTextStyle]
 ///  * [Directionality]
 ///  * [Expanded]
+///  * [Flexible]
 ///  * [FittedBox]
 ///  * [FractionallySizedBox]
 ///  * [GestureDetector]
@@ -268,6 +271,15 @@ Map<String, LocalWidgetBuilder> get _coreWidgetsDefinitions => <String, LocalWid
     );
   },
 
+  'ClipRRect': (BuildContext context, DataSource source) {
+    return ClipRRect(
+      borderRadius: ArgumentDecoders.borderRadius(source, ['borderRadius']) ?? BorderRadius.zero,
+      // CustomClipper<RRect> clipper,
+      clipBehavior: ArgumentDecoders.enumValue<Clip>(Clip.values, source, ['clipBehavior']) ?? Clip.antiAlias,
+      child: source.optionalChild(['child']),
+    );
+  },
+
   'ColoredBox': (BuildContext context, DataSource source) {
     return ColoredBox(
       color: ArgumentDecoders.color(source, ['color']) ?? const Color(0xFF000000),
@@ -334,6 +346,14 @@ Map<String, LocalWidgetBuilder> get _coreWidgetsDefinitions => <String, LocalWid
   'Expanded': (BuildContext context, DataSource source) {
     return Expanded(
       flex: source.v<int>(['flex']) ?? 1,
+      child: source.child(['child']),
+    );
+  },
+
+  'Flexible': (BuildContext context, DataSource source) {
+    return Flexible(
+      flex: source.v<int>(['flex']) ?? 1,
+      fit: ArgumentDecoders.enumValue<FlexFit>(FlexFit.values, source, ['fit']) ?? FlexFit.loose,
       child: source.child(['child']),
     );
   },
@@ -488,6 +508,7 @@ Map<String, LocalWidgetBuilder> get _coreWidgetsDefinitions => <String, LocalWid
       opacity: source.v<double>(['opacity']) ?? 0.0,
       onEnd: source.voidHandler(['onEnd']),
       alwaysIncludeSemantics: source.v<bool>(['alwaysIncludeSemantics']) ?? true,
+      child: source.optionalChild(['child']),
     );
   },
 
@@ -537,6 +558,8 @@ Map<String, LocalWidgetBuilder> get _coreWidgetsDefinitions => <String, LocalWid
     );
   },
 
+  // The "#docregion" pragma below makes this accessible from the README.md file.
+  // #docregion Row
   'Row': (BuildContext context, DataSource source) {
     return Row(
       mainAxisAlignment: ArgumentDecoders.enumValue<MainAxisAlignment>(MainAxisAlignment.values, source, ['mainAxisAlignment']) ?? MainAxisAlignment.start,
@@ -548,6 +571,7 @@ Map<String, LocalWidgetBuilder> get _coreWidgetsDefinitions => <String, LocalWid
       children: source.childList(['children']),
     );
   },
+  // #enddocregion Row
 
   'SafeArea': (BuildContext context, DataSource source) {
     return SafeArea(
@@ -628,13 +652,14 @@ Map<String, LocalWidgetBuilder> get _coreWidgetsDefinitions => <String, LocalWid
   'Text': (BuildContext context, DataSource source) {
     String? text = source.v<String>(['text']);
     if (text == null) {
-      final StringBuffer builder = StringBuffer();
+      final builder = StringBuffer();
       final int count = source.length(['text']);
-      for (int index = 0; index < count; index += 1) {
+      for (var index = 0; index < count; index += 1) {
         builder.write(source.v<String>(['text', index]) ?? '');
       }
       text = builder.toString();
     }
+    final double? textScaleFactor = source.v<double>(['textScaleFactor']);
     return Text(
       text,
       style: ArgumentDecoders.textStyle(source, ['style']),
@@ -644,7 +669,7 @@ Map<String, LocalWidgetBuilder> get _coreWidgetsDefinitions => <String, LocalWid
       locale: ArgumentDecoders.locale(source, ['locale']),
       softWrap: source.v<bool>(['softWrap']),
       overflow: ArgumentDecoders.enumValue<TextOverflow>(TextOverflow.values, source, ['overflow']),
-      textScaleFactor: source.v<double>(['textScaleFactor']),
+      textScaler: textScaleFactor == null ? null : TextScaler.linear(textScaleFactor),
       maxLines: source.v<int>(['maxLines']),
       semanticsLabel: source.v<String>(['semanticsLabel']),
       textWidthBasis: ArgumentDecoders.enumValue<TextWidthBasis>(TextWidthBasis.values, source, ['textWidthBasis']),

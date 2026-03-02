@@ -1,5 +1,23 @@
 ## NEXT
 
+* Updates minimum supported SDK version to Flutter 3.35/Dart 3.9.
+
+## 0.2.2
+
+* Adds support for `getMultiVideoWithOptions`.
+* Updates minimum supported SDK version to Flutter 3.27/Dart 3.6.
+
+## 0.2.1+1
+
+* Adds pub topics to package metadata.
+* Updates minimum supported SDK version to Flutter 3.7/Dart 2.19.
+
+## 0.2.1
+
+* Adds `getMedia` method.
+
+## 0.2.0
+
 * Updates minimum Flutter version to 3.3.
 
 ## 0.1.0+6
